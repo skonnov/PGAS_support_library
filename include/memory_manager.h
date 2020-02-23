@@ -5,8 +5,14 @@
 #include <thread>
 #include <vector>
 #include <iostream>
+
+struct memory_line {
+    std::vector<int> vector;
+    int logical_size;
+};
+
 class memory_manager {
-    std::vector<std::vector<int>>memory;
+    std::vector<memory_line>memory;
     std::thread helper_thr;
     int rank, size;
 public:
@@ -19,6 +25,7 @@ public:
     int get_size_of_portion(int key);
     int get_data_by_index_on_process(int key, int index);
     void set_data_by_index_on_process(int key, int index, int value);
+    int get_logical_index_of_element(int key, int index, int process);
     std::pair<int, int> get_number_of_process_and_index(int key, int index);
     void finalize();
     ~memory_manager();
