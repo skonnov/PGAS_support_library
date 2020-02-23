@@ -23,30 +23,25 @@ parallel_vector::parallel_vector(const int& number_of_elems) {
     size_vector = number_of_elems; 
 }
 
-// parallel_vector::parallel_vector(const parallel_vector& pv) {
-//     portion = pv.portion;
-//     rankproc = pv.rankproc;
-//     sizeproc = pv.sizeproc;
-//     allsize = pv.allsize;
-//     v.resize(pv.v.size());
-//     for(int i = 0; i < portion; i++) {
-//         v[i] = pv.v[i];
-//     }
-// }
+parallel_vector::parallel_vector(const parallel_vector& pv) {
+    portion = pv.portion;
+    size_vector = pv.size_vector;
+    size_proc = pv.size_proc;
+    rank_proc = pv.rank_proc;
+    key = mm.create_object(size_vector);
+    mm.copy_data(pv.key, key);
+}
 
-// parallel_vector& parallel_vector::operator=(const parallel_vector& pv) {
-//     if(this != &pv) {
-//         portion = pv.portion;
-//         rankproc = pv.rankproc;
-//         sizeproc = pv.sizeproc;
-//         allsize = pv.allsize;
-//         v.resize(pv.v.size());
-//         for(int i = 0; i < portion; i++) {
-//             v[i] = pv.v[i];
-//         }
-//     }
-//     return *this;
-// }
+parallel_vector& parallel_vector::operator=(const parallel_vector& pv) {
+    if(this != &pv) {
+        portion = pv.portion;
+        size_vector = pv.size_vector;
+        size_proc = pv.size_proc;
+        rank_proc = pv.rank_proc;
+        mm.copy_data(pv.key, key);
+    }
+    return *this;
+}
 
 int parallel_vector::get_elem(const int& index) const {
     if(index < 0 || index >= size_vector)
@@ -60,23 +55,23 @@ void parallel_vector::set_elem(const int& index, const int& value) {
     mm.set_data(key, index, value);
 }
 
-// int parallel_vector::get_elem_proc(const int& index) const { // WARNING!
-//     if(index < 0 || index >= portion)
-//          throw -1;
-//     return v[index];
-// }
+int parallel_vector::get_elem_proc(const int& index) const { // WARNING!
+    if(index < 0 || index >= mm.get_size_of_portion(key))
+         throw -1;
+    return mm.get_data_by_index_on_process(key, index);
+}
 
-// void parallel_vector::set_elem_proc(const int& index, const int& value) { // WARNING!
-//     if(index < 0 || index >= portion)
-//          throw -1;
-//     v[index] = value;
-// }
+void parallel_vector::set_elem_proc(const int& index, const int& value) { // WARNING!
+    if(index < 0 || index >= mm.get_size_of_portion(key))
+         throw -1;
+    mm.set_data_by_index_on_process(key, index, value);
+}
 
-// int parallel_vector::get_portion() const {
-//     return portion;
-// }
+int parallel_vector::get_portion() const {
+    return mm.get_size_of_portion(key);
+}
 
-// int parallel_vector::get_index_of_proccess(const int& index) const {
+// int parallel_vector::get_index_of_process(const int& index) const {
 //     int number_proc;
 //     if(index < (allsize%sizeproc)*(allsize/sizeproc+1)) {
 //         number_proc = index/(allsize/sizeproc+1);

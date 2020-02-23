@@ -13,11 +13,12 @@ public:
     void memory_manager_init(int argc, char** argv);
     int get_data(int key, int index_of_element); 
     void set_data(int key, int index_of_element, int value);
+    void copy_data(int key_from, int key_to);
     int create_object(int number_of_elements);
     // void delete_object(int key);
-    std::vector<int>& get_memory(int size);
-    // int get_number_by_pointer(int* pointer);
-    // int* get_pointer_by_number(int number);
+    int get_size_of_portion(int key);
+    int get_data_by_index_on_process(int key, int index);
+    void set_data_by_index_on_process(int key, int index, int value);
     std::pair<int, int> get_number_of_process_and_index(int key, int index);
     void finalize();
     ~memory_manager();

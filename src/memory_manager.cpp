@@ -46,6 +46,10 @@ int memory_manager::create_object(int number_of_elements) {  // int*???
 //     map_pointer_to_int.erase(tmp);
 // }
 
+int memory_manager::get_size_of_portion(int key) {
+    return memory[key].size();
+}
+
 
 int memory_manager::get_data(int key, int index_of_element) {
     // send to 0, чтобы узнать, какой процесс затребовал элемент?
@@ -64,6 +68,18 @@ void memory_manager::set_data(int key, int index_of_element, int value) {
     std::pair<int, int> index = get_number_of_process_and_index(key, index_of_element);
     if(rank == index.first)
         memory[key][index.second] = value;
+}
+
+void memory_manager::copy_data(int key_from, int key_to) {
+    memory[key_to] = memory[key_from];
+}
+
+int memory_manager::get_data_by_index_on_process(int key, int index) {
+    return memory[key][index];
+}
+
+void memory_manager::set_data_by_index_on_process(int key, int index, int value) {
+    memory[key][index] = value;
 }
 
 std::pair<int, int> memory_manager::get_number_of_process_and_index(int key, int index) {
