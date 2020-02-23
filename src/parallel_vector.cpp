@@ -71,35 +71,14 @@ int parallel_vector::get_portion() const {
     return mm.get_size_of_portion(key);
 }
 
-// int parallel_vector::get_index_of_process(const int& index) const {
-//     int number_proc;
-//     if(index < (allsize%sizeproc)*(allsize/sizeproc+1)) {
-//         number_proc = index/(allsize/sizeproc+1);
-//     } else {
-//         int tmp = index - (allsize%sizeproc)*(allsize/sizeproc+1);
-//         number_proc = tmp/(allsize/sizeproc) + (allsize%sizeproc);
-//     }
-//     return number_proc;
-// }
+int parallel_vector::get_index_of_process(const int& index) const {
+    return mm.get_number_of_process_and_index(key, index).first;
+}
 
-// int parallel_vector::get_index_of_element(const int& index) const {
-//     int number_elem;
-//     if(index < (allsize%sizeproc)*(allsize/sizeproc+1)) {
-//         number_elem = index%(allsize/sizeproc+1);
-//     } else {
-//         int tmp = index - (allsize%sizeproc)*(allsize/sizeproc+1);
-//         number_elem = tmp%(allsize/sizeproc);
-//     }
-//     return number_elem;
-// }
+int parallel_vector::get_index_of_element(const int& index) const {
+    return mm.get_number_of_process_and_index(key, index).second;
+}
 
-// int parallel_vector::get_reverse_index_of_element(const int& index, const int& proccess)  const {
-//     int number_elem;
-//     if(proccess < allsize%sizeproc) {
-//         number_elem = proccess*portion + index;
-//     }
-//     else {
-//         number_elem = (allsize%sizeproc)*(portion+1) + (proccess-allsize%sizeproc)*portion + index;
-//     }
-//     return number_elem;
-// }
+int parallel_vector::get_logical_index_of_element(const int& index, const int& process)  const {
+    return mm.get_logical_index_of_element(key, index, process);
+}

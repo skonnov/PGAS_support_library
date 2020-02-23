@@ -19,21 +19,21 @@ parallel_for::parallel_for() {
     }
 }*/
 
-// void parallel_for::operator()(int l, int r, parallel_vector& pv, std::function<int(int)> f) {
-//     if(l > r)
-//         return;
-//     int proccess_begin = pv.get_index_of_proccess(l);
-//     int proccess_end = pv.get_index_of_proccess(r);
-//     if(rank >= proccess_begin && rank <= proccess_end) {
-//         int begin = 0, end = pv.get_portion();
-//         if(rank == proccess_begin)
-//             begin = pv.get_index_of_element(l);
-//         if(rank == proccess_end)
-//             end = pv.get_index_of_element(r);
-//         for(int i = begin; i < end; i++)
-//             pv.set_elem_proc(i, f(pv.get_elem_proc(i)));
-//     }
-// }
+void parallel_for::operator()(int l, int r, parallel_vector& pv, std::function<int(int)> f) {
+    if(l > r)
+        return;
+    int proccess_begin = pv.get_index_of_process(l);
+    int proccess_end = pv.get_index_of_process(r);
+    if(rank >= proccess_begin && rank <= proccess_end) {
+        int begin = 0, end = pv.get_portion();
+        if(rank == proccess_begin)
+            begin = pv.get_index_of_element(l);
+        if(rank == proccess_end)
+            end = pv.get_index_of_element(r);
+        for(int i = begin; i < end; i++)
+            pv.set_elem_proc(i, f(pv.get_elem_proc(i)));
+    }
+}
 
 
 /*int parallel_for::get_ans(int proccess) {
