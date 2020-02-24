@@ -96,12 +96,12 @@ std::pair<int, int> memory_manager::get_number_of_process_and_index(int key, int
 
 int memory_manager::get_logical_index_of_element(int key, int index, int process) {
     int number_elem;
-    if(process < memory[key].logical_size%memory[key].vector.size()) {
-        number_elem = process*memory[key].vector.size() + index;
+    if(process < memory[key].logical_size%int(memory[key].vector.size())) {
+        number_elem = process*int(memory[key].vector.size()) + index;
     }
     else {
-        number_elem = (memory[key].logical_size%memory[key].vector.size())*(memory[key].vector.size()+1)
-                                            + (process-memory[key].logical_size%memory[key].vector.size())*memory[key].vector.size() + index;
+        number_elem = (memory[key].logical_size%int(memory[key].vector.size()))*(int(memory[key].vector.size())+1)
+                                + (process-memory[key].logical_size%int(memory[key].vector.size()))*int(memory[key].vector.size()) + index;
     }
     return number_elem;
 }
