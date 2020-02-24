@@ -43,7 +43,6 @@ int reduce_operation(int ans, const Reduction& reduction, int process_begin, int
         else
         {
             int destination = vtmprank[tmprank - n/(2*i)];
-            tmpans = 0;
             MPI_Send(&tmpans, 1, MPI_INT, destination, REDUCE_TAG, MPI_COMM_WORLD);
             break;
         }        
