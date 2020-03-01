@@ -5,8 +5,17 @@
 #include "memory_manager.h"
 // #include "parallel_vector.h"
 
-#define GET_DATA_FROM_HELPER 123
-#define SEND_DATA_TO_HELPER 234
+
+enum tags {
+    GET_DATA_FROM_HELPER = 123,
+    SEND_DATA_TO_HELPER  = 234
+};
+
+enum operations {
+    SET_DATA,
+    GET_DATA
+};
+
 // посылка: [номер структуры, откуда требуются данные; требуемый номер элемента, кому требуется переслать объект]
 // если номер структуры = -1, то завершение функции helper_thread
 memory_manager mm;
@@ -53,8 +62,8 @@ int memory_manager::get_data(int key, int index_of_element) {
     std::pair<int, int> index = get_number_of_process_and_index(key, index_of_element);
     if(rank == index.first)
         return memory[key].vector[index.second];
-    int request[] = {key, index.second};
-    MPI_Send(&request, 2, MPI_INT, index.first, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
+    int request[] = {GET_DATA, key, index.second, -1};
+    MPI_Send(request, 4, MPI_INT, index.first, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
     int data;
     MPI_Status status;
     MPI_Recv(&data, 1, MPI_INT, index.first, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
@@ -65,6 +74,8 @@ void memory_manager::set_data(int key, int index_of_element, int value) {
     std::pair<int, int> index = get_number_of_process_and_index(key, index_of_element);
     if(rank == index.first)
         memory[key].vector[index.second] = value;
+    int request[] = {SET_DATA, key, index.second, value};
+    MPI_Send(request, 4, MPI_INT, index.first, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
 }
 
 void memory_manager::copy_data(int key_from, int key_to) {
@@ -107,27 +118,32 @@ int memory_manager::get_logical_index_of_element(int key, int index, int process
 }
 
 void helper_thread() {
-    int request[2];
+    int request[4];
     MPI_Status status;
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     while(true) {
-        MPI_Recv(request, 2, MPI_INT, MPI_ANY_SOURCE, SEND_DATA_TO_HELPER, MPI_COMM_WORLD, &status);
+        MPI_Recv(request, 4, MPI_INT, MPI_ANY_SOURCE, SEND_DATA_TO_HELPER, MPI_COMM_WORLD, &status);
         if(request[0] == -1) {
             break;
         }
-        int to_rank = status.MPI_SOURCE;
-        int data = mm.memory[request[0]].vector[request[1]];
-        MPI_Send(&data, 1, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD); // MPI_ISend?
+        if(request[0] == GET_DATA) {
+            int to_rank = status.MPI_SOURCE;
+            int data = mm.memory[request[1]].vector[request[2]];
+            MPI_Send(&data, 1, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD); // MPI_ISend?
+        }
+        else if(request[0] == SET_DATA) {
+            mm.memory[request[1]].vector[request[2]] = request[3];
+        }
     }
 }
 
 void memory_manager::finalize() {
     MPI_Barrier(MPI_COMM_WORLD);
-    int request[2] = {-1, -1};
+    int request[4] = {-1, -1, -1, -1};
     if(rank == 0) {
         for(int i = 0; i < size; i++) {
-            MPI_Send(request, 2, MPI_INT, i, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
+            MPI_Send(request, 4, MPI_INT, i, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
         }
     }
     if(helper_thr.joinable())   
