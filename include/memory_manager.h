@@ -4,12 +4,28 @@
 #include <map>
 #include <thread>
 #include <vector>
+#include <queue>
 #include <iostream>
 
 #define QUANTUM_SIZE 50
 
+enum tags {
+    GET_DATA_FROM_HELPER = 123,
+    SEND_DATA_TO_HELPER  = 234,
+    SEND_DATA_TO_MASTER_HELPER = 345,
+    GET_DATA_FROM_MASTER_HELPER = 456
+};
+
+enum operations {
+    SET_DATA,
+    GET_DATA,
+    LOCK,
+    UNLOCK
+};
+
 struct memory_line {
     std::vector<int> vector;
+    std::map<int, std::queue<int>> wait;
     int logical_size;
     std::vector<int> quantums;
 };
@@ -33,7 +49,8 @@ public:
     std::pair<int, int> get_number_of_process_and_index(int key, int index);
     void finalize();
     ~memory_manager();
-    friend void helper_thread();
+    friend void worker_helper_thread();
+    friend void master_helper_thread();
 };
 
 extern memory_manager mm;

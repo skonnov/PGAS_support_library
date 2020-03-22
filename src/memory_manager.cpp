@@ -5,18 +5,7 @@
 #include "memory_manager.h"
 // #include "parallel_vector.h"
 
-
-enum tags {
-    GET_DATA_FROM_HELPER = 123,
-    SEND_DATA_TO_HELPER  = 234
-};
-
-enum operations {
-    SET_DATA,
-    GET_DATA
-};
-
-// посылка: [номер структуры, откуда требуются данные; требуемый номер элемента, кому требуется переслать объект]
+// посылка: [операция, номер структуры, откуда требуются данные; требуемый номер элемента, кому требуется переслать объект]
 // если номер структуры = -1, то завершение функции helper_thread
 memory_manager mm;
 
@@ -31,7 +20,11 @@ void memory_manager::memory_manager_init(int argc, char**argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     worker_rank = rank - 1;
     worker_size = size - 1;
-    helper_thr = std::thread(helper_thread);
+    if(rank == 0) {
+        helper_thr = std::thread(master_helper_thread);
+    } else {
+        helper_thr = std::thread(worker_helper_thread);
+    }
     // создание своего типа для пересылки посылок ???
 }
 
@@ -127,7 +120,7 @@ int memory_manager::get_logical_index_of_element(int key, int index, int process
     return number_elem;
 }
 
-void helper_thread() {
+void worker_helper_thread() {
     int request[4];
     MPI_Status status;
     int rank;
@@ -148,11 +141,53 @@ void helper_thread() {
     }
 }
 
+void master_helper_thread() {
+    int request[3];
+    MPI_Status status;
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    while(true) {
+        MPI_Recv(&request, 3, MPI_INT, MPI_ANY_SOURCE, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD, &status);
+        if(request[0] == -1) {
+            break;
+        }
+        int key = request[1], quantum = request[2];
+        if(request[0] == LOCK) {
+            std::cout<<"#";
+            if(mm.memory[key].quantums[quantum] == 0) {
+                int to_rank = status.MPI_SOURCE;
+                int tmp = 1;
+                mm.memory[key].quantums[quantum] = status.MPI_SOURCE;
+                MPI_Send(&tmp, 1, MPI_INT, to_rank, GET_DATA_FROM_MASTER_HELPER, MPI_COMM_WORLD);
+            } else {
+                if(mm.memory[key].wait.find(quantum) == mm.memory[key].wait.end())
+                    mm.memory[key].wait.insert({quantum, std::queue<int>{}});
+                mm.memory[key].wait[quantum].push(status.MPI_SOURCE);
+            }
+        }
+        else if(request[0] == UNLOCK) {
+            if(mm.memory[key].quantums[quantum] == status.MPI_SOURCE) {
+                mm.memory[key].quantums[quantum] = 0;
+                if(mm.memory[key].wait.find(quantum) != mm.memory[key].wait.end()) {
+                    int to_rank = mm.memory[key].wait[quantum].front();
+                    mm.memory[key].wait[quantum].pop();
+                    mm.memory[key].quantums[quantum] = to_rank;
+                    if(mm.memory[key].wait[quantum].size() == 0)
+                        mm.memory[key].wait.erase(quantum);
+                    int tmp = 1;
+                    MPI_Send(&tmp, 1, MPI_INT, to_rank, GET_DATA_FROM_MASTER_HELPER, MPI_COMM_WORLD);
+                }
+            }
+        }
+    }
+}
+
 void memory_manager::finalize() {
     MPI_Barrier(MPI_COMM_WORLD);
     int request[4] = {-1, -1, -1, -1};
     if(rank == 0) {
-        for(int i = 0; i < size; i++) {
+        MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
+        for(int i = 1; i < size; i++) {
             MPI_Send(request, 4, MPI_INT, i, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
         }
     }
