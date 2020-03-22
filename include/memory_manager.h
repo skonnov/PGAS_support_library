@@ -6,15 +6,19 @@
 #include <vector>
 #include <iostream>
 
+#define QUANTUM_SIZE 50
+
 struct memory_line {
     std::vector<int> vector;
     int logical_size;
+    std::vector<int> quantums;
 };
 
 class memory_manager {
-    std::vector<memory_line>memory;
+    std::vector<memory_line> memory;
     std::thread helper_thr;
     int rank, size;
+    int worker_rank, worker_size;
 public:
     void memory_manager_init(int argc, char** argv);
     int get_data(int key, int index_of_element); 

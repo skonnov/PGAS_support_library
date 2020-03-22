@@ -29,19 +29,26 @@ void memory_manager::memory_manager_init(int argc, char**argv) {
     }
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
+    worker_rank = rank - 1;
+    worker_size = size - 1;
     helper_thr = std::thread(helper_thread);
     // создание своего типа для пересылки посылок ???
 }
 
-// list of free vectors
-int memory_manager::create_object(int number_of_elements) {  // int*???
-    int portion = number_of_elements/size + (rank < number_of_elements%size?1:0);
-    memory.push_back({std::vector<int>(portion), number_of_elements});
+int memory_manager::create_object(int number_of_elements) {
+    memory_line line;
+    line.logical_size = number_of_elements;
+    if(rank == 0) {
+        line.quantums.resize((number_of_elements + QUANTUM_SIZE - 1)/ QUANTUM_SIZE);
+    } else {
+        int portion = number_of_elements/worker_size + (worker_rank < number_of_elements%worker_size?1:0);
+        line.vector.resize(portion);
+    }
+    memory.push_back(line);
     return memory.size()-1;
-    // разделение памяти по процессам?
 }
 
-// void memory_manager::delete_object(int* object) {  // int*???
+// void memory_manager::delete_object(int* object) { 
 //     auto tmp = map_pointer_to_int.find(object);
 //     if(tmp == map_pointer_to_int.end())
 //         throw -1;
@@ -92,8 +99,8 @@ void memory_manager::set_data_by_index_on_process(int key, int index, int value)
 
 std::pair<int, int> memory_manager::get_number_of_process_and_index(int key, int index) {
     int number_proc, number_elem;
-    int tmp1 = int(memory[key].logical_size)%size;
-    int tmp2 = int(memory[key].logical_size)/size;
+    int tmp1 = int(memory[key].logical_size)%worker_size;
+    int tmp2 = int(memory[key].logical_size)/worker_size;
     if(index < tmp1*(tmp2+1)) {
         number_proc = index/(tmp2+1);
         number_elem = index%(tmp2+1);
@@ -102,11 +109,14 @@ std::pair<int, int> memory_manager::get_number_of_process_and_index(int key, int
         number_proc = tmp1 + tmp/tmp2;
         number_elem = tmp%tmp2;
     }
+    number_proc += 1;
     return {number_proc, number_elem};
 }
 
 int memory_manager::get_logical_index_of_element(int key, int index, int process) {
+
     int number_elem;
+    process -= 1;
     if(process < memory[key].logical_size%int(memory[key].vector.size())) {
         number_elem = process*int(memory[key].vector.size()) + index;
     }
