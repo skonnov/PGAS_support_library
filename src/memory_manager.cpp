@@ -33,6 +33,8 @@ int memory_manager::create_object(int number_of_elements) {
     line.logical_size = number_of_elements;
     if(rank == 0) {
         line.quantums.resize((number_of_elements + QUANTUM_SIZE - 1)/ QUANTUM_SIZE);
+        for(int i = 0; i < line.quantums.size(); i++)
+            line.quantums[i] = -1;
     } else {
         int portion = number_of_elements/worker_size + (worker_rank < number_of_elements%worker_size?1:0);
         line.vector.resize(portion);
@@ -153,8 +155,7 @@ void master_helper_thread() {
         }
         int key = request[1], quantum = request[2];
         if(request[0] == LOCK) {
-            std::cout<<"#";
-            if(mm.memory[key].quantums[quantum] == 0) {
+            if(mm.memory[key].quantums[quantum] == -1) {
                 int to_rank = status.MPI_SOURCE;
                 int tmp = 1;
                 mm.memory[key].quantums[quantum] = status.MPI_SOURCE;
@@ -167,7 +168,7 @@ void master_helper_thread() {
         }
         else if(request[0] == UNLOCK) {
             if(mm.memory[key].quantums[quantum] == status.MPI_SOURCE) {
-                mm.memory[key].quantums[quantum] = 0;
+                mm.memory[key].quantums[quantum] = -1;
                 if(mm.memory[key].wait.find(quantum) != mm.memory[key].wait.end()) {
                     int to_rank = mm.memory[key].wait[quantum].front();
                     mm.memory[key].wait[quantum].pop();
