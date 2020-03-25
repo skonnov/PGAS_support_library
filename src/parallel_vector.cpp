@@ -95,3 +95,7 @@ void parallel_vector::unset_lock(int quantum_index) {
     int request[3] = {UNLOCK, key, quantum_index};
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
 }
+
+int parallel_vector::get_quantum(int index) {
+    return index / QUANTUM_SIZE;
+}
