@@ -32,7 +32,7 @@ int memory_manager::create_object(int number_of_elements) {
     memory_line line;
     line.logical_size = number_of_elements;
     if(rank == 0) {
-        line.quantums.resize((number_of_elements + QUANTUM_SIZE - 1)/ QUANTUM_SIZE);
+        line.quantums.resize((number_of_elements + QUANTUM_SIZE - 1) / QUANTUM_SIZE);
         for(int i = 0; i < line.quantums.size(); i++)
             line.quantums[i] = -1;
     } else {
@@ -78,6 +78,9 @@ void memory_manager::set_data(int key, int index_of_element, int value) {
         memory[key].vector[index.second] = value;
     int request[] = {SET_DATA, key, index.second, value};
     MPI_Send(request, 4, MPI_INT, index.first, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
+    int tmp;
+    MPI_Status status;
+    MPI_Recv(&tmp, 1, MPI_INT, index.first, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
 }
 
 void memory_manager::copy_data(int key_from, int key_to) {
@@ -139,6 +142,9 @@ void worker_helper_thread() {
         }
         else if(request[0] == SET_DATA) {
             mm.memory[request[1]].vector[request[2]] = request[3];
+            int to_rank = status.MPI_SOURCE;
+            int tmp = 1;
+            MPI_Send(&tmp, 1, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD);
         }
     }
 }
