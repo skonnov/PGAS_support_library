@@ -47,6 +47,8 @@ public:
     void set_data_by_index_on_process(int key, int index, int value);
     int get_logical_index_of_element(int key, int index, int process);
     std::pair<int, int> get_number_of_process_and_index(int key, int index);
+    void set_lock(int key, int quantum_index);
+    void unset_lock(int key, int quantum_index);
     void finalize();
     ~memory_manager();
     friend void worker_helper_thread();

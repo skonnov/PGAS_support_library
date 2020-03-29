@@ -84,16 +84,11 @@ int parallel_vector::get_logical_index_of_element(const int& index, const int& p
 }
 
 void parallel_vector::set_lock(int quantum_index) {
-    int request[] = {LOCK, key, quantum_index};
-    MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
-    int ans;
-    MPI_Status status;
-    MPI_Recv(&ans, 1, MPI_INT, 0, GET_DATA_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);
+    mm.set_lock(key, quantum_index);
 }
 
 void parallel_vector::unset_lock(int quantum_index) {
-    int request[3] = {UNLOCK, key, quantum_index};
-    MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
+    mm.unset_lock(key, quantum_index);   
 }
 
 int parallel_vector::get_quantum(int index) {

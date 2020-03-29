@@ -189,6 +189,19 @@ void master_helper_thread() {
     }
 }
 
+void memory_manager::set_lock(int key, int quantum_index) {
+    int request[] = {LOCK, key, quantum_index};
+    MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
+    int ans;
+    MPI_Status status;
+    MPI_Recv(&ans, 1, MPI_INT, 0, GET_DATA_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);
+}
+
+void memory_manager::unset_lock(int key, int quantum_index) {
+    int request[3] = {UNLOCK, key, quantum_index};
+    MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
+}
+
 void memory_manager::finalize() {
     MPI_Barrier(MPI_COMM_WORLD);
     int request[4] = {-1, -1, -1, -1};
