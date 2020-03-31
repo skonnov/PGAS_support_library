@@ -7,7 +7,7 @@
 #include <queue>
 #include <iostream>
 
-#define QUANTUM_SIZE 50
+#define QUANTUM_SIZE 5
 
 enum tags {
     GET_DATA_FROM_HELPER = 123,
@@ -27,6 +27,7 @@ struct memory_line {  // память для одного parallel_vector
     std::vector<int> vector;
     std::map<int, std::queue<int>> wait;  // мапа очередей для процессов, ожидающих разблокировки кванта
     int logical_size;  // общее число элементов в векторе на всех процессах
+    int vector_size;  // число элементов на данном процессе
     std::vector<int> quantums;
     int buffer[QUANTUM_SIZE];
     int index_buffer;  // индекс кванта, находящегося в буфере
@@ -48,8 +49,9 @@ public:
     int get_data_by_index_on_process(int key, int index);  // получить данные по индексу элемента на данном процессе
     void set_data_by_index_on_process(int key, int index, int value);  // сохранить данные по индексу элемента на данном процессе
     int get_logical_index_of_element(int key, int index, int process);  // получить индекс элемента в сквозной нумерации
-    std::pair<int, int> get_number_of_process_and_index(int key, int index);  // получить номер процесса,
-                                                                              // на котором располагается элемент, и его индекс на этом процессе
+    int get_number_of_process(int key, int index);  // получить номер процесса, на котором располагается элемент
+    int get_number_of_element(int key, int index);  // получить конкретный номер элемента на процессе, на котором он расположен
+    int get_quantum_index(int logical_index);  // получить номер кванта по индексу в сквозной нумерации
     void set_lock(int key, int quantum_index);  // заблокировать квант
     void unset_lock(int key, int quantum_index);  // разблокировать квант
     void finalize();  // функция, завершающая выполнение программы, останавливает вспомогательные потоки

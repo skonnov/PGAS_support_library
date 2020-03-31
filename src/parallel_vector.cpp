@@ -72,11 +72,11 @@ int parallel_vector::get_portion() const {
 }
 
 int parallel_vector::get_index_of_process(const int& index) const {
-    return mm.get_number_of_process_and_index(key, index).first;
+    return mm.get_number_of_process(key, index);
 }
 
 int parallel_vector::get_index_of_element(const int& index) const {
-    return mm.get_number_of_process_and_index(key, index).second;
+    return mm.get_number_of_element(key, index);
 }
 
 int parallel_vector::get_logical_index_of_element(const int& index, const int& process)  const {
@@ -92,5 +92,5 @@ void parallel_vector::unset_lock(int quantum_index) {
 }
 
 int parallel_vector::get_quantum(int index) {
-    return index / QUANTUM_SIZE;
+    return mm.get_quantum_index(index);
 }

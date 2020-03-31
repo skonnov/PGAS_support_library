@@ -3,7 +3,6 @@
 #include <vector>
 #include <iostream>
 #include "memory_manager.h"
-// #include "parallel_vector.h"
 
 // посылка: [операция; номер структуры, откуда требуются данные; требуемый номер элемента, кому требуется переслать объект;
 //           значение элемента(для get_data = -1)]
@@ -32,13 +31,18 @@ void memory_manager::memory_manager_init(int argc, char**argv) {
 int memory_manager::create_object(int number_of_elements) {
     memory_line line;
     line.logical_size = number_of_elements;
+    line.vector_size = 0;
     if(rank == 0) {
         line.quantums.resize((number_of_elements + QUANTUM_SIZE - 1) / QUANTUM_SIZE);
         for(int i = 0; i < line.quantums.size(); i++)
             line.quantums[i] = -1;
     } else {
-        int portion = number_of_elements/worker_size + (worker_rank < number_of_elements%worker_size?1:0);
+        int tmp_size = (number_of_elements + QUANTUM_SIZE - 1) / QUANTUM_SIZE * QUANTUM_SIZE;
+        int num_of_quantums = tmp_size / QUANTUM_SIZE;
+        int quantum_portion = num_of_quantums / worker_size + (worker_rank < num_of_quantums%worker_size?1:0);
+        int portion = quantum_portion * QUANTUM_SIZE;
         line.vector.resize(portion);
+        line.vector_size = portion - (rank == size - 1?tmp_size-number_of_elements:0);
     }
     memory.push_back(line);
     return memory.size()-1;
@@ -56,32 +60,34 @@ int memory_manager::create_object(int number_of_elements) {
 // }
 
 int memory_manager::get_size_of_portion(int key) {
-    return memory[key].vector.size();
+    return memory[key].vector_size;
 }
 
 
 int memory_manager::get_data(int key, int index_of_element) {
     // send to 0, чтобы узнать, какой процесс затребовал элемент?
-    std::pair<int, int> index = get_number_of_process_and_index(key, index_of_element);
-    if(rank == index.first)
-        return memory[key].vector[index.second];
-    int request[] = {GET_DATA, key, index.second, -1};
-    MPI_Send(request, 4, MPI_INT, index.first, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
+    int to_rank = get_number_of_process(key, index_of_element);
+    int num_elem = get_number_of_element(key, index_of_element);
+    if(rank == to_rank)
+        return memory[key].vector[num_elem];
+    int request[] = {GET_DATA, key, num_elem, -1};
+    MPI_Send(request, 4, MPI_INT, to_rank, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
     int data;
     MPI_Status status;
-    MPI_Recv(&data, 1, MPI_INT, index.first, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
+    MPI_Recv(&data, 1, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
     return data;
 }
 
 void memory_manager::set_data(int key, int index_of_element, int value) {
-    std::pair<int, int> index = get_number_of_process_and_index(key, index_of_element);
-    if(rank == index.first)
-        memory[key].vector[index.second] = value;
-    int request[] = {SET_DATA, key, index.second, value};
-    MPI_Send(request, 4, MPI_INT, index.first, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
+    int to_rank = get_number_of_process(key, index_of_element);
+    int num_elem = get_number_of_element(key, index_of_element);
+    if(rank == to_rank)
+        memory[key].vector[num_elem] = value;
+    int request[] = {SET_DATA, key, num_elem, value};
+    MPI_Send(request, 4, MPI_INT, to_rank, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
     int tmp;
     MPI_Status status;
-    MPI_Recv(&tmp, 1, MPI_INT, index.first, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
+    MPI_Recv(&tmp, 1, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
 }
 
 void memory_manager::copy_data(int key_from, int key_to) {
@@ -96,20 +102,34 @@ void memory_manager::set_data_by_index_on_process(int key, int index, int value)
     memory[key].vector[index] = value;
 }
 
-std::pair<int, int> memory_manager::get_number_of_process_and_index(int key, int index) {
-    int number_proc, number_elem;
-    int tmp1 = int(memory[key].logical_size)%worker_size;
-    int tmp2 = int(memory[key].logical_size)/worker_size;
-    if(index < tmp1*(tmp2+1)) {
-        number_proc = index/(tmp2+1);
-        number_elem = index%(tmp2+1);
+int memory_manager::get_number_of_process(int key, int index) {
+    int number_proc;
+    int quantum_index = get_quantum_index(index);
+    int tmp1 = int((memory[key].logical_size + QUANTUM_SIZE - 1)/QUANTUM_SIZE)%worker_size;
+    int tmp2 = int((memory[key].logical_size + QUANTUM_SIZE - 1)/QUANTUM_SIZE)/worker_size;
+    if(quantum_index < tmp1*(tmp2+1)) {
+        number_proc = quantum_index/(tmp2+1);
     } else {
-        int tmp = index - tmp1*(tmp2+1);
+        int tmp = quantum_index - tmp1*(tmp2+1);
         number_proc = tmp1 + tmp/tmp2;
-        number_elem = tmp%tmp2;
     }
     number_proc += 1;
-    return {number_proc, number_elem};
+    return number_proc;
+}
+
+int memory_manager::get_number_of_element(int key, int index) {
+    int number_elem, quantum_number_elem;
+    int quantum_index = get_quantum_index(index);
+    int tmp1 = int((memory[key].logical_size + QUANTUM_SIZE - 1)/QUANTUM_SIZE)%worker_size;
+    int tmp2 = int((memory[key].logical_size + QUANTUM_SIZE - 1)/QUANTUM_SIZE)/worker_size;
+    if(quantum_index < tmp1*(tmp2+1)) {
+        quantum_number_elem = quantum_index%(tmp2+1);
+    } else {
+        int tmp = quantum_index - tmp1*(tmp2+1);
+        quantum_number_elem = tmp%tmp2;
+    }
+    number_elem = quantum_number_elem*QUANTUM_SIZE + index%QUANTUM_SIZE;
+    return number_elem;
 }
 
 int memory_manager::get_logical_index_of_element(int key, int index, int process) {
@@ -123,6 +143,10 @@ int memory_manager::get_logical_index_of_element(int key, int index, int process
                                 + (process-memory[key].logical_size%int(memory[key].vector.size()))*int(memory[key].vector.size()) + index;
     }
     return number_elem;
+}
+
+int memory_manager::get_quantum_index(int logical_index) {
+    return logical_index/QUANTUM_SIZE;
 }
 
 void worker_helper_thread() {
