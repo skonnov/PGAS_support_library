@@ -5,7 +5,8 @@
 #include "memory_manager.h"
 // #include "parallel_vector.h"
 
-// посылка: [операция, номер структуры, откуда требуются данные; требуемый номер элемента, кому требуется переслать объект]
+// посылка: [операция; номер структуры, откуда требуются данные; требуемый номер элемента, кому требуется переслать объект;
+//           значение элемента(для get_data = -1)]
 // если номер структуры = -1, то завершение функции helper_thread
 memory_manager mm;
 
@@ -112,7 +113,6 @@ std::pair<int, int> memory_manager::get_number_of_process_and_index(int key, int
 }
 
 int memory_manager::get_logical_index_of_element(int key, int index, int process) {
-
     int number_elem;
     process -= 1;
     if(process < memory[key].logical_size%int(memory[key].vector.size())) {
@@ -216,7 +216,7 @@ void memory_manager::finalize() {
     MPI_Finalize();
 }
 
-memory_manager::~memory_manager() {
+// memory_manager::~memory_manager() {
     // int request[2] = {-1, -1};
     // if(rank == 0) {
     //     for(int i = 0; i < size; i++) {
@@ -229,4 +229,4 @@ memory_manager::~memory_manager() {
     // std::cout<<"join ended\n";
     // MPI_Finalize();
     // std::cout<<"this is destructor\n";
-}
+// }
