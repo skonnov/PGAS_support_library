@@ -22,7 +22,8 @@ enum operations {
     LOCK,
     UNLOCK
 };
-
+void worker_helper_thread();
+void master_helper_thread();
 struct memory_line {  // память для одного parallel_vector
     std::vector<int> vector;
     std::map<int, std::queue<int>> wait;  // мапа очередей для процессов, ожидающих разблокировки кванта
@@ -65,3 +66,4 @@ extern memory_manager mm;
 void init(int argc, char** argv);
 
 #endif  // __MEMORY_MANAGER_H__
+

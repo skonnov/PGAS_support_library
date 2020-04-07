@@ -45,6 +45,7 @@ int memory_manager::create_object(int number_of_elements) {
         line.vector_size = portion - (rank == size - 1?tmp_size-number_of_elements:0);
     }
     memory.push_back(line);
+    MPI_Barrier(MPI_COMM_WORLD);
     return memory.size()-1;
 }
 
@@ -161,11 +162,21 @@ void worker_helper_thread() {
         }
         if(request[0] == GET_DATA) {
             int to_rank = status.MPI_SOURCE;
-            int data = mm.memory[request[1]].vector[request[2]];
+            int key = request[1], index = request[2], value = request[3];
+            if(key < 0 || key >= mm.memory.size())
+                throw -1;
+            if(index < 0 || index >= mm.memory[key].vector.size())
+                throw "-2";
+            int data = mm.memory[key].vector[index];
             MPI_Send(&data, 1, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD); // MPI_ISend?
         }
         else if(request[0] == SET_DATA) {
-            mm.memory[request[1]].vector[request[2]] = request[3];
+            int key = request[1], index = request[2], value = request[3];
+            if(key < 0 || key >= mm.memory.size())
+                throw -1;
+            if(index < 0 || index >= mm.memory[key].vector.size())
+                throw -2;
+            mm.memory[key].vector[index] = value;
             int to_rank = status.MPI_SOURCE;
             int tmp = 1;
             MPI_Send(&tmp, 1, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD);
