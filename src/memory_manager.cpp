@@ -2,6 +2,7 @@
 #include <mpi.h>
 #include <vector>
 #include <iostream>
+#include <cassert>
 #include "memory_manager.h"
 
 // посылка: [операция; номер структуры, откуда требуются данные; требуемый номер элемента, кому требуется переслать объект;
@@ -25,6 +26,7 @@ void memory_manager::memory_manager_init(int argc, char**argv) {
     } else {
         helper_thr = std::thread(worker_helper_thread);
     }
+    is_read_only_mode = false;
     // создание своего типа для пересылки посылок ???
 }
 
@@ -42,6 +44,7 @@ int memory_manager::create_object(int number_of_elements) {
         int quantum_portion = num_of_quantums / worker_size + (worker_rank < num_of_quantums%worker_size?1:0);
         int portion = quantum_portion * QUANTUM_SIZE;
         line.vector.resize(portion);
+        line.index_buffer = -1;
         line.vector_size = portion - (rank == size - 1?tmp_size-number_of_elements:0);
     }
     memory.push_back(line);
@@ -69,17 +72,23 @@ int memory_manager::get_data(int key, int index_of_element) {
     // send to 0, чтобы узнать, какой процесс затребовал элемент?
     int to_rank = get_number_of_process(key, index_of_element);
     int num_elem = get_number_of_element(key, index_of_element);
+    int num_quantum = get_quantum_index(num_elem);
     if(rank == to_rank)
         return memory[key].vector[num_elem];
-    int request[] = {GET_DATA, key, num_elem, -1};
+    int request[] = {GET_DATA, key, num_quantum, -1};
+    if(is_in_buffer(key, index_of_element))
+        return memory[key].buffer[index_of_element%QUANTUM_SIZE];
     MPI_Send(request, 4, MPI_INT, to_rank, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
-    int data;
     MPI_Status status;
-    MPI_Recv(&data, 1, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
-    return data;
+    MPI_Recv(mm.memory[key].buffer, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
+    mm.memory[key].index_buffer = mm.get_quantum_index(index_of_element)*QUANTUM_SIZE;
+    return mm.memory[key].buffer[index_of_element - mm.memory[key].index_buffer];
 }
 
 void memory_manager::set_data(int key, int index_of_element, int value) {
+    if(is_read_only_mode) {
+        throw -1;
+    }
     int to_rank = get_number_of_process(key, index_of_element);
     int num_elem = get_number_of_element(key, index_of_element);
     if(rank == to_rank)
@@ -100,6 +109,8 @@ int memory_manager::get_data_by_index_on_process(int key, int index) {
 }
 
 void memory_manager::set_data_by_index_on_process(int key, int index, int value) {
+    if(is_read_only_mode)
+        throw -1;
     memory[key].vector[index] = value;
 }
 
@@ -146,36 +157,39 @@ int memory_manager::get_logical_index_of_element(int key, int index, int process
     return number_elem;
 }
 
-int memory_manager::get_quantum_index(int logical_index) {
-    return logical_index/QUANTUM_SIZE;
+int memory_manager::get_quantum_index(int index) {
+    return index/QUANTUM_SIZE;
 }
+
 
 void worker_helper_thread() {
     int request[4];
     MPI_Status status;
-    int rank;
+    int rank, size;
+    int cnt_end = 0;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
     while(true) {
         MPI_Recv(request, 4, MPI_INT, MPI_ANY_SOURCE, SEND_DATA_TO_HELPER, MPI_COMM_WORLD, &status);
         if(request[0] == -1) {
-            break;
+            cnt_end++;
+            if(cnt_end == size)
+                break;
         }
         if(request[0] == GET_DATA) {
             int to_rank = status.MPI_SOURCE;
-            int key = request[1], index = request[2], value = request[3];
+            int key = request[1], index = request[2];
             if(key < 0 || key >= mm.memory.size())
                 throw -1;
             if(index < 0 || index >= mm.memory[key].vector.size())
                 throw "-2";
-            int data = mm.memory[key].vector[index];
-            MPI_Send(&data, 1, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD); // MPI_ISend?
+            int* data = mm.memory[key].vector.data() + index*QUANTUM_SIZE;
+            MPI_Send(data, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD);
         }
         else if(request[0] == SET_DATA) {
             int key = request[1], index = request[2], value = request[3];
             if(key < 0 || key >= mm.memory.size())
                 throw -1;
-            if(index < 0 || index >= mm.memory[key].vector.size())
-                throw -2;
             mm.memory[key].vector[index] = value;
             int to_rank = status.MPI_SOURCE;
             int tmp = 1;
@@ -187,15 +201,22 @@ void worker_helper_thread() {
 void master_helper_thread() {
     int request[3];
     MPI_Status status;
-    int rank;
+    int rank, size;
+    int cnt_end = 0;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
     while(true) {
         MPI_Recv(&request, 3, MPI_INT, MPI_ANY_SOURCE, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD, &status);
         if(request[0] == -1) {
-            break;
+            cnt_end++;
+            if(cnt_end == size)
+                break;
         }
         int key = request[1], quantum = request[2];
-        if(request[0] == LOCK) {
+        if(request[0] == LOCK_READ || request[0] == LOCK_WRITE) {
+            if(request[0] == LOCK_WRITE) {
+
+            }
             if(mm.memory[key].quantums[quantum] == -1) {
                 int to_rank = status.MPI_SOURCE;
                 int tmp = 1;
@@ -224,12 +245,20 @@ void master_helper_thread() {
     }
 }
 
-void memory_manager::set_lock(int key, int quantum_index) {
-    int request[] = {LOCK, key, quantum_index};
+void memory_manager::set_lock_read(int key, int quantum_index) {
+    int request[] = {LOCK_READ, key, quantum_index};
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
     int ans;
     MPI_Status status;
     MPI_Recv(&ans, 1, MPI_INT, 0, GET_DATA_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);
+}
+
+void memory_manager::set_lock_write(int key, int quantum_index) {
+    // int request[] = {LOCK_WRITE, key, quantum_index};
+    // MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
+    // int ans;
+    // MPI_Status status;
+    // MPI_Recv(&ans, 1, MPI_INT, 0, GET_DATA_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);
 }
 
 void memory_manager::unset_lock(int key, int quantum_index) {
@@ -237,18 +266,37 @@ void memory_manager::unset_lock(int key, int quantum_index) {
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
 }
 
+bool memory_manager::is_in_buffer(int key, int logical_index) {
+    return is_read_only_mode && (logical_index >= memory[key].index_buffer && logical_index < memory[key].index_buffer + QUANTUM_SIZE);
+}
+
 void memory_manager::finalize() {
     MPI_Barrier(MPI_COMM_WORLD);
     int request[4] = {-1, -1, -1, -1};
-    if(rank == 0) {
-        MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
-        for(int i = 1; i < size; i++) {
-            MPI_Send(request, 4, MPI_INT, i, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
-        }
+    MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
+    for(int i = 1; i < size; i++) {
+        MPI_Send(request, 4, MPI_INT, i, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
     }
-    if(helper_thr.joinable())   
-        helper_thr.join();
+    assert(helper_thr.joinable());
+    helper_thr.join();
+    
     MPI_Finalize();
+}
+
+void memory_manager::section_lock(int mode) {
+    if(mode == READ_ONLY) {
+        is_read_only_mode = true;
+    } else if(mode == READ_WRITE) {
+        
+    }
+}
+
+void memory_manager::section_unlock(int mode) {
+    if(mode == READ_ONLY) {
+        is_read_only_mode = false;
+    } else if(mode == READ_WRITE) {
+        
+    }
 }
 
 // memory_manager::~memory_manager() {

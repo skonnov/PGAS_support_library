@@ -9,6 +9,11 @@
 
 #define QUANTUM_SIZE 5
 
+enum mods {
+    READ_ONLY,
+    READ_WRITE
+};
+
 enum tags {
     GET_DATA_FROM_HELPER = 123,
     SEND_DATA_TO_HELPER  = 234,
@@ -19,7 +24,8 @@ enum tags {
 enum operations {
     SET_DATA,
     GET_DATA,
-    LOCK,
+    LOCK_READ,
+    LOCK_WRITE,
     UNLOCK
 };
 void worker_helper_thread();
@@ -39,6 +45,7 @@ class memory_manager {
     std::thread helper_thr;
     int rank, size;
     int worker_rank, worker_size;
+    bool is_read_only_mode;
 public:
     void memory_manager_init(int argc, char** argv);  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
     int get_data(int key, int index_of_element);  // получить элемент по индексу с любого процесса
@@ -52,13 +59,17 @@ public:
     int get_logical_index_of_element(int key, int index, int process);  // получить индекс элемента в сквозной нумерации
     int get_number_of_process(int key, int index);  // получить номер процесса, на котором располагается элемент
     int get_number_of_element(int key, int index);  // получить конкретный номер элемента на процессе, на котором он расположен
-    int get_quantum_index(int logical_index);  // получить номер кванта по индексу в сквозной нумерации
-    void set_lock(int key, int quantum_index);  // заблокировать квант
+    int get_quantum_index(int index);  // получить номер кванта по индексу
+    void set_lock_read(int key, int quantum_index);  // заблокировать квант
+    void set_lock_write(int key, int quantum_index);  // not ready yet
     void unset_lock(int key, int quantum_index);  // разблокировать квант
+    bool is_in_buffer(int key, int logical_index);
     void finalize();  // функция, завершающая выполнение программы, останавливает вспомогательные потоки
     // ~memory_manager();
     friend void worker_helper_thread();  // функция, выполняемая вспомогательными потоками процессов-рабочих
     friend void master_helper_thread();  // функция, выполняемая вспомогательным потоком процесса-мастера
+    void section_lock(int mode);  // not ready yet
+    void section_unlock(int mode);
 };
 
 extern memory_manager mm;

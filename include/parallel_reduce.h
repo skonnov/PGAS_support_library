@@ -8,7 +8,7 @@
   // std::function<int(int, int)>reduction - ?
   // std::function<int(int, int, const parallel_vector&, int)> func - ?
 
-#define REDUCE_TAG 456
+#define REDUCE_TAG 4567
 
 template<class Reduction>
 int reduce_operation(int ans, const Reduction& reduction, int process_begin, int process_end, int process = 0) {

@@ -83,8 +83,12 @@ int parallel_vector::get_logical_index_of_element(const int& index, const int& p
     return mm.get_logical_index_of_element(key, index, process);
 }
 
-void parallel_vector::set_lock(int quantum_index) {
-    mm.set_lock(key, quantum_index);
+void parallel_vector::set_lock_read(int quantum_index) {
+    mm.set_lock_read(key, quantum_index);
+}
+
+void parallel_vector::set_lock_write(int quantum_index) {
+    mm.set_lock_write(key, quantum_index);
 }
 
 void parallel_vector::unset_lock(int quantum_index) {
