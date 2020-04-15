@@ -56,7 +56,7 @@ public:
     int get_size_of_portion(int key);  // получить размер вектора memory из memory_line на данном процессе
     int get_data_by_index_on_process(int key, int index);  // получить данные по индексу элемента на данном процессе
     void set_data_by_index_on_process(int key, int index, int value);  // сохранить данные по индексу элемента на данном процессе
-    int get_logical_index_of_element(int key, int index, int process);  // получить индекс элемента в сквозной нумерации
+    int get_global_index_of_element(int key, int index, int process);  // получить индекс элемента в сквозной нумерации
     int get_number_of_process(int key, int index);  // получить номер процесса, на котором располагается элемент
     int get_number_of_element(int key, int index);  // получить конкретный номер элемента на процессе, на котором он расположен
     int get_quantum_index(int index);  // получить номер кванта по индексу

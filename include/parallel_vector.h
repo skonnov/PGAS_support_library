@@ -23,7 +23,7 @@ public:
     void set_elem_proc(const int& index, const int& value); //don't touch this in main! 
     int get_index_of_process(const int& index) const;
     int get_index_of_element(const int& index) const;
-    int get_logical_index_of_element(const int& index, const int& proccess) const;
+    int get_global_index_of_element(const int& index, const int& proccess) const;
     void set_lock_read(int quantum_index);
     void set_lock_write(int quantum_index);
     void unset_lock(int quantum_index);

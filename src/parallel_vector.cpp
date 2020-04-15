@@ -79,8 +79,8 @@ int parallel_vector::get_index_of_element(const int& index) const {
     return mm.get_number_of_element(key, index);
 }
 
-int parallel_vector::get_logical_index_of_element(const int& index, const int& process)  const {
-    return mm.get_logical_index_of_element(key, index, process);
+int parallel_vector::get_global_index_of_element(const int& index, const int& process)  const {
+    return mm.get_global_index_of_element(key, index, process);
 }
 
 void parallel_vector::set_lock_read(int quantum_index) {

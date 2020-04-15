@@ -144,15 +144,17 @@ int memory_manager::get_number_of_element(int key, int index) {
     return number_elem;
 }
 
-int memory_manager::get_logical_index_of_element(int key, int index, int process) {
+int memory_manager::get_global_index_of_element(int key, int index, int process) {
+    if(process == 0)
+        throw -2;
     int number_elem;
     process -= 1;
-    if(process < memory[key].logical_size%int(memory[key].vector.size())) {
-        number_elem = process*int(memory[key].vector.size()) + index;
-    }
-    else {
-        number_elem = (memory[key].logical_size%int(memory[key].vector.size()))*(int(memory[key].vector.size())+1)
-                                + (process-memory[key].logical_size%int(memory[key].vector.size()))*int(memory[key].vector.size()) + index;
+    int num_of_quantums = (memory[key].logical_size + QUANTUM_SIZE-1)/QUANTUM_SIZE;
+    if(process < num_of_quantums%worker_size) {
+        number_elem = process*(num_of_quantums/worker_size+1)*QUANTUM_SIZE+index;
+    } else {
+        number_elem = (num_of_quantums/worker_size+1)*QUANTUM_SIZE*(num_of_quantums%worker_size) +
+                                    + (process-num_of_quantums%worker_size)*(num_of_quantums/worker_size)*QUANTUM_SIZE + index;
     }
     return number_elem;
 }

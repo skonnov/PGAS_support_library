@@ -15,7 +15,7 @@ public:
         for(int i = l; i < r; i++) {
             int rank;
             MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-            ans+=a->get_elem_proc(i)*(*b)[a->get_logical_index_of_element(i, rank)%(b->size())];
+            ans+=a->get_elem_proc(i)*(*b)[a->get_global_index_of_element(i, rank)%(b->size())];
         }
         return ans;
     }  
