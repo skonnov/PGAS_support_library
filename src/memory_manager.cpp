@@ -33,19 +33,18 @@ void memory_manager::memory_manager_init(int argc, char**argv) {
 int memory_manager::create_object(int number_of_elements) {
     memory_line line;
     line.logical_size = number_of_elements;
-    line.vector_size = 0;
     if(rank == 0) {
-        line.quantums.resize((number_of_elements + QUANTUM_SIZE - 1) / QUANTUM_SIZE);
-        for(int i = 0; i < line.quantums.size(); i++)
-            line.quantums[i] = -1;
+        line.quantums_for_lock.resize((number_of_elements + QUANTUM_SIZE - 1) / QUANTUM_SIZE);
+        line.quantum_owner.resize((number_of_elements + QUANTUM_SIZE - 1) / QUANTUM_SIZE);
+        for(int i = 0; i < line.quantums_for_lock.size(); i++) {
+            line.quantums_for_lock[i] = -1;
+            line.quantum_owner[i] = -1;
+        }
     } else {
-        int tmp_size = (number_of_elements + QUANTUM_SIZE - 1) / QUANTUM_SIZE * QUANTUM_SIZE;
-        int num_of_quantums = tmp_size / QUANTUM_SIZE;
-        int quantum_portion = num_of_quantums / worker_size + (worker_rank < num_of_quantums%worker_size?1:0);
-        int portion = quantum_portion * QUANTUM_SIZE;
-        line.vector.resize(portion);
-        line.index_buffer = -1;
-        line.vector_size = portion - (rank == size - 1?tmp_size-number_of_elements:0);
+        line.quantums.resize((number_of_elements + QUANTUM_SIZE - 1) / QUANTUM_SIZE);
+        for(int i = 0; i < line.quantums.size(); i++) {
+            line.quantums[i] = {false, nullptr};
+        }
     }
     memory.push_back(line);
     MPI_Barrier(MPI_COMM_WORLD);
@@ -183,8 +182,6 @@ void worker_helper_thread() {
             int key = request[1], index = request[2];
             if(key < 0 || key >= mm.memory.size())
                 throw -1;
-            if(index < 0 || index >= mm.memory[key].vector.size())
-                throw "-2";
             int* data = mm.memory[key].vector.data() + index*QUANTUM_SIZE;
             MPI_Send(data, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD);
         }
@@ -192,6 +189,8 @@ void worker_helper_thread() {
             int key = request[1], index = request[2], value = request[3];
             if(key < 0 || key >= mm.memory.size())
                 throw -1;
+            if(index < 0 || index >= mm.memory[key].vector.size())
+                throw "-2";
             mm.memory[key].vector[index] = value;
             int to_rank = status.MPI_SOURCE;
             int tmp = 1;
@@ -219,10 +218,10 @@ void master_helper_thread() {
             if(request[0] == LOCK_WRITE) {
 
             }
-            if(mm.memory[key].quantums[quantum] == -1) {
+            if(mm.memory[key].quantums_for_lock[quantum] == -1) {
                 int to_rank = status.MPI_SOURCE;
                 int tmp = 1;
-                mm.memory[key].quantums[quantum] = status.MPI_SOURCE;
+                mm.memory[key].quantums_for_lock[quantum] = status.MPI_SOURCE;
                 MPI_Send(&tmp, 1, MPI_INT, to_rank, GET_DATA_FROM_MASTER_HELPER, MPI_COMM_WORLD);
             } else {
                 if(mm.memory[key].wait.find(quantum) == mm.memory[key].wait.end())
@@ -231,12 +230,12 @@ void master_helper_thread() {
             }
         }
         else if(request[0] == UNLOCK) {
-            if(mm.memory[key].quantums[quantum] == status.MPI_SOURCE) {
-                mm.memory[key].quantums[quantum] = -1;
+            if(mm.memory[key].quantums_for_lock[quantum] == status.MPI_SOURCE) {
+                mm.memory[key].quantums_for_lock[quantum] = -1;
                 if(mm.memory[key].wait.find(quantum) != mm.memory[key].wait.end()) {
                     int to_rank = mm.memory[key].wait[quantum].front();
                     mm.memory[key].wait[quantum].pop();
-                    mm.memory[key].quantums[quantum] = to_rank;
+                    mm.memory[key].quantums_for_lock[quantum] = to_rank;
                     if(mm.memory[key].wait[quantum].size() == 0)
                         mm.memory[key].wait.erase(quantum);
                     int tmp = 1;

@@ -30,14 +30,13 @@ enum operations {
 };
 void worker_helper_thread();
 void master_helper_thread();
+
 struct memory_line {  // память для одного parallel_vector
-    std::vector<int> vector;
-    std::map<int, std::queue<int>> wait;  // мапа очередей для процессов, ожидающих разблокировки кванта
+    std::vector<std::pair<bool, std::array<int, QUANTUM_SIZE>*>>quantums;
     int logical_size;  // общее число элементов в векторе на всех процессах
-    int vector_size;  // число элементов на данном процессе
-    std::vector<int> quantums;
-    int buffer[QUANTUM_SIZE];
-    int index_buffer;  // индекс кванта, находящегося в буфере
+    std::vector<int>quantum_owner;
+    std::map<int, std::queue<int>> wait;  // мапа очередей для процессов, ожидающих разблокировки кванта
+    std::vector<int> quantums_for_lock;
 };
 
 class memory_manager {
