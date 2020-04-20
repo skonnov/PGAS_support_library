@@ -18,12 +18,17 @@ enum tags {
     GET_DATA_FROM_HELPER = 123,
     SEND_DATA_TO_HELPER  = 234,
     SEND_DATA_TO_MASTER_HELPER = 345,
-    GET_DATA_FROM_MASTER_HELPER = 456
+    GET_DATA_FROM_MASTER_HELPER_LOCK = 456,
+    SEND_INFO_TO_MASTER_HELPER = 567,
+    GET_INFO_FROM_MASTER_HELPER = 678,
+    GET_REQUEST_FROM_MASTER_HELPER = 789
 };
 
 enum operations {
     SET_DATA,
     GET_DATA,
+    SET_INFO,
+    GET_INFO,
     LOCK_READ,
     LOCK_WRITE,
     UNLOCK
@@ -32,7 +37,7 @@ void worker_helper_thread();
 void master_helper_thread();
 
 struct memory_line {  // память для одного parallel_vector
-    std::vector<std::pair<bool, std::array<int, QUANTUM_SIZE>*>>quantums;
+    std::vector<std::pair<bool, int*>>quantums;  // delete bool?
     int logical_size;  // общее число элементов в векторе на всех процессах
     std::vector<int>quantum_owner;
     std::map<int, std::queue<int>> wait;  // мапа очередей для процессов, ожидающих разблокировки кванта
