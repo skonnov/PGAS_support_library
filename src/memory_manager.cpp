@@ -73,7 +73,7 @@ int memory_manager::get_data(int key, int index_of_element) {
     auto& quantum = mm.memory[key].quantums[num_quantum];
     if (quantum != nullptr)
         return quantum[index_of_element%QUANTUM_SIZE];
-    quantum = new int(QUANTUM_SIZE);
+    quantum = new int[QUANTUM_SIZE];
     int request[3] = {GET_INFO, key, num_quantum};
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
     int to_rank = -1;
@@ -92,9 +92,11 @@ void memory_manager::set_data(int key, int index_of_element, int value) {
     }
     int num_quantum = get_quantum_index(index_of_element);
     auto& quantum = mm.memory[key].quantums[num_quantum];
-    if (quantum != nullptr)
+    if (quantum != nullptr) {
         quantum[index_of_element%QUANTUM_SIZE] = value;
-    quantum = new int(QUANTUM_SIZE);
+        return;
+    }
+    quantum = new int[QUANTUM_SIZE];
     int request[3] = {GET_INFO, key, num_quantum};
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
     int to_rank = -1;
@@ -178,7 +180,7 @@ void worker_helper_thread() {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     while(true) {
-        MPI_Recv(request, 3, MPI_INT, MPI_ANY_SOURCE, SEND_DATA_TO_HELPER, MPI_COMM_WORLD, &status);
+        MPI_Recv(request, 4, MPI_INT, MPI_ANY_SOURCE, SEND_DATA_TO_HELPER, MPI_COMM_WORLD, &status);
         if(request[0] == -1) {
             for (int key = 0; key < int(mm.memory.size()); key++) {
                 for(int i = 0; i < int(mm.memory[key].quantums.size()); i++) {
@@ -279,6 +281,7 @@ void master_helper_thread() {
                 }
                 break;
         }
+
     }
 }
 
@@ -305,10 +308,12 @@ void memory_manager::unset_lock(int key, int quantum_index) {
 
 void memory_manager::finalize() {
     MPI_Barrier(MPI_COMM_WORLD);
-    int request[4] = {-1, -1, -1, -1};
-    MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
-    for(int i = 1; i < size; i++) {
-        MPI_Send(request, 4, MPI_INT, i, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
+    if(rank == 0) {
+        int request[4] = {-1, -1, -1, -1};
+        MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
+        for(int i = 1; i < size; i++) {
+            MPI_Send(request, 4, MPI_INT, i, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
+        }
     }
     assert(helper_thr.joinable());
     helper_thr.join();
