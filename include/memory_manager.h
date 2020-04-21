@@ -37,7 +37,7 @@ void worker_helper_thread();
 void master_helper_thread();
 
 struct memory_line {  // память для одного parallel_vector
-    std::vector<std::pair<bool, int*>>quantums;  // delete bool?
+    std::vector<int*>quantums;  // delete bool?
     int logical_size;  // общее число элементов в векторе на всех процессах
     std::vector<int>quantum_owner;
     std::map<int, std::queue<int>> wait;  // мапа очередей для процессов, ожидающих разблокировки кванта

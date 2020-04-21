@@ -71,19 +71,18 @@ int memory_manager::get_size_of_portion(int key) {
 int memory_manager::get_data(int key, int index_of_element) {
     int num_quantum = get_quantum_index(index_of_element);
     auto& quantum = mm.memory[key].quantums[num_quantum];
-    if (quantum.first)
-        return quantum.second[index_of_element%QUANTUM_SIZE];
-    quantum.first = true;
-    quantum.second = new int(QUANTUM_SIZE);
+    if (quantum != nullptr)
+        return quantum[index_of_element%QUANTUM_SIZE];
+    quantum = new int(QUANTUM_SIZE);
     int request[3] = {GET_INFO, key, num_quantum};
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
     int to_rank = -1;
     MPI_Status status;
     MPI_Recv(&to_rank, 1, MPI_INT, 0, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);
-    MPI_Recv(quantum.second, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
+    MPI_Recv(quantum, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
     request[0] = SET_INFO;
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
-    return quantum.second[index_of_element%QUANTUM_SIZE];
+    return quantum[index_of_element%QUANTUM_SIZE];
 }
 
 void memory_manager::set_data(int key, int index_of_element, int value) {
@@ -92,19 +91,18 @@ void memory_manager::set_data(int key, int index_of_element, int value) {
     }
     int num_quantum = get_quantum_index(index_of_element);
     auto& quantum = mm.memory[key].quantums[num_quantum];
-    if (quantum.first)
-        quantum.second[index_of_element%QUANTUM_SIZE] = value;
-    quantum.first = true;
-    quantum.second = new int(QUANTUM_SIZE);
+    if (quantum != nullptr)
+        quantum[index_of_element%QUANTUM_SIZE] = value;
+    quantum = new int(QUANTUM_SIZE);
     int request[3] = {GET_INFO, key, num_quantum};
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
     int to_rank = -1;
     MPI_Status status;
     MPI_Recv(&to_rank, 1, MPI_INT, 0, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);
-    MPI_Recv(quantum.second, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
+    MPI_Recv(quantum, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
     request[0] = SET_INFO;
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
-    quantum.second[index_of_element%QUANTUM_SIZE] = value;
+    quantum[index_of_element%QUANTUM_SIZE] = value;
 }
 
 void memory_manager::copy_data(int key_from, int key_to) {
@@ -182,8 +180,10 @@ void worker_helper_thread() {
         if(request[0] == -1) {
             for (int key = 0; key < mm.memory.size(); key++) {
                 for(int i = 0; i < mm.memory[key].quantums.size(); i++) {
-                    if(mm.memory[key].quantums[i].second != nullptr)
-                        delete[] mm.memory[key].quantums[i].second;
+                    if(mm.memory[key].quantums[i] != nullptr) {
+                        delete[] mm.memory[key].quantums[i];
+                        mm.memory[key].quantums[i] = nullptr;
+                    }
                 }
             }
             break;
@@ -191,11 +191,10 @@ void worker_helper_thread() {
         int key = request[1], quantum_index = request[2], to_rank = request[3];
         switch(request[0]) {
             case GET_DATA:
-                mm.memory[key].quantums[quantum_index].first = false;
-                MPI_Send(mm.memory[key].quantums[quantum_index].second, QUANTUM_SIZE,
+                MPI_Send(mm.memory[key].quantums[quantum_index], QUANTUM_SIZE,
                                         MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD);
-                delete[] mm.memory[key].quantums[quantum_index].second;
-                mm.memory[key].quantums[quantum_index].second = nullptr;
+                delete[] mm.memory[key].quantums[quantum_index];
+                mm.memory[key].quantums[quantum_index] = nullptr;
                 break;
         }
     }
@@ -275,7 +274,7 @@ void memory_manager::set_lock_write(int key, int quantum_index) {
 
 void memory_manager::unset_lock(int key, int quantum_index) {
     int request[3] = {UNLOCK, key, quantum_index};
-    MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER_LOCK, MPI_COMM_WORLD);
+    MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
 }
 
 bool memory_manager::is_in_buffer(int key, int logical_index) {
