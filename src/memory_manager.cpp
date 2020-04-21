@@ -38,12 +38,12 @@ int memory_manager::create_object(int number_of_elements) {
         line.quantum_owner.resize((number_of_elements + QUANTUM_SIZE - 1) / QUANTUM_SIZE);
         for (int i = 0; i < line.quantums_for_lock.size(); i++) {
             line.quantums_for_lock[i] = -1;
-            line.quantum_owner[i] = -1;
+            line.quantum_owner[i] = {0, -1};
         }
     } else {
         line.quantums.resize((number_of_elements + QUANTUM_SIZE - 1) / QUANTUM_SIZE);
         for (int i = 0; i < line.quantums.size(); i++) {
-            line.quantums[i] = {false, nullptr};
+            line.quantums[i] = nullptr;
         }
     }
     memory.push_back(line);
@@ -79,7 +79,8 @@ int memory_manager::get_data(int key, int index_of_element) {
     int to_rank = -1;
     MPI_Status status;
     MPI_Recv(&to_rank, 1, MPI_INT, 0, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);
-    MPI_Recv(quantum, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
+    if (to_rank != rank)
+        MPI_Recv(quantum, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
     request[0] = SET_INFO;
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
     return quantum[index_of_element%QUANTUM_SIZE];
@@ -99,7 +100,8 @@ void memory_manager::set_data(int key, int index_of_element, int value) {
     int to_rank = -1;
     MPI_Status status;
     MPI_Recv(&to_rank, 1, MPI_INT, 0, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);
-    MPI_Recv(quantum, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
+    if (to_rank != rank)
+        MPI_Recv(quantum, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
     request[0] = SET_INFO;
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
     quantum[index_of_element%QUANTUM_SIZE] = value;
@@ -227,30 +229,58 @@ void master_helper_thread() {
                     mm.memory[key].quantums_for_lock[quantum] = status.MPI_SOURCE;
                     MPI_Send(&tmp, 1, MPI_INT, to_rank, GET_DATA_FROM_MASTER_HELPER_LOCK, MPI_COMM_WORLD);
                 } else {
-                    if(mm.memory[key].wait.find(quantum) == mm.memory[key].wait.end())
-                        mm.memory[key].wait.insert({quantum, std::queue<int>{}});
-                    mm.memory[key].wait[quantum].push(status.MPI_SOURCE);
+                    if(mm.memory[key].wait_locks.find(quantum) == mm.memory[key].wait_locks.end())
+                        mm.memory[key].wait_locks.insert({quantum, std::queue<int>{}});
+                    mm.memory[key].wait_locks[quantum].push(status.MPI_SOURCE);
                 }
                 break;
             case UNLOCK:
                 if(mm.memory[key].quantums_for_lock[quantum] == status.MPI_SOURCE) {
                     mm.memory[key].quantums_for_lock[quantum] = -1;
-                    if(mm.memory[key].wait.find(quantum) != mm.memory[key].wait.end()) {
-                        int to_rank = mm.memory[key].wait[quantum].front();
-                        mm.memory[key].wait[quantum].pop();
+                    if(mm.memory[key].wait_locks.find(quantum) != mm.memory[key].wait_locks.end()) {
+                        int to_rank = mm.memory[key].wait_locks[quantum].front();
+                        mm.memory[key].wait_locks[quantum].pop();
                         mm.memory[key].quantums_for_lock[quantum] = to_rank;
-                        if(mm.memory[key].wait[quantum].size() == 0)
-                            mm.memory[key].wait.erase(quantum);
+                        if(mm.memory[key].wait_locks[quantum].size() == 0)
+                            mm.memory[key].wait_locks.erase(quantum);
                         int tmp = 1;
                         MPI_Send(&tmp, 1, MPI_INT, to_rank, GET_DATA_FROM_MASTER_HELPER_LOCK, MPI_COMM_WORLD);
                     }
                 }
                 break;
             case GET_INFO:
-                int to_request[4] = {GET_DATA, key, quantum, status.MPI_SOURCE};
-                MPI_Send(to_request, 4, MPI_INT, /*dest*/, GET_REQUEST_FROM_MASTER_HELPER, MPI_COMM_WORLD);
+                bool is_ready = mm.memory[key].quantum_owner[quantum].first;
+                int to_rank = mm.memory[key].quantum_owner[quantum].second;
+                if (to_rank == -1) {
+                    mm.memory[key].quantum_owner[quantum] = {false, status.MPI_SOURCE};
+                    MPI_Send(&status.MPI_SOURCE, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
+                    break;
+                }  // empty
+                if (is_ready) {  // queue is empty, can get a quantum
+                    int to_request[4] = {GET_DATA, key, quantum, status.MPI_SOURCE};
+                    mm.memory[key].quantum_owner[quantum] = {false, status.MPI_SOURCE};
+                    MPI_Send(&to_rank, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
+                    MPI_Send(to_request, 4, MPI_INT, to_rank, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
+                } else {  // quantum is not ready yet
+                    if (mm.memory[key].wait_quantums.find(quantum) == mm.memory[key].wait_quantums.end())
+                        mm.memory[key].wait_quantums.insert({quantum, std::queue<int>()});
+                    mm.memory[key].wait_quantums[quantum].push(status.MPI_SOURCE);
+                }
                 break;
             case SET_INFO:
+                mm.memory[key].quantum_owner[quantum].first = true;
+                if(mm.memory[key].wait_quantums.find(quantum) != mm.memory[key].wait_quantums.end()) {
+                    std::queue<int>& wait_queue = mm.memory[key].wait_quantums[quantum];
+                    int source_rank = wait_queue.front();
+                    wait_queue.pop();
+                    if (wait_queue.size() == 0)
+                        mm.memory[key].wait_quantums.erase(quantum);
+                    int to_rank = mm.memory[key].quantum_owner[quantum].second;
+                    mm.memory[key].quantum_owner[quantum] = {false, source_rank};
+                    int to_request[4] = {GET_DATA, key, quantum, source_rank};
+                    MPI_Send(&to_rank, 1, MPI_INT, source_rank, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
+                    MPI_Send(to_request, 4, MPI_INT, to_rank, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
+                }
                 break;
         }
     }
@@ -258,7 +288,7 @@ void master_helper_thread() {
 
 void memory_manager::set_lock_read(int key, int quantum_index) {
     int request[] = {LOCK_READ, key, quantum_index};
-    MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER_LOCK, MPI_COMM_WORLD);
+    MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
     int ans;
     MPI_Status status;
     MPI_Recv(&ans, 1, MPI_INT, 0, GET_DATA_FROM_MASTER_HELPER_LOCK, MPI_COMM_WORLD, &status);
