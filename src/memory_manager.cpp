@@ -307,10 +307,6 @@ void memory_manager::unset_lock(int key, int quantum_index) {
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
 }
 
-bool memory_manager::is_in_buffer(int key, int logical_index) {
-    return is_read_only_mode && (logical_index >= memory[key].index_buffer && logical_index < memory[key].index_buffer + QUANTUM_SIZE);
-}
-
 void memory_manager::finalize() {
     MPI_Barrier(MPI_COMM_WORLD);
     int request[4] = {-1, -1, -1, -1};

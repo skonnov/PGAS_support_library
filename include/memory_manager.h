@@ -67,7 +67,6 @@ public:
     void set_lock_read(int key, int quantum_index);  // заблокировать квант
     void set_lock_write(int key, int quantum_index);  // not ready yet
     void unset_lock(int key, int quantum_index);  // разблокировать квант
-    bool is_in_buffer(int key, int logical_index);
     void finalize();  // функция, завершающая выполнение программы, останавливает вспомогательные потоки
     // ~memory_manager();
     friend void worker_helper_thread();  // функция, выполняемая вспомогательными потоками процессов-рабочих
