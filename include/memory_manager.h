@@ -57,9 +57,9 @@ public:
     void copy_data(int key_from, int key_to);  // скопировать один memory_line в другой
     int create_object(int number_of_elements);  // создать новый memory_line и занести его в memory
     // void delete_object(int key);
-    int get_size_of_portion(int key);  // получить размер вектора memory из memory_line на данном процессе
-    int get_data_by_index_on_process(int key, int index);  // получить данные по индексу элемента на данном процессе
-    void set_data_by_index_on_process(int key, int index, int value);  // сохранить данные по индексу элемента на данном процессе
+    // int get_size_of_portion(int key);  // получить размер вектора memory из memory_line на данном процессе
+    // int get_data_by_index_on_process(int key, int index);  // получить данные по индексу элемента на данном процессе
+    // void set_data_by_index_on_process(int key, int index, int value);  // сохранить данные по индексу элемента на данном процессе
     int get_global_index_of_element(int key, int index, int process);  // получить индекс элемента в сквозной нумерации
     int get_number_of_process(int key, int index);  // получить номер процесса, на котором располагается элемент
     int get_number_of_element(int key, int index);  // получить конкретный номер элемента на процессе, на котором он расположен

@@ -36,13 +36,13 @@ int memory_manager::create_object(int number_of_elements) {
     if (rank == 0) {
         line.quantums_for_lock.resize((number_of_elements + QUANTUM_SIZE - 1) / QUANTUM_SIZE);
         line.quantum_owner.resize((number_of_elements + QUANTUM_SIZE - 1) / QUANTUM_SIZE);
-        for (int i = 0; i < line.quantums_for_lock.size(); i++) {
+        for (int i = 0; i < int(line.quantums_for_lock.size()); i++) {
             line.quantums_for_lock[i] = -1;
             line.quantum_owner[i] = {0, -1};
         }
     } else {
         line.quantums.resize((number_of_elements + QUANTUM_SIZE - 1) / QUANTUM_SIZE);
-        for (int i = 0; i < line.quantums.size(); i++) {
+        for (int i = 0; i < int(line.quantums.size()); i++) {
             line.quantums[i] = nullptr;
         }
     }
@@ -63,9 +63,9 @@ int memory_manager::create_object(int number_of_elements) {
 // }
 
 
-int memory_manager::get_size_of_portion(int key) {
-    return memory[key].vector_size;
-}
+// int memory_manager::get_size_of_portion(int key) {
+//     return memory[key].vector_size;
+// }
 
 
 int memory_manager::get_data(int key, int index_of_element) {
@@ -111,15 +111,15 @@ void memory_manager::copy_data(int key_from, int key_to) {
     memory[key_to] = memory[key_from];
 }
 
-int memory_manager::get_data_by_index_on_process(int key, int index) {
-    return memory[key].vector[index];
-}
+// int memory_manager::get_data_by_index_on_process(int key, int index) {
+//     return memory[key].vector[index];
+// }
 
-void memory_manager::set_data_by_index_on_process(int key, int index, int value) {
-    if(is_read_only_mode)
-        throw -1;
-    memory[key].vector[index] = value;
-}
+// void memory_manager::set_data_by_index_on_process(int key, int index, int value) {
+//     if(is_read_only_mode)
+//         throw -1;
+//     memory[key].vector[index] = value;
+// }
 
 int memory_manager::get_number_of_process(int key, int index) {
     int number_proc;
@@ -180,8 +180,8 @@ void worker_helper_thread() {
     while(true) {
         MPI_Recv(request, 3, MPI_INT, MPI_ANY_SOURCE, SEND_DATA_TO_HELPER, MPI_COMM_WORLD, &status);
         if(request[0] == -1) {
-            for (int key = 0; key < mm.memory.size(); key++) {
-                for(int i = 0; i < mm.memory[key].quantums.size(); i++) {
+            for (int key = 0; key < int(mm.memory.size()); key++) {
+                for(int i = 0; i < int(mm.memory[key].quantums.size()); i++) {
                     if(mm.memory[key].quantums[i] != nullptr) {
                         delete[] mm.memory[key].quantums[i];
                         mm.memory[key].quantums[i] = nullptr;
@@ -206,15 +206,12 @@ void master_helper_thread() {
     int request[3];
     MPI_Status status;
     int rank, size;
-    int cnt_end = 0;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     while(true) {
         MPI_Recv(&request, 3, MPI_INT, MPI_ANY_SOURCE, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD, &status);
         if(request[0] == -1) {
-            cnt_end++;
-            if(cnt_end == size)
-                break;
+            break;
         }
         int key = request[1], quantum = request[2];
         switch(request[0]) {
@@ -248,15 +245,14 @@ void master_helper_thread() {
                     }
                 }
                 break;
-            case GET_INFO:
-                bool is_ready = mm.memory[key].quantum_owner[quantum].first;
-                int to_rank = mm.memory[key].quantum_owner[quantum].second;
-                if (to_rank == -1) {
+            case GET_INFO:               
+                if (mm.memory[key].quantum_owner[quantum].second == -1) {
                     mm.memory[key].quantum_owner[quantum] = {false, status.MPI_SOURCE};
                     MPI_Send(&status.MPI_SOURCE, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
                     break;
                 }  // empty
-                if (is_ready) {  // queue is empty, can get a quantum
+                if (mm.memory[key].quantum_owner[quantum].first) {  // queue is empty, can get a quantum
+                    int to_rank = mm.memory[key].quantum_owner[quantum].second;
                     int to_request[4] = {GET_DATA, key, quantum, status.MPI_SOURCE};
                     mm.memory[key].quantum_owner[quantum] = {false, status.MPI_SOURCE};
                     MPI_Send(&to_rank, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
