@@ -27,7 +27,8 @@ enum tags {
 
 enum operations {
     SET_DATA,
-    GET_DATA,
+    GET_DATA_RW,
+    GET_DATA_R,
     SET_INFO,
     GET_INFO,
     LOCK_READ,
