@@ -91,9 +91,9 @@ int memory_manager::get_data(int key, int index_of_element) {
     MPI_Status status;
     MPI_Recv(&to_rank, 1, MPI_INT, 0, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);
     mm.memory[key].num_change_mode[num_quantum] = mm.num_of_change_mode;
-    if (to_rank == -1)
+    if (to_rank == -1)  // данные уже у процесса, он может обрабатывать их дальше
         return quantum[index_of_element%QUANTUM_SIZE];
-    if (to_rank != rank)
+    if (to_rank != rank)  // если to_rank == rank, то данные можно отдать процессу, но он должен оповестить процесс-мастер при завершении работы с квантом
         MPI_Recv(quantum, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
     request[0] = SET_INFO;
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
@@ -121,11 +121,11 @@ void memory_manager::set_data(int key, int index_of_element, int value) {
     MPI_Status status;
     MPI_Recv(&to_rank, 1, MPI_INT, 0, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);
     mm.memory[key].num_change_mode[num_quantum] = mm.num_of_change_mode;
-    if (to_rank == -1) {
+    if (to_rank == -1) {  // данные уже у процесса, он может обрабатывать их дальше
         quantum[index_of_element%QUANTUM_SIZE] = value;
         return;
     }
-    if (to_rank != rank)
+    if (to_rank != rank)  // если to_rank == rank, то данные можно отдать процессу, но он должен оповестить процесс-мастер при завершении работы с квантом
         MPI_Recv(quantum, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
     request[0] = SET_INFO;
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
@@ -313,7 +313,7 @@ void master_helper_thread() {
                 } else {  // read_write mode
                     assert(quantum < (int)mm.memory[key].num_change_mode.size());
                     if (mm.memory[key].num_change_mode[quantum] != mm.num_of_change_mode) {  // был переход между режимами?
-                        long long minn = mm.memory[key].time;
+                        long long minn = mm.memory[key].time+1;
                         int to_rank = -1;
                         for (int owner: mm.memory[key].owners[quantum]) {
                             if (owner == status.MPI_SOURCE) {
@@ -325,7 +325,11 @@ void master_helper_thread() {
                                 minn = mm.memory[key].times[owner];
                             }
                         }
-                        mm.memory[key].quantum_owner[quantum] = {true, to_rank};
+                        if (to_rank == -1) {
+                            mm.memory[key].quantum_owner[quantum] = {false, -1};
+                        } else {
+                            mm.memory[key].quantum_owner[quantum] = {true, to_rank};
+                        }
                         mm.memory[key].num_change_mode[quantum] = mm.num_of_change_mode;
                         if (to_rank == status.MPI_SOURCE) {
                             int tmp = -1;
@@ -408,20 +412,6 @@ void memory_manager::unset_lock(int key, int quantum_index) {
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
 }
 
-void memory_manager::finalize() {
-    MPI_Barrier(MPI_COMM_WORLD);
-    if(rank == 0) {
-        int request[4] = {-1, -1, -1, -1};
-        MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
-        for(int i = 1; i < size; i++) {
-            MPI_Send(request, 4, MPI_INT, i, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
-        }
-    }
-    assert(helper_thr.joinable());
-    helper_thr.join();
-    MPI_Finalize();
-}
-
 void memory_manager::change_mode(int mode) {
     if (mode == READ_ONLY && is_read_only_mode ||
         mode == READ_WRITE && !is_read_only_mode)
@@ -439,6 +429,20 @@ void memory_manager::change_mode(int mode) {
     MPI_Status status;
     MPI_Recv(&is_ready, 1, MPI_INT, 0, GET_PERMISSION_FOR_CHANGE_MODE, MPI_COMM_WORLD, &status);
     mm.num_of_change_mode++;
+}
+
+void memory_manager::finalize() {
+    MPI_Barrier(MPI_COMM_WORLD);
+    if(rank == 0) {
+        int request[4] = {-1, -1, -1, -1};
+        MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
+        for(int i = 1; i < size; i++) {
+            MPI_Send(request, 4, MPI_INT, i, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
+        }
+    }
+    assert(helper_thr.joinable());
+    helper_thr.join();
+    MPI_Finalize();
 }
 
 // memory_manager::~memory_manager() {

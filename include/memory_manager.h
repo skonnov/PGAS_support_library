@@ -76,11 +76,11 @@ public:
     void set_lock_read(int key, int quantum_index);  // заблокировать квант
     void set_lock_write(int key, int quantum_index);  // not ready yet
     void unset_lock(int key, int quantum_index);  // разблокировать квант
+    void change_mode(int mode);
     void finalize();  // функция, завершающая выполнение программы, останавливает вспомогательные потоки
-    // ~memory_manager();
     friend void worker_helper_thread();  // функция, выполняемая вспомогательными потоками процессов-рабочих
     friend void master_helper_thread();  // функция, выполняемая вспомогательным потоком процесса-мастера
-    void change_mode(int mode);
+    // ~memory_manager();
 };
 
 extern memory_manager mm;
