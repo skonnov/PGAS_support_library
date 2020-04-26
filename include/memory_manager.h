@@ -21,7 +21,8 @@ enum tags {
     GET_DATA_FROM_MASTER_HELPER_LOCK = 456,
     SEND_INFO_TO_MASTER_HELPER = 567,
     GET_INFO_FROM_MASTER_HELPER = 678,
-    GET_REQUEST_FROM_MASTER_HELPER = 789
+    GET_REQUEST_FROM_MASTER_HELPER = 789,
+    GET_PERMISSION_FOR_CHANGE_MODE = 890
 };
 
 enum operations {
@@ -31,7 +32,8 @@ enum operations {
     GET_INFO,
     LOCK_READ,
     LOCK_WRITE,
-    UNLOCK
+    UNLOCK,
+    CHANGE_MODE
 };
 void worker_helper_thread();
 void master_helper_thread();
@@ -41,8 +43,9 @@ struct memory_line {  // память для одного parallel_vector
     int logical_size;  // общее число элементов в векторе на всех процессах
     std::vector<std::pair<bool, int>>quantum_owner; // for read_write mode
     std::map<int, std::queue<int>> wait_locks, wait_quantums;  // мапа очередей для процессов, ожидающих разблокировки кванта
+    std::vector<int> num_change_mode;
     std::vector<int> quantums_for_lock;
-    std::vector<int> times;
+    std::vector<long long> times;
     long long time;
     std::vector<std::vector<int>> owners; // for read_only mode
 };
@@ -53,6 +56,8 @@ class memory_manager {
     int rank, size;
     int worker_rank, worker_size;
     bool is_read_only_mode;
+    int num_of_change_mode_procs;
+    int num_of_change_mode;
 public:
     void memory_manager_init(int argc, char** argv);  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
     int get_data(int key, int index_of_element);  // получить элемент по индексу с любого процесса

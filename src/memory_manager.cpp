@@ -27,6 +27,8 @@ void memory_manager::memory_manager_init(int argc, char**argv) {
         helper_thr = std::thread(worker_helper_thread);
     }
     is_read_only_mode = false;
+    num_of_change_mode_procs = 0;
+    num_of_change_mode = 0;
     // создание своего типа для пересылки посылок ???
 }
 
@@ -40,6 +42,7 @@ int memory_manager::create_object(int number_of_elements) {
         line.owners.resize(num_of_quantums);
         line.times.resize(size);
         line.time = LLONG_MIN;
+        line.num_change_mode.resize(num_of_quantums, 0);
         for (int i = 0; i < int(line.quantums_for_lock.size()); i++) {
             line.quantums_for_lock[i] = -1;
             line.quantum_owner[i] = {0, -1};
@@ -223,9 +226,6 @@ void master_helper_thread() {
         switch(request[0]) {
             case LOCK_READ:
             case LOCK_WRITE:
-                if (request[0] == LOCK_WRITE) {
-
-                }
                 if (mm.memory[key].quantums_for_lock[quantum] == -1) {
                     int to_rank = status.MPI_SOURCE;
                     int tmp = 1;
@@ -251,13 +251,21 @@ void master_helper_thread() {
                     }
                 }
                 break;
-            case GET_INFO:
+            case GET_INFO:                
                 if (mm.is_read_only_mode) {
+                    if (mm.memory[key].num_change_mode[quantum] != mm.num_of_change_mode) {
+                        if (mm.memory[key].quantum_owner[quantum].second == -1)
+                            throw -1;
+                        assert(mm.memory[key].quantum_owner[quantum].first == true);
+                        mm.memory[key].owners[quantum].clear();
+                        mm.memory[key].owners[quantum].push_back(mm.memory[key].quantum_owner[quantum].second);
+                        mm.memory[key].num_change_mode[quantum] = mm.num_of_change_mode;
+                    }
                     if (mm.memory[key].owners[quantum].empty()) {
-                        throw -1;  // ?
+                            throw -1;  // ?
                     }
                     int to_rank = 0;
-                    int minn = mm.memory[key].time;
+                    long long minn = mm.memory[key].time;
                     for (int owner: mm.memory[key].owners[quantum]) {
                         if (mm.memory[key].times[owner] < minn) {
                             to_rank = owner;
@@ -269,8 +277,25 @@ void master_helper_thread() {
                     int to_request[4] = {GET_DATA, key, quantum, status.MPI_SOURCE};
                     MPI_Send(&to_rank, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
                     MPI_Send(to_request, 4, MPI_INT, to_rank, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
-                } else {
-                    if (mm.memory[key].quantum_owner[quantum].second == -1) {
+                } else {  // read_write mode
+                    if (mm.memory[key].num_change_mode[quantum] != mm.num_of_change_mode) {
+                        long long minn = mm.memory[key].time;
+                        int to_rank = -1;
+                        for (int owner: mm.memory[key].owners[quantum]) {
+                            if (owner == status.MPI_SOURCE) {
+                                to_rank = owner;
+                                break;
+                            }
+                            if (mm.memory[key].times[owner] < minn) {
+                                to_rank = owner;
+                                minn = mm.memory[key].times[owner];
+                            }
+                        }
+                        mm.memory[key].quantum_owner[quantum] = {1, to_rank};
+                        mm.memory[key].num_change_mode[quantum] = mm.num_of_change_mode;
+                    }
+                    if (mm.memory[key].quantum_owner[quantum].second == -1 ||
+                                    mm.memory[key].quantum_owner[quantum].second == status.MPI_SOURCE) {
                         mm.memory[key].quantum_owner[quantum] = {false, status.MPI_SOURCE};
                         MPI_Send(&status.MPI_SOURCE, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
                         break;
@@ -305,6 +330,17 @@ void master_helper_thread() {
                         MPI_Send(&to_rank, 1, MPI_INT, source_rank, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
                         MPI_Send(to_request, 4, MPI_INT, to_rank, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
                     }
+                }
+                break;
+            case CHANGE_MODE:
+                mm.num_of_change_mode_procs++;
+                if (mm.num_of_change_mode_procs == mm.worker_size) {
+                    mm.is_read_only_mode = request[1];
+                    int ready = 1;
+                    for (int i = 1; i < size; i++)
+                        MPI_Send(&ready, 1, MPI_INT, i, GET_PERMISSION_FOR_CHANGE_MODE, MPI_COMM_WORLD);
+                    mm.num_of_change_mode_procs = 0;
+                    mm.num_of_change_mode++;
                 }
                 break;
         }
@@ -348,10 +384,17 @@ void memory_manager::finalize() {
 
 void memory_manager::section_lock(int mode) {
     if(mode == READ_ONLY) {
+        int request[3] = {CHANGE_MODE, 1, -1};
+        MPI_Send(request, 3, MPI_INT, 0, SEND_INFO_TO_MASTER_HELPER, MPI_COMM_WORLD);
         is_read_only_mode = true;
     } else if(mode == READ_WRITE) {
-        
+        int request[3] = {CHANGE_MODE, 0, -1};
+        MPI_Send(request, 3, MPI_INT, 0, SEND_INFO_TO_MASTER_HELPER, MPI_COMM_WORLD);
+        is_read_only_mode = false;
     }
+    int is_ready;
+    MPI_Status status;
+    MPI_Recv(&is_ready, 1, MPI_INT, 0, GET_PERMISSION_FOR_CHANGE_MODE, MPI_COMM_WORLD, &status);
 }
 
 void memory_manager::section_unlock(int mode) {
