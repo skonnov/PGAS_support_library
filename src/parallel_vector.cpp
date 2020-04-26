@@ -55,21 +55,21 @@ void parallel_vector::set_elem(const int& index, const int& value) {
     mm.set_data(key, index, value);
 }
 
-int parallel_vector::get_elem_proc(const int& index) const { // WARNING!
-    if(index < 0 || index >= mm.get_size_of_portion(key))
-         throw -1;
-    return mm.get_data_by_index_on_process(key, index);
-}
+// int parallel_vector::get_elem_proc(const int& index) const { // WARNING!
+//     if(index < 0 || index >= mm.get_size_of_portion(key))
+//          throw -1;
+//     return mm.get_data_by_index_on_process(key, index);
+// }
 
-void parallel_vector::set_elem_proc(const int& index, const int& value) { // WARNING!
-    if(index < 0 || index >= mm.get_size_of_portion(key))
-         throw -1;
-    mm.set_data_by_index_on_process(key, index, value);
-}
+// void parallel_vector::set_elem_proc(const int& index, const int& value) { // WARNING!
+//     if(index < 0 || index >= mm.get_size_of_portion(key))
+//          throw -1;
+//     mm.set_data_by_index_on_process(key, index, value);
+// }
 
-int parallel_vector::get_portion() const {
-    return mm.get_size_of_portion(key);
-}
+// int parallel_vector::get_portion() const {
+//     return mm.get_size_of_portion(key);
+// }
 
 int parallel_vector::get_index_of_process(const int& index) const {
     return mm.get_number_of_process(key, index);

@@ -382,12 +382,15 @@ void memory_manager::finalize() {
     MPI_Finalize();
 }
 
-void memory_manager::section_lock(int mode) {
-    if(mode == READ_ONLY) {
+void memory_manager::change_mode(int mode) {
+    if (mode == READ_ONLY && is_read_only_mode ||
+        mode == READ_WRITE && !is_read_only_mode)
+        return;
+    if (mode == READ_ONLY) {
         int request[3] = {CHANGE_MODE, 1, -1};
         MPI_Send(request, 3, MPI_INT, 0, SEND_INFO_TO_MASTER_HELPER, MPI_COMM_WORLD);
         is_read_only_mode = true;
-    } else if(mode == READ_WRITE) {
+    } else if (mode == READ_WRITE) {
         int request[3] = {CHANGE_MODE, 0, -1};
         MPI_Send(request, 3, MPI_INT, 0, SEND_INFO_TO_MASTER_HELPER, MPI_COMM_WORLD);
         is_read_only_mode = false;
@@ -395,14 +398,6 @@ void memory_manager::section_lock(int mode) {
     int is_ready;
     MPI_Status status;
     MPI_Recv(&is_ready, 1, MPI_INT, 0, GET_PERMISSION_FOR_CHANGE_MODE, MPI_COMM_WORLD, &status);
-}
-
-void memory_manager::section_unlock(int mode) {
-    if(mode == READ_ONLY) {
-        is_read_only_mode = false;
-    } else if(mode == READ_WRITE) {
-        
-    }
 }
 
 // memory_manager::~memory_manager() {

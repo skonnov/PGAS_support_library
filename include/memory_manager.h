@@ -79,8 +79,7 @@ public:
     // ~memory_manager();
     friend void worker_helper_thread();  // функция, выполняемая вспомогательными потоками процессов-рабочих
     friend void master_helper_thread();  // функция, выполняемая вспомогательным потоком процесса-мастера
-    void section_lock(int mode);  // not ready yet
-    void section_unlock(int mode);
+    void change_mode(int mode);
 };
 
 extern memory_manager mm;

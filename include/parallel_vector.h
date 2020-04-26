@@ -18,9 +18,9 @@ public:
     parallel_vector& operator=(const parallel_vector& v);
     int get_elem(const int& index) const;
     void set_elem(const int& index, const int& value);
-    int get_portion() const;
-    int get_elem_proc(const int& index) const; // don't touch this in main!
-    void set_elem_proc(const int& index, const int& value); //don't touch this in main! 
+    // int get_portion() const;
+    // int get_elem_proc(const int& index) const; // don't touch this in main!
+    // void set_elem_proc(const int& index, const int& value); //don't touch this in main! 
     int get_index_of_process(const int& index) const;
     int get_index_of_element(const int& index) const;
     int get_global_index_of_element(const int& index, const int& proccess) const;
