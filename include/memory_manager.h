@@ -39,9 +39,12 @@ void master_helper_thread();
 struct memory_line {  // память для одного parallel_vector
     std::vector<int*>quantums;  // delete bool?
     int logical_size;  // общее число элементов в векторе на всех процессах
-    std::vector<std::pair<bool, int>>quantum_owner;
+    std::vector<std::pair<bool, int>>quantum_owner; // for read_write mode
     std::map<int, std::queue<int>> wait_locks, wait_quantums;  // мапа очередей для процессов, ожидающих разблокировки кванта
     std::vector<int> quantums_for_lock;
+    std::vector<int> times;
+    long long time;
+    std::vector<std::vector<int>> owners; // for read_only mode
 };
 
 class memory_manager {
