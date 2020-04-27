@@ -46,8 +46,6 @@ struct memory_line {  // память для одного parallel_vector
     std::map<int, std::queue<int>> wait_locks, wait_quantums;  // мапа очередей для процессов, ожидающих разблокировки кванта
     std::vector<int> num_change_mode;
     std::vector<int> quantums_for_lock;
-    std::vector<long long> times;
-    long long time;
     std::vector<std::vector<int>> owners; // for read_only mode
 };
 
@@ -59,6 +57,8 @@ class memory_manager {
     bool is_read_only_mode;
     int num_of_change_mode_procs;
     int num_of_change_mode;
+    std::vector<long long> times;
+    long long time;
 public:
     void memory_manager_init(int argc, char** argv);  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
     int get_data(int key, int index_of_element);  // получить элемент по индексу с любого процесса

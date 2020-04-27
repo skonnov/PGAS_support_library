@@ -21,14 +21,16 @@ void memory_manager::memory_manager_init(int argc, char**argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     worker_rank = rank - 1;
     worker_size = size - 1;
+    is_read_only_mode = false;
+    num_of_change_mode_procs = 0;
+    num_of_change_mode = 0;
+    times.resize(size, LLONG_MIN);
+    time = LLONG_MIN;
     if(rank == 0) {
         helper_thr = std::thread(master_helper_thread);
     } else {
         helper_thr = std::thread(worker_helper_thread);
     }
-    is_read_only_mode = false;
-    num_of_change_mode_procs = 0;
-    num_of_change_mode = 0;
     // создание своего типа для пересылки посылок ???
 }
 
@@ -40,8 +42,6 @@ int memory_manager::create_object(int number_of_elements) {
         line.quantums_for_lock.resize(num_of_quantums);
         line.quantum_owner.resize(num_of_quantums);
         line.owners.resize(num_of_quantums);
-        line.times.resize(size, LLONG_MIN);
-        line.time = LLONG_MIN;
         for (int i = 0; i < int(line.quantums_for_lock.size()); i++) {
             line.quantums_for_lock[i] = -1;
             line.quantum_owner[i] = {0, -1};
@@ -293,17 +293,17 @@ void master_helper_thread() {
                             throw -1;  // ?
                     }
                     int to_rank = -1;
-                    long long minn = mm.memory[key].time+1;
+                    long long minn = mm.time+1;
                     for (int owner: mm.memory[key].owners[quantum]) {
-                        assert(owner < (int)mm.memory[key].times.size());
-                        if (mm.memory[key].times[owner] < minn) {
+                        assert(owner < (int)mm.times.size());
+                        if (mm.times[owner] < minn) {
                             to_rank = owner;
-                            minn = mm.memory[key].times[owner];
+                            minn = mm.times[owner];
                         }
                     }
                     assert(to_rank > 0 && to_rank < size);
-                    mm.memory[key].times[to_rank] = mm.memory[key].time;
-                    mm.memory[key].times[status.MPI_SOURCE] = mm.memory[key].time++;
+                    mm.times[to_rank] = mm.time;
+                    mm.times[status.MPI_SOURCE] = mm.time++;
                     int to_request[4] = {GET_DATA_R, key, quantum, status.MPI_SOURCE};
                     if (to_rank == status.MPI_SOURCE)
                         to_rank = -1;
@@ -313,16 +313,16 @@ void master_helper_thread() {
                 } else {  // read_write mode
                     assert(quantum < (int)mm.memory[key].num_change_mode.size());
                     if (mm.memory[key].num_change_mode[quantum] != mm.num_of_change_mode) {  // был переход между режимами?
-                        long long minn = mm.memory[key].time+1;
+                        long long minn = mm.time+1;
                         int to_rank = -1;
                         for (int owner: mm.memory[key].owners[quantum]) {
                             if (owner == status.MPI_SOURCE) {
                                 to_rank = owner;
                                 break;
                             }
-                            if (mm.memory[key].times[owner] < minn) {
+                            if (mm.times[owner] < minn) {
                                 to_rank = owner;
-                                minn = mm.memory[key].times[owner];
+                                minn = mm.times[owner];
                             }
                         }
                         if (to_rank == -1) {
@@ -331,6 +331,7 @@ void master_helper_thread() {
                             mm.memory[key].quantum_owner[quantum] = {true, to_rank};
                         }
                         mm.memory[key].num_change_mode[quantum] = mm.num_of_change_mode;
+                        mm.times[to_rank] = mm.time++;
                         if (to_rank == status.MPI_SOURCE) {
                             int tmp = -1;
                             MPI_Send(&tmp, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
