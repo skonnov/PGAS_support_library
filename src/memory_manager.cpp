@@ -3,6 +3,7 @@
 #include <vector>
 #include <iostream>
 #include <cassert>
+#include <mutex>
 #include "memory_manager.h"
 
 // посылка: [операция; номер структуры, откуда требуются данные; требуемый номер элемента, кому требуется переслать объект;
@@ -48,13 +49,16 @@ int memory_manager::create_object(int number_of_elements) {
             line.owners[i] = std::vector<int>();
         }
     } else {
-        line.quantums.resize((number_of_elements + QUANTUM_SIZE - 1) / QUANTUM_SIZE);
-        for (int i = 0; i < int(line.quantums.size()); i++) {
+        line.mutexes.resize(num_of_quantums);
+        line.quantums.resize(num_of_quantums);
+        for (int i = 0; i < num_of_quantums; i++) {
             line.quantums[i] = nullptr;
+            line.mutexes[i] = new std::mutex();
         }
     }
     line.num_change_mode.resize(num_of_quantums, 0);
-    memory.push_back(line);
+
+    memory.emplace_back(line);
     MPI_Barrier(MPI_COMM_WORLD);
     return memory.size()-1;
 }
@@ -79,20 +83,27 @@ int memory_manager::create_object(int number_of_elements) {
 int memory_manager::get_data(int key, int index_of_element) {
     int num_quantum = get_quantum_index(index_of_element);
     auto& quantum = mm.memory[key].quantums[num_quantum];
+    bool f = false;
+    if (!is_read_only_mode)
+        mm.memory[key].mutexes[num_quantum]->lock();
     if (quantum != nullptr) {
-        if (mm.memory[key].num_change_mode[num_quantum] == mm.num_of_change_mode)
-            return quantum[index_of_element%QUANTUM_SIZE];
+        if (mm.memory[key].num_change_mode[num_quantum] == mm.num_of_change_mode) {
+            int elem = quantum[index_of_element%QUANTUM_SIZE];
+            if (!is_read_only_mode)
+                mm.memory[key].mutexes[num_quantum]->unlock();
+            return elem;
+        }
     } else {
         quantum = new int[QUANTUM_SIZE];
     }
+    if (!is_read_only_mode)
+        mm.memory[key].mutexes[num_quantum]->unlock();
     int request[3] = {GET_INFO, key, num_quantum};
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
     int to_rank = -1;
     MPI_Status status;
     MPI_Recv(&to_rank, 1, MPI_INT, 0, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);
     mm.memory[key].num_change_mode[num_quantum] = mm.num_of_change_mode;
-    if (to_rank == -1)  // данные уже у процесса, он может обрабатывать их дальше
-        return quantum[index_of_element%QUANTUM_SIZE];
     if (to_rank != rank)  // если to_rank == rank, то данные можно отдать процессу, но он должен оповестить процесс-мастер при завершении работы с квантом
         MPI_Recv(quantum, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
     request[0] = SET_INFO;
@@ -106,14 +117,17 @@ void memory_manager::set_data(int key, int index_of_element, int value) {
     }
     int num_quantum = get_quantum_index(index_of_element);
     auto& quantum = mm.memory[key].quantums[num_quantum];
+    mm.memory[key].mutexes[num_quantum]->lock();
     if (quantum != nullptr) {
         if (mm.memory[key].num_change_mode[num_quantum] == mm.num_of_change_mode) {
             quantum[index_of_element%QUANTUM_SIZE] = value;
+            mm.memory[key].mutexes[num_quantum]->unlock();
             return;
         }
     } else {
         quantum = new int[QUANTUM_SIZE];
     }
+    mm.memory[key].mutexes[num_quantum]->unlock();
     quantum = new int[QUANTUM_SIZE];
     int request[3] = {GET_INFO, key, num_quantum};
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
@@ -121,10 +135,6 @@ void memory_manager::set_data(int key, int index_of_element, int value) {
     MPI_Status status;
     MPI_Recv(&to_rank, 1, MPI_INT, 0, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);
     mm.memory[key].num_change_mode[num_quantum] = mm.num_of_change_mode;
-    if (to_rank == -1) {  // данные уже у процесса, он может обрабатывать их дальше
-        quantum[index_of_element%QUANTUM_SIZE] = value;
-        return;
-    }
     if (to_rank != rank)  // если to_rank == rank, то данные можно отдать процессу, но он должен оповестить процесс-мастер при завершении работы с квантом
         MPI_Recv(quantum, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
     request[0] = SET_INFO;
@@ -211,21 +221,25 @@ void worker_helper_thread() {
                         delete[] mm.memory[key].quantums[i];
                         mm.memory[key].quantums[i] = nullptr;
                     }
+                    delete mm.memory[key].mutexes[i];
                 }
             }
             break;
         }
         int key = request[1], quantum_index = request[2], to_rank = request[3];
+       
         switch(request[0]) {
             case GET_DATA_R:
                 MPI_Send(mm.memory[key].quantums[quantum_index], QUANTUM_SIZE,
                                         MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD);
                 break;
             case GET_DATA_RW:
+                mm.memory[key].mutexes[quantum_index]->lock();
                 MPI_Send(mm.memory[key].quantums[quantum_index], QUANTUM_SIZE,
                                         MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD);
                 delete[] mm.memory[key].quantums[quantum_index];
                 mm.memory[key].quantums[quantum_index] = nullptr;
+                mm.memory[key].mutexes[quantum_index]->unlock();
                 break;
         }
     }
@@ -360,7 +374,8 @@ void master_helper_thread() {
                 break;
             case SET_INFO:
                 if (mm.is_read_only_mode) {
-                    mm.memory[key].owners[quantum].push_back(status.MPI_SOURCE);
+                    if (mm.memory[key].quantum_owner[quantum].second != status.MPI_SOURCE)
+                        mm.memory[key].owners[quantum].push_back(status.MPI_SOURCE);
                 } else {  // read_write mode
                     mm.memory[key].quantum_owner[quantum].first = true;
                     if (mm.memory[key].wait_quantums.find(quantum) != mm.memory[key].wait_quantums.end()) {

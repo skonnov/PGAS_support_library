@@ -5,6 +5,7 @@
 #include <thread>
 #include <vector>
 #include <queue>
+#include <mutex>
 #include <iostream>
 
 #define QUANTUM_SIZE 5
@@ -46,6 +47,7 @@ struct memory_line {  // память для одного parallel_vector
     std::map<int, std::queue<int>> wait_locks, wait_quantums;  // мапа очередей для процессов, ожидающих разблокировки кванта
     std::vector<int> num_change_mode;
     std::vector<int> quantums_for_lock;
+    std::vector<std::mutex*> mutexes;
     std::vector<std::vector<int>> owners; // for read_only mode
 };
 
