@@ -36,6 +36,7 @@ void memory_manager::memory_manager_init(int argc, char**argv) {
 }
 
 int memory_manager::create_object(int number_of_elements) {
+    // std::cout<<"(rank: "<<rank<<" num_elem: "<<number_of_elements<<" | create object begin)\n"<<std::flush;
     memory_line line;
     line.logical_size = number_of_elements;
     int num_of_quantums = (number_of_elements + QUANTUM_SIZE - 1) / QUANTUM_SIZE;
@@ -60,6 +61,7 @@ int memory_manager::create_object(int number_of_elements) {
 
     memory.emplace_back(line);
     MPI_Barrier(MPI_COMM_WORLD);
+    // std::cout<<"(rank: "<<rank<<" num_elem: "<<number_of_elements<<" | create object end)\n"<<std::flush;
     return memory.size()-1;
 }
 
@@ -119,7 +121,8 @@ int memory_manager::get_data(int key, int index_of_element) {
 }
 
 void memory_manager::set_data(int key, int index_of_element, int value) {
-    std::cout<<"(rank: "<<rank<<" index: "<<index_of_element<<" set_data | 1)\n"<<std::flush;
+    // std::cout<<index_of_element<<"!\n"<<std::flush;
+    // std::cout<<"(rank: "<<rank<<" index: "<<index_of_element<<" set_data | 1)\n"<<std::flush;
     assert(key >= 0 && key < (int)mm.memory.size());
     if(is_read_only_mode) {
         throw -1;
@@ -135,33 +138,40 @@ void memory_manager::set_data(int key, int index_of_element, int value) {
         if (mm.memory[key].num_change_mode[num_quantum] == mm.num_of_change_mode) {
             quantum[index_of_element%QUANTUM_SIZE] = value;
             mm.memory[key].mutexes[num_quantum]->unlock();
-            std::cout<<"(rank: "<<rank<<" index: "<<index_of_element<<" set_data | not nullptr)\n"<<std::flush;
+            // std::cout<<"(rank: "<<rank<<" index: "<<index_of_element<<" set_data | not nullptr)\n"<<std::flush;
             return;
         }
     } else {
+        // std::cout<<"1$$$\n"<<std::flush<<"\n";
         quantum = new int[QUANTUM_SIZE];
+        // std::cout<<"2$$$\n"<<std::flush<<"\n";
     }
-    quantum = new int[QUANTUM_SIZE];
     int request[3] = {GET_INFO, key, num_quantum};
+    // std::cout<<"3$$$\n"<<std::flush<<"\n";
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
+    // std::cout<<"4$$$\n"<<std::flush<<"\n";
     int to_rank = -2;
     MPI_Status status;
+    // std::cout<<"5$$$\n"<<std::flush<<"\n";
     MPI_Recv(&to_rank, 1, MPI_INT, 0, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);
+    // std::cout<<"6$$$\n"<<std::flush<<"\n";
     assert(num_quantum >= 0 && num_quantum < (int)mm.memory[key].num_change_mode.size());
     mm.memory[key].num_change_mode[num_quantum] = mm.num_of_change_mode;
     if (to_rank != rank) {  // если to_rank == rank, то данные можно отдать процессу, но он должен оповестить процесс-мастер при завершении работы с квантом
         assert(quantum != nullptr);
         assert(to_rank > 0 && to_rank < size);
+        // std::cout<<"(rank: "<<rank<<" index: "<<index_of_element<<" set_data | nullptr get from another process)\n"<<std::flush;
         MPI_Recv(quantum, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
-        std::cout<<"(rank: "<<rank<<" index: "<<index_of_element<<" set_data | nullptr get from another process)\n"<<std::flush;
     } else {
-        std::cout<<"(rank: "<<rank<<" index: "<<index_of_element<<" set_data | nullptr first use)\n"<<std::flush;
+        // std::cout<<"(rank: "<<rank<<" index: "<<index_of_element<<" set_data | nullptr first use)\n"<<std::flush;
     }
+    // std::cout<<"7$$$\n"<<std::flush<<"\n";
     request[0] = SET_INFO;
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
+    // std::cout<<"8$$$\n"<<std::flush<<"\n";
     assert(quantum != nullptr);
     quantum[index_of_element%QUANTUM_SIZE] = value;
-    std::cout<<"("<<rank<<" "<<index_of_element<<" set_data | nullptr set info)\n"<<std::flush;
+    // std::cout<<"("<<rank<<" "<<index_of_element<<" set_data | nullptr set info)\n"<<std::flush;
     mm.memory[key].mutexes[num_quantum]->unlock();
 }
 
@@ -230,7 +240,7 @@ int memory_manager::get_quantum_index(int index) {
 
 
 void worker_helper_thread() {
-    int request[4];
+    int request[4] = {-2, -2, -2, -2};
     MPI_Status status;
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -247,11 +257,10 @@ void worker_helper_thread() {
                     delete mm.memory[key].mutexes[i];
                 }
             }
-            std::cout<<"(rank: "<<rank<<" end of worker)\n"<<std::flush;
             break;
         }
         int key = request[1], quantum_index = request[2], to_rank = request[3];
-        std::cout<<"(rank: "<<rank<<" quantum: "<<quantum_index<<" to_rank: "<<to_rank<<" worker)\n"<<std::flush;
+        // std::cout<<"(rank: "<<rank<<" quantum: "<<quantum_index<<" to_rank: "<<to_rank<<" worker)\n"<<std::flush;
         assert(mm.memory[key].quantums[quantum_index] != nullptr);
         assert(to_rank > 0 && to_rank < size);
         assert(key >= 0 && key < (int)mm.memory.size());
@@ -275,7 +284,7 @@ void worker_helper_thread() {
 }
 
 void master_helper_thread() {
-    int request[3];
+    int request[3] = {-2, -2, -2};
     MPI_Status status;
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -283,13 +292,15 @@ void master_helper_thread() {
     while(true) {
         MPI_Recv(&request, 3, MPI_INT, MPI_ANY_SOURCE, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD, &status);
         if (request[0] == -1 && request[1] == -1 && request[2] == -1) {
-            std::cout<<"("<<rank<<" end of master)\n"<<std::flush;
+            // std::cout<<"("<<rank<<" end of master)\n"<<std::flush;
             break;
         }
         int key = request[1], quantum = request[2];
-        assert(key < (int)mm.memory.size());
-        assert(key >= 0 && key < (int)mm.memory.size());
-        assert(quantum >= 0 && quantum < (int)mm.memory[key].quantum_owner.size());
+        // std::cout<<key<<" "<<" "<<quantum<<" "<<request[0]<<" "<<mm.memory.size()<<" "<<(key >= 0 && key < (int)mm.memory.size())<<"!!!!!!!!!!!!!!!!!!!!\n"<<std::flush;
+        if (request[0] != CHANGE_MODE) {
+            assert(key >= 0 && key < (int)mm.memory.size());
+            assert(quantum >= 0 && quantum < (int)mm.memory[key].quantum_owner.size());
+        }
         switch(request[0]) {
             case LOCK_READ:
             case LOCK_WRITE:
@@ -320,12 +331,12 @@ void master_helper_thread() {
                 break;
             case GET_INFO:                
                 if (mm.is_read_only_mode) {
-                    std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" master read_only)\n"<<std::flush;
+                    // std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" master read_only)\n"<<std::flush;
                     assert(quantum < (int)mm.memory[key].num_change_mode.size());
                     assert(quantum < (int)mm.memory[key].quantum_owner.size());
                     assert(quantum < (int)mm.memory[key].owners.size());
                     if (mm.memory[key].num_change_mode[quantum] != mm.num_of_change_mode) {  // был переход между режимами?
-                        std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" master read_only first change)\n"<<std::flush;
+                        // std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" master read_only first change)\n"<<std::flush;
                         if (mm.memory[key].quantum_owner[quantum].second == -1)
                             throw -1;
                         assert(mm.memory[key].quantum_owner[quantum].first == true);
@@ -335,7 +346,7 @@ void master_helper_thread() {
                         int to_rank = mm.memory[key].owners[quantum][0];
                         if (to_rank == status.MPI_SOURCE) {
                             MPI_Send(&to_rank, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
-                            std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" master read_only first change to_rank = status.MPI_SOURCE)\n"<<std::flush;
+                            // std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" master read_only first change to_rank = status.MPI_SOURCE)\n"<<std::flush;
                             break;
                         }
                     }
@@ -355,7 +366,7 @@ void master_helper_thread() {
                             minn = mm.times[owner];
                         }
                     }
-                    std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" to_rank: "<<to_rank<<" "<<" master read_only who is chosen)\n"<<std::flush;
+                    // std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" to_rank: "<<to_rank<<" "<<" master read_only who is chosen)\n"<<std::flush;
                     assert(to_rank > 0 && to_rank < size);
                     mm.times[to_rank] = mm.time;
                     mm.times[status.MPI_SOURCE] = mm.time++;
@@ -367,10 +378,10 @@ void master_helper_thread() {
                         mm.memory[key].owners[quantum].push_back(to_rank);
                     }
                 } else {  // read_write mode
-                    std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" master read_write mode)\n"<<std::flush;
+                    // std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" master read_write mode)\n"<<std::flush;
                     assert(quantum < (int)mm.memory[key].num_change_mode.size());
                     if (mm.memory[key].num_change_mode[quantum] != mm.num_of_change_mode) {  // был переход между режимами?
-                        std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" master read_write first change)\n"<<std::flush;
+                        // std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" master read_write first change)\n"<<std::flush;
                         long long minn = mm.time+1;
                         int to_rank = -1;
                         for (int owner: mm.memory[key].owners[quantum]) {
@@ -388,12 +399,12 @@ void master_helper_thread() {
                         mm.memory[key].quantum_owner[quantum] = {false, status.MPI_SOURCE};
                         if (to_rank == -1 || to_rank == status.MPI_SOURCE) {
                             MPI_Send(&status.MPI_SOURCE, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
-                            std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" master read_write first change to_rank = status.MPI_SOURCE or first use)\n"<<std::flush;
+                            // std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" master read_write first change to_rank = status.MPI_SOURCE or first use)\n"<<std::flush;
                         } else {
                             int to_request[4] = {GET_DATA_RW, key, quantum, status.MPI_SOURCE};
                             MPI_Send(&to_rank, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
                             MPI_Send(to_request, 4, MPI_INT, to_rank, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
-                            std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" to_rank: "<<to_rank<<" "<<" master read_write first change who is chosen)\n"<<std::flush;
+                            // std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" to_rank: "<<to_rank<<" "<<" master read_write first change who is chosen)\n"<<std::flush;
                         }
                         break;
                     }
@@ -402,7 +413,7 @@ void master_helper_thread() {
                     if (mm.memory[key].quantum_owner[quantum].second == -1) {
                         mm.memory[key].quantum_owner[quantum] = {false, status.MPI_SOURCE};
                         MPI_Send(&status.MPI_SOURCE, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
-                        std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" "<<" master read_write first use)\n"<<std::flush;
+                        // std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" "<<" master read_write first use)\n"<<std::flush;
                         break;
                     }  // empty
                     if (mm.memory[key].quantum_owner[quantum].first) {  // queue is empty, can get a quantum
@@ -411,21 +422,21 @@ void master_helper_thread() {
                         mm.memory[key].quantum_owner[quantum] = {false, status.MPI_SOURCE};
                         MPI_Send(&to_rank, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
                         MPI_Send(to_request, 4, MPI_INT, to_rank, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
-                        std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" to_rank: "<<to_rank<<" master read_write who is chosen)\n"<<std::flush;
+                        // std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" to_rank: "<<to_rank<<" master read_write who is chosen)\n"<<std::flush;
                     } else {  // quantum is not ready yet
                         if (mm.memory[key].wait_quantums.find(quantum) == mm.memory[key].wait_quantums.end())
                             mm.memory[key].wait_quantums.insert({quantum, std::queue<int>()});
                         mm.memory[key].wait_quantums[quantum].push(status.MPI_SOURCE);
-                        std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" master read_write go to queue)\n"<<std::flush;
+                        // std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" master read_write go to queue)\n"<<std::flush;
                     }
                 }
                 break;
             case SET_INFO:
                 if (mm.is_read_only_mode) {
-                    std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" master read_only set_info)\n"<<std::flush;
+                    // std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" master read_only set_info)\n"<<std::flush;
                     mm.memory[key].owners[quantum].push_back(status.MPI_SOURCE);
                 } else {  // read_write mode
-                    std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" master read_write set_info)\n"<<std::flush;
+                    // std::cout<<"(quantum: "<<quantum<<" source: "<<status.MPI_SOURCE<<" master read_write set_info)\n"<<std::flush;
                     assert(mm.memory[key].quantum_owner[quantum].second == status.MPI_SOURCE);
                     assert(mm.memory[key].quantum_owner[quantum].first == false);
                     mm.memory[key].quantum_owner[quantum].first = true;
@@ -438,14 +449,14 @@ void master_helper_thread() {
                             assert(mm.memory[key].wait_quantums.find(quantum) == mm.memory[key].wait_quantums.end());
                         }
                         int to_rank = mm.memory[key].quantum_owner[quantum].second;
-                        std::cout<<"(quantum: "<<quantum<<" source: "<<source_rank<<" master read_write get from queue)\n"<<std::flush;
+                        // std::cout<<"(quantum: "<<quantum<<" source: "<<source_rank<<" master read_write get from queue)\n"<<std::flush;
                         mm.memory[key].quantum_owner[quantum] = {false, source_rank};
                         int to_request[4] = {GET_DATA_RW, key, quantum, source_rank};
                         assert(source_rank != to_rank);
                         assert(to_rank > 0 && to_rank < size);
                         MPI_Send(&to_rank, 1, MPI_INT, source_rank, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
                         MPI_Send(to_request, 4, MPI_INT, to_rank, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
-                        std::cout<<"(quantum: "<<quantum<<" source: "<<source_rank<<" to_rank: "<<to_rank<<" master read_write from queue who is chosen)\n"<<std::flush;
+                        // std::cout<<"(quantum: "<<quantum<<" source: "<<source_rank<<" to_rank: "<<to_rank<<" master read_write from queue who is chosen)\n"<<std::flush;
                     }
                 }
                 break;
@@ -510,16 +521,16 @@ void memory_manager::change_mode(int mode) {
 }
 
 void memory_manager::finalize() {
-    std::cout<<"(rank: "<<rank<<" | finalize begin)\n"<<std::flush;
+    // std::cout<<"(rank: "<<rank<<" | finalize begin)\n"<<std::flush;
     int cnt = 0;
     if(rank != 0) {
         int tmp = 1;
-        std::cout<<"(rank: "<<rank<<" | finalize send)\n"<<std::flush;
+        // std::cout<<"(rank: "<<rank<<" | finalize send)\n"<<std::flush;
         MPI_Send(&tmp, 1, MPI_INT, 0, 23221, MPI_COMM_WORLD);
         MPI_Status status;
-        std::cout<<"(rank: "<<rank<<" | finalize begin recv)\n"<<std::flush;
+        // std::cout<<"(rank: "<<rank<<" | finalize begin recv)\n"<<std::flush;
         MPI_Recv(&tmp, 1, MPI_INT, 0, 12455, MPI_COMM_WORLD, &status);
-        std::cout<<"(rank: "<<rank<<" | finalize begin end recv)\n"<<std::flush;
+        // std::cout<<"(rank: "<<rank<<" | finalize begin end recv)\n"<<std::flush;
     } else {
         int tmp;
         for(int i = 1; i < size; i++) {
@@ -530,14 +541,18 @@ void memory_manager::finalize() {
             MPI_Send(&tmp, 1, MPI_INT, i, 12455, MPI_COMM_WORLD);
         }
     }
-    std::cout<<"( rank: "<<rank<<" | finalize go from barrier)\n"<<std::flush;
-    if(rank == 0) {
+    // std::cout<<"( rank: "<<rank<<" | finalize go from barrier)\n"<<std::flush;
+    if (rank == 0) {
         int request[4] = {-1, -1, -1, -1};
-        MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
         for(int i = 1; i < size; i++) {
             MPI_Send(request, 4, MPI_INT, i, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
         }
+    } else if (rank == 1) {
+        int request[3] = {-1, -1, -1};
+        MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
     }
+    assert(helper_thr.joinable());
+    helper_thr.join();
     if (rank != 0) {
         for(int key = 0; key < (int)memory.size(); key++) {
             assert(memory[key].wait_quantums.size() == 0);
@@ -546,11 +561,12 @@ void memory_manager::finalize() {
                     assert(memory[key].quantum_owner[quantum].first == true);
                 }
             }
+            for(int i = 0; i < (int)mm.memory[key].quantums.size(); i++) {
+                assert(memory[key].quantums[i] == nullptr);
+            }
         }
     }
-    assert(helper_thr.joinable());
-    helper_thr.join();
-    std::cout<<"(rank: "<<rank<<" | finalize end\n"<<std::flush;
+    // std::cout<<"(rank: "<<rank<<" | finalize end)\n"<<std::flush;
 }
 
 // memory_manager::~memory_manager() {
