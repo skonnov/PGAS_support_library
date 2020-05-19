@@ -38,8 +38,8 @@ int main(int argc, char** argv) { // b*a
     assert(argc > 2);
     int n = atoi(argv[1]), m = atoi(argv[2]);
     int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    rank = mm.get_MPI_rank();
+    size = mm.get_MPI_size();
     parallel_vector pv(n*m);
     parallel_vector ans(m);
     std::vector<int> b(n);
@@ -58,7 +58,6 @@ int main(int argc, char** argv) { // b*a
         }
         for (int i = 0; i < n; i++)
             b[i] = i;
-        double t2 = MPI_Wtime();
         mm.change_mode(READ_ONLY);
         std::vector<int>tmp_ans(portion);
         int t = 0;
@@ -73,13 +72,11 @@ int main(int argc, char** argv) { // b*a
         for (int i = index/n; i < index/n + portion; i++) {
             ans.set_elem(i, tmp_ans[i-index/n]);
         }
-        double t3 = MPI_Wtime();
-        if (rank == 1) {
-            for (int i = 0; i < n; i++)
-                std::cout<<ans.get_elem(i)<<" ";
-            std::cout<<"\n";
-            std::cout<<t3-t1<<"\n";
-        }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    double t3 = MPI_Wtime();
+    if (rank == 1) {
+        std::cout<<t3-t1<<"\n";
     }
     mm.finalize();
     MPI_Finalize();
