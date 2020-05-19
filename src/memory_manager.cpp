@@ -35,6 +35,14 @@ void memory_manager::memory_manager_init(int argc, char**argv) {
     // создание своего типа для пересылки посылок ???
 }
 
+int memory_manager::get_MPI_rank() {
+    return rank;
+}
+
+int memory_manager::get_MPI_size() {
+    return size;
+}
+
 int memory_manager::create_object(int number_of_elements) {
     // std::cout<<"(rank: "<<rank<<" num_elem: "<<number_of_elements<<" | create object begin)\n"<<std::flush;
     memory_line line;

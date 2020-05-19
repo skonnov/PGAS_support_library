@@ -63,6 +63,8 @@ class memory_manager {
     long long time;
 public:
     void memory_manager_init(int argc, char** argv);  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
+    int get_MPI_rank();
+    int get_MPI_size();
     int get_data(int key, int index_of_element);  // получить элемент по индексу с любого процесса
     void set_data(int key, int index_of_element, int value);  // сохранить значение элемента с любого процесса
     void copy_data(int key_from, int key_to);  // скопировать один memory_line в другой
