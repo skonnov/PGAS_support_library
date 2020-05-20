@@ -51,23 +51,23 @@ int reduce_operation(int ans, const Reduction& reduction, int process_begin, int
 }
 
 template<class Func, class Reduction>
-int parallel_reduce(int l, int r, const parallel_vector& pv, int identity, const Func& func, const Reduction& reduction, int process = 0) {
+int parallel_reduce(int l, int r, const parallel_vector& pv, int identity, const Reduction& reduction, int process = 1) {
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-    int process_begin = pv.get_index_of_process(l);
-    int process_end = pv.get_index_of_process(r-1);
     int ans = identity;
-    if(rank >= process_begin && rank <= process_end) {
-        int begin = 0, end = pv.get_portion();
-        if(rank == process_begin)
-            begin = pv.get_index_of_element(l);
-        if(rank == process_end)
-            end = pv.get_index_of_element(r-1)+1;
-        ans = func(begin, end, identity);
+    int begin = mm.get_quantum_index(l);
+    int end = mm.get_quantum_index(r);
+    int key = pv.get_key();
+    for (int i = begin; i <= end; i++) {
+        if(mm.memory[key].quantums != nullptr) {
+            int begin_quantum = (i == begin?l:0);
+            int end_quantum = (i == end?r:0);
+            for (int j = 0; j < r; j++) {
+                ans = reduction(ans, j);
+            }
+        }
     }
-    else if(rank != process)
-        return ans;
     return reduce_operation(ans, reduction, process_begin, process_end, process);
 }
 
