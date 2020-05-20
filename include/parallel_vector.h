@@ -28,6 +28,7 @@ public:
     void set_lock_write(int quantum_index);
     void unset_lock(int quantum_index);
     int get_quantum(int index);
+    int get_key();
 };
 
 #endif // __PARALLEL_VECTOR_H__

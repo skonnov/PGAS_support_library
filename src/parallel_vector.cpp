@@ -98,3 +98,7 @@ void parallel_vector::unset_lock(int quantum_index) {
 int parallel_vector::get_quantum(int index) {
     return mm.get_quantum_index(index);
 }
+
+int parallel_vector::get_key() {
+    return key;
+}
