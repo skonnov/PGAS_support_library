@@ -79,6 +79,5 @@ int main(int argc, char** argv) { // b*a
         std::cout<<t3-t1<<"\n";
     }
     mm.finalize();
-    MPI_Finalize();
     return 0;
 }
