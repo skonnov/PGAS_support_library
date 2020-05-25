@@ -73,45 +73,28 @@ int memory_manager::create_object(int number_of_elements) {
     return memory.size()-1;
 }
 
-// void memory_manager::delete_object(int* object) { 
-//     auto tmp = map_pointer_to_int.find(object);
-//     if(tmp == map_pointer_to_int.end())
-//         throw -1;
-//     auto tmp2 = map_int_to_pointer.find(tmp->second);  // ???
-//     if(tmp2 == map_int_to_pointer.end())
-//         throw -2;
-//     map_int_to_pointer.erase(tmp2);
-//     map_pointer_to_int.erase(tmp);
-// }
-
-
-// int memory_manager::get_size_of_portion(int key) {
-//     return memory[key].vector_size;
-// }
-
-
 int memory_manager::get_data(int key, int index_of_element) {
     int num_quantum = get_quantum_index(index_of_element);
     auto& quantum = mm.memory[key].quantums[num_quantum];
     bool f = false;
-    if (!is_read_only_mode)
+    if (!is_read_only_mode)   // если read_write mode, то используем мьютекс на данный квант
         mm.memory[key].mutexes[num_quantum]->lock();
-    if (quantum != nullptr) {
-        if (mm.memory[key].num_change_mode[num_quantum] == mm.num_of_change_mode) {
+    if (quantum != nullptr) {  // на данном процессе есть квант?
+        if (mm.memory[key].num_change_mode[num_quantum] == mm.num_of_change_mode) {  // не было изменения режима? (данные актуальны?)
             int elem = quantum[index_of_element%QUANTUM_SIZE];
             if (!is_read_only_mode)
                 mm.memory[key].mutexes[num_quantum]->unlock();
-            return elem;
+            return elem;  // элемент возвращается без обращения к мастеру
         }
     } else {
-        quantum = new int[QUANTUM_SIZE];
+        quantum = new int[QUANTUM_SIZE];  // выделение памяти
     }
-    int request[3] = {GET_INFO, key, num_quantum};
+    int request[3] = {GET_INFO, key, num_quantum};  // обращение к мастеру: {тип операции, идентификатор вектора, номер кванта}
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
     int to_rank = -2;
     MPI_Status status;
-    MPI_Recv(&to_rank, 1, MPI_INT, 0, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);
-    mm.memory[key].num_change_mode[num_quantum] = mm.num_of_change_mode;
+    MPI_Recv(&to_rank, 1, MPI_INT, 0, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);  
+    mm.memory[key].num_change_mode[num_quantum] = mm.num_of_change_mode;  
     if (is_read_only_mode && to_rank == rank) {
         return quantum[index_of_element%QUANTUM_SIZE];
     }
@@ -183,65 +166,6 @@ void memory_manager::set_data(int key, int index_of_element, int value) {
     mm.memory[key].mutexes[num_quantum]->unlock();
 }
 
-void memory_manager::copy_data(int key_from, int key_to) {  // change it!
-    memory[key_to] = memory[key_from];
-}
-
-// int memory_manager::get_data_by_index_on_process(int key, int index) {
-//     return memory[key].vector[index];
-// }
-
-// void memory_manager::set_data_by_index_on_process(int key, int index, int value) {
-//     if(is_read_only_mode)
-//         throw -1;
-//     memory[key].vector[index] = value;
-// }
-
-int memory_manager::get_number_of_process(int key, int index) {
-    int number_proc;
-    int quantum_index = get_quantum_index(index);
-    int tmp1 = int((memory[key].logical_size + QUANTUM_SIZE - 1)/QUANTUM_SIZE)%worker_size;
-    int tmp2 = int((memory[key].logical_size + QUANTUM_SIZE - 1)/QUANTUM_SIZE)/worker_size;
-    if(quantum_index < tmp1*(tmp2+1)) {
-        number_proc = quantum_index/(tmp2+1);
-    } else {
-        int tmp = quantum_index - tmp1*(tmp2+1);
-        number_proc = tmp1 + tmp/tmp2;
-    }
-    number_proc += 1;
-    return number_proc;
-}
-
-int memory_manager::get_number_of_element(int key, int index) {
-    int number_elem, quantum_number_elem;
-    int quantum_index = get_quantum_index(index);
-    int tmp1 = int((memory[key].logical_size + QUANTUM_SIZE - 1)/QUANTUM_SIZE)%worker_size;
-    int tmp2 = int((memory[key].logical_size + QUANTUM_SIZE - 1)/QUANTUM_SIZE)/worker_size;
-    if(quantum_index < tmp1*(tmp2+1)) {
-        quantum_number_elem = quantum_index%(tmp2+1);
-    } else {
-        int tmp = quantum_index - tmp1*(tmp2+1);
-        quantum_number_elem = tmp%tmp2;
-    }
-    number_elem = quantum_number_elem*QUANTUM_SIZE + index%QUANTUM_SIZE;
-    return number_elem;
-}
-
-int memory_manager::get_global_index_of_element(int key, int index, int process) {
-    if(process == 0)
-        throw -2;
-    int number_elem;
-    process -= 1;
-    int num_of_quantums = (memory[key].logical_size + QUANTUM_SIZE-1)/QUANTUM_SIZE;
-    if(process < num_of_quantums%worker_size) {
-        number_elem = process*(num_of_quantums/worker_size+1)*QUANTUM_SIZE+index;
-    } else {
-        number_elem = (num_of_quantums/worker_size+1)*QUANTUM_SIZE*(num_of_quantums%worker_size) +
-                                    + (process-num_of_quantums%worker_size)*(num_of_quantums/worker_size)*QUANTUM_SIZE + index;
-    }
-    return number_elem;
-}
-
 int memory_manager::get_quantum_index(int index) {
     return index/QUANTUM_SIZE;
 }
@@ -311,7 +235,6 @@ void master_helper_thread() {
         }
         switch(request[0]) {
             case LOCK_READ:
-            case LOCK_WRITE:
                 if (mm.memory[key].quantums_for_lock[quantum] == -1) {
                     int to_rank = status.MPI_SOURCE;
                     int tmp = 1;
@@ -486,20 +409,12 @@ void master_helper_thread() {
     }
 }
 
-void memory_manager::set_lock_read(int key, int quantum_index) {
+void memory_manager::set_lock(int key, int quantum_index) {
     int request[] = {LOCK_READ, key, quantum_index};
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
     int ans;
     MPI_Status status;
     MPI_Recv(&ans, 1, MPI_INT, 0, GET_DATA_FROM_MASTER_HELPER_LOCK, MPI_COMM_WORLD, &status);
-}
-
-void memory_manager::set_lock_write(int key, int quantum_index) {
-    // int request[] = {LOCK_WRITE, key, quantum_index};
-    // MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
-    // int ans;
-    // MPI_Status status;
-    // MPI_Recv(&ans, 1, MPI_INT, 0, GET_DATA_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);
 }
 
 void memory_manager::unset_lock(int key, int quantum_index) {

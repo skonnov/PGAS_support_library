@@ -10,8 +10,14 @@
 
 #define REDUCE_TAG 4567
 
+
+// функция объединения данных на одном процессе
+// аргументы: ans - значение, полученное после выполнения функции parallel_reduce; 
+// reduction – функция объединения данных с двух процессов;
+// process_begin, process_end – номера участвующих в редукции процессов;
+// process – номер процесса, на котором редуцируются данные
 template<class Reduction>
-int reduce_operation(int ans, const Reduction& reduction, int process_begin, int process_end, int process = 0) {
+int reduce_operation(int ans, const Reduction& reduction, int process_begin, int process_end, int process = 1) {
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -26,7 +32,7 @@ int reduce_operation(int ans, const Reduction& reduction, int process_begin, int
         vtmprank[t++] = i;
         if(rank == i)
             tmprank = t-1;
-    }
+    }  // создание временной нумерации (для удобства обращения к процессам при дальнейшей работе функции reduce_operation)
     int n = 1;
     while(n < t)
         n *= 2;
@@ -51,7 +57,12 @@ int reduce_operation(int ans, const Reduction& reduction, int process_begin, int
 }
 
 
-// l, r - границы на отдельном процессе в глобальной нумерации
+// аргументы: аргументы: [l, r) – диапазон глобальных индексов на отдельном процессе;
+// pv – вектор, над которым осуществляется функция редукции;
+// process_begin, process_end – номера участвующих в редукции процессов;
+// func – функтор, используемый для сбора данных на одном процессе;
+// reduction – функтор, используемый для объединения данных с разных процессов;
+// process – номер процесса, на котором редуцируются данные
 template<class Func, class Reduction>
 int parallel_reduce(int l, int r, const parallel_vector& pv, int identity, int process_begin, int process_end, const Func& func, const Reduction& reduction, int process = 1) {
     int ans = identity;
