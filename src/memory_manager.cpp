@@ -574,6 +574,7 @@ void memory_manager::finalize() {
             }
         }
     }
+    MPI_Finalize();
     // std::cout<<"(rank: "<<rank<<" | finalize end)\n"<<std::flush;
 }
 
