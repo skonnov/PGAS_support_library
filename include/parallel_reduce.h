@@ -50,24 +50,12 @@ int reduce_operation(int ans, const Reduction& reduction, int process_begin, int
     return tmpans;
 }
 
+
+// l, r - границы на отдельном процессе в глобальной нумерации
 template<class Func, class Reduction>
-int parallel_reduce(int l, int r, const parallel_vector& pv, int identity, const Reduction& reduction, int process = 1) {
-    int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
+int parallel_reduce(int l, int r, const parallel_vector& pv, int identity, int process_begin, int process_end, const Func& func, const Reduction& reduction, int process = 1) {
     int ans = identity;
-    int begin = mm.get_quantum_index(l);
-    int end = mm.get_quantum_index(r);
-    int key = pv.get_key();
-    for (int i = begin; i <= end; i++) {
-        if(mm.memory[key].quantums != nullptr) {
-            int begin_quantum = (i == begin?l:0);
-            int end_quantum = (i == end?r:0);
-            for (int j = 0; j < r; j++) {
-                ans = reduction(ans, j);
-            }
-        }
-    }
+    ans = func(l, r, identity);
     return reduce_operation(ans, reduction, process_begin, process_end, process);
 }
 
