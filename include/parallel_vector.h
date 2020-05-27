@@ -8,8 +8,6 @@
 class parallel_vector {
     int key;  // идентификатор вектора в memory_manager
     int size_vector;  // глобальный размер вектора
-    int size_proc, rank_proc;
-    int portion;
 public:
     parallel_vector();
     parallel_vector(const int& size);
