@@ -48,11 +48,12 @@ struct memory_line {  // память для одного parallel_vector
     // for master
     std::vector<std::pair<bool, int>>quantum_owner; // для read_write mode, массив пар: bool - готов ли квант для передачи;
                                                                                     // int - на каком процессе расположен квант
-    std::map<int, std::queue<int>> wait_locks, wait_quantums;  // мапа очередей для процессов, ожидающих разблокировки кванта
+    std::map<int, std::queue<int>> wait_locks;  // мапа очередей для процессов, ожидающих разблокировки кванта, заблокированных через set_lock
+    std::map<int, std::queue<int>>wait_quantums;  // мапа очередей для процессов, ожидающих разблокировки кванта, заблокированных процессом-мастером
     std::vector<int> quantums_for_lock;  // вектор для определения номеров процессов, блокирующих кванты
     std::vector<std::vector<int>> owners; // для read_only mode, номера процессов, хранящих у себя квант
     // for master and workers
-    std::vector<int> num_change_mode;  // для перехода
+    std::vector<int> num_change_mode;  // для перехода между режимами
 };
 
 class memory_manager {
