@@ -1,6 +1,7 @@
 #include <thread>
 #include <mpi.h>
 #include <vector>
+#include <climits>
 #include <iostream>
 #include <cassert>
 #include <mutex>
