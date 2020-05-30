@@ -437,9 +437,9 @@ void memory_manager::change_mode(int mode) {
     int is_ready;
     MPI_Status status;
     MPI_Recv(&is_ready, 1, MPI_INT, 0, GET_PERMISSION_FOR_CHANGE_MODE, MPI_COMM_WORLD, &status);
-    if(mode == READ_ONLY)
+    if (mode == READ_ONLY)
         is_read_only_mode = true;
-    else
+    else if (mode == READ_WRITE)
         is_read_only_mode = false;
     mm.num_of_change_mode++;
 }

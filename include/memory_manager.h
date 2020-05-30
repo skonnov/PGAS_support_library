@@ -84,7 +84,5 @@ public:
 
 extern memory_manager mm;
 
-void init(int argc, char** argv);
-
 #endif  // __MEMORY_MANAGER_H__
 
