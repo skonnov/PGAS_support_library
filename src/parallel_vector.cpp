@@ -5,17 +5,6 @@
 #include "parallel_vector.h"
 #include "memory_manager.h"
 
-
-extern memory_manager mm;
-// parallel_vector::parallel_vector() {
-//     MPI_Comm_size(MPI_COMM_WORLD, &sizeproc);
-//     MPI_Comm_rank(MPI_COMM_WORLD, &rankproc);
-//     portion = 1; 
-//     allsize = sizeproc;
-//     v.resize(portion);
-// }
-
-
 parallel_vector::parallel_vector(const int& number_of_elems) {
     key = mm.create_object(number_of_elems);
     size_vector = number_of_elems; 

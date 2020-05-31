@@ -457,18 +457,18 @@ void memory_manager::finalize() {
     }
     assert(helper_thr.joinable());
     helper_thr.join();
-    if (rank != 0) {
-        for(int key = 0; key < (int)memory.size(); key++) {
-            assert(memory[key].wait_quantums.size() == 0);
-            if(!mm.is_read_only_mode) {
-                for(int quantum = 0; quantum < (int)memory[key].quantum_owner.size(); quantum++) {
-                    assert(memory[key].quantum_owner[quantum].first == true);
-                }
-            }
-            for(int i = 0; i < (int)mm.memory[key].quantums.size(); i++) {
-                assert(memory[key].quantums[i] == nullptr);
-            }
-        }
-    }
+    // if (rank != 0) {
+    //     for(int key = 0; key < (int)memory.size(); key++) {
+    //         assert(memory[key].wait_quantums.size() == 0);
+    //         if(!mm.is_read_only_mode) {
+    //             for(int quantum = 0; quantum < (int)memory[key].quantum_owner.size(); quantum++) {
+    //                 assert(memory[key].quantum_owner[quantum].first == true);
+    //             }
+    //         }
+    //         for(int i = 0; i < (int)mm.memory[key].quantums.size(); i++) {
+    //             assert(memory[key].quantums[i] == nullptr);
+    //         }
+    //     }
+    // }
     MPI_Finalize();
 }
