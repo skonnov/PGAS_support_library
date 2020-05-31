@@ -1,65 +1,42 @@
 use List::Util qw[min max];
 
-open(WF, "> ./output_vector_sum_of_vector.txt") or die;
-for($i = 100000000; $i <= 250000000; $i+=50000000) {
-    print WF $i;
-    print WF " ";
-    for($j = 2; $j <= 4; $j = $j*2) {
-        $result = `mpiexec -n $j ../build/Release/main $i`;
-		print WF $result;
-		print WF " ";
-	}
-	print WF "\n";
-}
-close(WF);
 
-print "Done parallel_vector\n";
-
-open(WF2, "> ./output_reduce_sum_of_vector.txt") or die;
-for($i = 100000000; $i <= 1000000000; $i+=10000000) {
-    print WF2 $i;
-    print WF2 " ";
-    for($j = 2; $j <= 4; $j = $j*2) {
-        if($i / $j <= 250000000) {
+$it_sov = 1000000;
+$it_mv = 1000;
+$it_sov_step = 1000000, $it_mv_step = 1000;
+$it_sov_max = 100000000, $it_mv_max = 15000;
+$min_proc = 2, $max_proc = 4;
+while($it_sov < $it_sov_max || $it_mv < $it_mv_max) {
+    if ($it_sov < $it_sov_max) {
+        open(WF, "> ./output_parallel_reduce_sum_of_vector.txt") or die;    
+        for ($j = $min_proc; $j <= $max_proc; $j = $j*2) {
             $result = 250000.0;
-            for($k = 0; $k < 5; $k++) {
-                $tmp = `mpiexec -n $j ../build/Release/main_parallel_for $i`;
+            for ($k = 0; $k < 3; $k++) {
+                $tmp = `mpiexec -n $j ../build/Release/parallel_reduce_sum_of_vector $it_sov`;
                 $result = min($result + 0.0, $tmp+0.0);
             }
             print WF2 $result;
             print WF2 " ";
         }
-        else {
-            print WF2 "Too_much ";
-        }
-	}
-	print WF2 "\n";
-}
-close(WF2);
-
-print "Done parallel_for\n";
-
-use List::Util qw[min max];
-
-open(WF2, "> ./output_reduce_multiple_vector_matrix.txt") or die;
-
-for($i = 10000; $i <= 25000; $i+=1000) {
-    for($l = 5000; $l <= 25000; $l+=5000) {
-        print WF2 $i, " ", $l, " ";
-        for($j = 2; $j <= 4; $j = $j*2) {
-            $result = 250000.0;
-            for($k = 0; $k < 5; $k++) {
-                $tmp = `mpiexec -n $j ../build/Release/matrixvector $i $l`;
-                $result = min($result + 0.0, $tmp+0.0);
-            }
-            print WF2 $result;
-            print WF2 " ";
-        }
-        print WF " | ";
+        print "parallel_reduce for $it_sov\n";
+        $it_sov += $it_sov_step;
+        close(WF);
     }
-	print WF2 "\n";
+    if ($it_mv < $it_mv_max) {
+        open(WF2, "> ./output_reduce_multiple_vector_matrix.txt") or die;
+        for ($j = $min_proc; $j <= $max_proc; $j = $j*2) {
+            $result = 250000.0;
+            for ($k = 0; $k < 3; $k++) {
+                $tmp = `mpiexec -n $j ../build/Release/matrixvector $it_mv $it_mv`;
+                $result = min($result + 0.0, $tmp+0.0);
+            }
+            print WF2 $result;
+            print WF2 " ";
+        }
+        print WF2 "\n";
+        print "matrixvector for $it_mv\n";
+        $it_mv += $it_mv_step;
+        close(WF2);
+    }
 }
-close(WF2);
-
-print "Done matrixvector\n";
 
