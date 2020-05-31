@@ -35,6 +35,7 @@ int main(int argc, char ** argv) {
     if (rank != 0) {
         int worker_rank = rank-1;
         int worker_size = size-1;
+        // разделение элементов вектора по процессам
         int portion = n/worker_size + (worker_rank < n%worker_size?1:0);
         int index = 0;
         if (worker_rank < n%worker_size) {
@@ -42,9 +43,9 @@ int main(int argc, char ** argv) {
         } else {
             index = (portion+1)*(n%worker_size) + portion*(worker_rank-n%worker_size);
         }
-        for (int i = index; i < index+portion; i++)
+        for (int i = index; i < index+portion; i++)  // инициализация элементов вектора
             pv.set_elem(i, i);
-        mm.change_mode(READ_ONLY);
+        mm.change_mode(READ_ONLY);  // так как далее вектор изменяться не будет, режим изменяется на READ_ONLY
         int ans = parallel_reduce(0, n, pv, 0, 1, size-1, Func(pv), reduction);
         double t2 = MPI_Wtime();
         if(rank == 1)
