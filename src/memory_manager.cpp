@@ -215,7 +215,7 @@ void master_helper_thread() {
             assert(quantum >= 0 && quantum < (int)mm.memory[key].quantum_owner.size());
         }
         switch(request[0]) {
-            case LOCK_READ:
+            case LOCK:
                 if (mm.memory[key].quantums_for_lock[quantum] == -1) {
                     int to_rank = status.MPI_SOURCE;
                     int tmp = 1;
@@ -376,7 +376,7 @@ void master_helper_thread() {
 }
 
 void memory_manager::set_lock(int key, int quantum_index) {
-    int request[] = {LOCK_READ, key, quantum_index};
+    int request[] = {LOCK, key, quantum_index};
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
     int ans;
     MPI_Status status;
