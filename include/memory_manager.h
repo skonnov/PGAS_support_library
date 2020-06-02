@@ -8,7 +8,7 @@
 #include <mutex>
 #include <iostream>
 
-#define QUANTUM_SIZE 5
+#define QUANTUM_SIZE 500
 
 enum mods {  // используется для изменения режима работы с памятью
     READ_ONLY,
