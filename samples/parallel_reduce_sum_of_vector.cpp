@@ -46,10 +46,10 @@ int main(int argc, char ** argv) {
         for (int i = index; i < index+portion; i++)  // инициализация элементов вектора
             pv.set_elem(i, i);
         mm.change_mode(READ_ONLY);  // так как далее вектор изменяться не будет, режим изменяется на READ_ONLY
-        int ans = parallel_reduce(0, n, pv, 0, 1, size-1, Func(pv), reduction);
+        int ans = parallel_reduce(index, index+portion, pv, 0, 1, size-1, Func(pv), reduction);
         double t2 = MPI_Wtime();
         if(rank == 1)
-            std::cout<<t2-t1<<std::flush;
+            std::cout<<ans<<" "<<t2-t1<<std::flush;
     }
     mm.finalize();
     return 0;
