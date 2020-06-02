@@ -8,7 +8,7 @@ $it_sov_max = 100000000, $it_mv_max = 15000;
 $min_proc = 2, $max_proc = 4;
 while($it_sov < $it_sov_max || $it_mv < $it_mv_max) {
     if ($it_sov < $it_sov_max) {
-        open(WF, "> ./output_parallel_reduce_sum_of_vector.txt") or die;    
+        open(WF, ">> ./output_parallel_reduce_sum_of_vector.txt") or die;    
         for ($j = $min_proc; $j <= $max_proc; $j = $j*2) {
             $result = 250000.0;
             for ($k = 0; $k < 3; $k++) {
@@ -23,7 +23,7 @@ while($it_sov < $it_sov_max || $it_mv < $it_mv_max) {
         close(WF);
     }
     if ($it_mv < $it_mv_max) {
-        open(WF2, "> ./output_matrixvector.txt") or die;
+        open(WF2, ">> ./output_matrixvector.txt") or die;
         for ($j = $min_proc; $j <= $max_proc; $j = $j*2) {
             $result = 250000.0;
             for ($k = 0; $k < 3; $k++) {
