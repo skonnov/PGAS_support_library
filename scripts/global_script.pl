@@ -4,7 +4,7 @@ use List::Util qw[min max];
 $it_sov = 1000000;
 $it_mv = 1000;
 $it_sov_step = 1000000, $it_mv_step = 1000;
-$it_sov_max = 100000000, $it_mv_max = 15000;
+$it_sov_max = 150000000, $it_mv_max = 20000;
 $min_proc = 2, $max_proc = 4;
 while($it_sov < $it_sov_max || $it_mv < $it_mv_max) {
     if ($it_sov < $it_sov_max) {
