@@ -34,7 +34,7 @@ int main(int argc, char** argv) { // b*a
         mm.change_mode(READ_ONLY);
         std::vector<int>tmp_ans(portion);
         int t = 0;
-        for (int i = index/n; i < index/n+portion; i++) {
+        for (int i = index/m; i < index/m+portion; i++) {
             tmp_ans[t] = 0;
             for (int j = 0; j < n; j++) {
                 tmp_ans[t] += pv.get_elem(i*n + j)*b[j];
@@ -42,8 +42,8 @@ int main(int argc, char** argv) { // b*a
             t++;
         }
         mm.change_mode(READ_WRITE);  // копирование элементов в вектор, с которого можно будет получить данные на любом процессе
-        for (int i = index/n; i < index/n + portion; i++) {
-            ans.set_elem(i, tmp_ans[i-index/n]);
+        for (int i = index/m; i < index/m + portion; i++) {
+            ans.set_elem(i, tmp_ans[i-index/m]);
         }
     }
     MPI_Barrier(MPI_COMM_WORLD);

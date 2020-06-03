@@ -49,7 +49,7 @@ int main(int argc, char ** argv) {
         int ans = parallel_reduce(index, index+portion, pv, 0, 1, size-1, Func(pv), reduction);
         double t2 = MPI_Wtime();
         if(rank == 1)
-            std::cout<<ans<<" "<<t2-t1<<std::flush;
+            std::cout<<t2-t1<<std::flush;
     }
     mm.finalize();
     return 0;
