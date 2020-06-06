@@ -16,15 +16,22 @@ int main(int argc, char** argv) {
     int rank, size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Barrier(MPI_COMM_WORLD);
-    for(int i = 0; i < n; i++)
-    {
-        pv.set_lock(pv.get_quantum(i));
-        pv.set_elem(i, pv.get_elem(i) + 1);
-        pv.unset_lock(pv.get_quantum(i));
+    if(rank == 1) {
+        for (int i = 0; i < n; i++) {
+            pv.set_elem(i, 0);
+        }
     }
     MPI_Barrier(MPI_COMM_WORLD);
-    if(rank == 0) {
+    if (rank != 0) {
+        for(int i = 0; i < n; i++)
+        {
+            pv.set_lock(pv.get_quantum(i));
+            pv.set_elem(i, pv.get_elem(i) + 1);
+            pv.unset_lock(pv.get_quantum(i));
+        }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    if(rank == 1) {
         for(int i = 0; i < n; i++)
             std::cout<<pv.get_elem(i)<<" ";
         std::cout<<"\n";

@@ -1,4 +1,4 @@
 *.exe
 *.obj
-build
+build*
 .vscode
