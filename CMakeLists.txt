@@ -7,7 +7,7 @@ project(parallel_arrays C CXX)
 
 find_package(Threads REQUIRED)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 find_package(MPI)
 
