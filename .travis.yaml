@@ -1,0 +1,17 @@
+language: cpp
+
+os: linux
+compiler: gcc
+
+before_install:
+  - test -n $CC && unset CC
+  - test -n $CXX && unset CXX
+
+install:
+  - sudo apt-get install mpich libmpich-dev
+
+script:
+  - mkdir build
+  - cd build
+  - cmake ..
+  - cmake --build . --config release -j4
