@@ -13,5 +13,9 @@ install:
 build_script:
   - cmd: mkdir build
   - cmd: cd build
-  - cmd: cmake ..
+  - cmd: cmake ^
+        -D MPI_C_INCLUDE_PATH:PATH="%MPI_HOME%/Include" ^
+        -D MPI_C_LIBRARIES:PATH="%MPI_HOME%/Lib/x86/msmpi.lib" ^
+        -D MPI_CXX_INCLUDE_PATH:PATH="%MPI_HOME%/Include" ^
+        -D MPI_CXX_LIBRARIES:PATH="%MPI_HOME%/Lib/x86/msmpi.lib" ..
   - cmd: cmake --build . --config release
