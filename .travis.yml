@@ -14,4 +14,4 @@ script:
   - mkdir build
   - cd build
   - cmake ..
-  - cmake --build . --config release -j4
+  - cmake --build . release -- -j4
