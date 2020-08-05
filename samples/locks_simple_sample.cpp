@@ -6,10 +6,8 @@
 
 using namespace std;
 
-extern memory_manager mm;
-
 int main(int argc, char** argv) {
-    mm.memory_manager_init(argc, argv);
+    memory_manager::memory_manager_init(argc, argv);
     assert(argc >= 1);
     int n = atoi(argv[1]);
     parallel_vector pv(n);
@@ -36,6 +34,6 @@ int main(int argc, char** argv) {
             std::cout<<pv.get_elem(i)<<" ";
         std::cout<<"\n";
     }
-    mm.finalize();
+    memory_manager::finalize();
     return 0;
 }

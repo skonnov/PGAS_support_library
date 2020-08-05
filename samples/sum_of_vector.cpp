@@ -7,10 +7,8 @@
 
 using namespace std;
 
-extern memory_manager mm;
-
 int main(int argc, char** argv) {
-    mm.memory_manager_init(argc, argv);
+    memory_manager::memory_manager_init(argc, argv);
     assert(argc >= 1);
     int n = atoi(argv[1]);
     parallel_vector pv(n);
@@ -21,7 +19,7 @@ int main(int argc, char** argv) {
         for(int i = 0; i < n; i++) {
             pv.set_elem(i, i);
         }
-        mm.change_mode(READ_ONLY);
+        memory_manager::change_mode(READ_ONLY);
         double t1 = MPI_Wtime();
         int sum = 0;
         for(int i = 0; i < n; i++) {
@@ -30,11 +28,11 @@ int main(int argc, char** argv) {
         }
         double t2 = MPI_Wtime();
         cout<<t2-t1<<" "<<sum<<" "<<rank<<"\n"<<std::flush;
-        mm.change_mode(READ_WRITE);
+        memory_manager::change_mode(READ_WRITE);
         for(int i = 0; i < n; i++) {
             pv.set_elem(i, i+1);
         }
-        mm.change_mode(READ_ONLY);
+        memory_manager::change_mode(READ_ONLY);
         t1 = MPI_Wtime();
         sum = 0;
         for(int i = 0; i < n; i++) {
@@ -43,11 +41,11 @@ int main(int argc, char** argv) {
         }
         t2 = MPI_Wtime();
         cout<<t2-t1<<" "<<sum<<" "<<rank<<"\n";
-        mm.change_mode(READ_WRITE);
+        memory_manager::change_mode(READ_WRITE);
         for(int i = 0; i < n; i++) {
             pv.set_elem(i, i);
         }
-        mm.change_mode(READ_ONLY);
+        memory_manager::change_mode(READ_ONLY);
         t1 = MPI_Wtime();
         sum = 0;
         for(int i = 0; i < n; i++) {
@@ -56,11 +54,11 @@ int main(int argc, char** argv) {
         }
         t2 = MPI_Wtime();
         cout<<t2-t1<<" "<<sum<<" "<<rank<<"\n"<<std::flush;
-        mm.change_mode(READ_WRITE);
+        memory_manager::change_mode(READ_WRITE);
         for(int i = 0; i < n; i++) {
             pv.set_elem(i, i+1);
         }
-        mm.change_mode(READ_ONLY);
+        memory_manager::change_mode(READ_ONLY);
         t1 = MPI_Wtime();
         sum = 0;
         for(int i = 0; i < n; i++) {
@@ -70,6 +68,6 @@ int main(int argc, char** argv) {
         t2 = MPI_Wtime();
         cout<<t2-t1<<" "<<sum<<" "<<rank<<"\n";
     }
-    mm.finalize();
+    memory_manager::finalize();
     return 0;
 }

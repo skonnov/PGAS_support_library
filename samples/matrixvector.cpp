@@ -5,13 +5,13 @@
 #include "parallel_vector.h"
 
 int main(int argc, char** argv) { // b*a
-    mm.memory_manager_init(argc, argv);
+    memory_manager::memory_manager_init(argc, argv);
     double t1 = MPI_Wtime();
     assert(argc > 2);
     int n = atoi(argv[1]), m = atoi(argv[2]);
     int rank, size;
-    rank = mm.get_MPI_rank();
-    size = mm.get_MPI_size();
+    rank = memory_manager::get_MPI_rank();
+    size = memory_manager::get_MPI_size();
     parallel_vector pv(n*m);
     parallel_vector ans(m);
     std::vector<int> b(n);
@@ -31,7 +31,7 @@ int main(int argc, char** argv) { // b*a
         }  
         for (int i = 0; i < n; i++)
             b[i] = i;
-        mm.change_mode(READ_ONLY);
+        memory_manager::change_mode(READ_ONLY);
         std::vector<int>tmp_ans(portion);
         int t = 0;
         for (int i = index/m; i < index/m+portion; i++) {
@@ -41,7 +41,7 @@ int main(int argc, char** argv) { // b*a
             }
             t++;
         }
-        mm.change_mode(READ_WRITE);  // копирование элементов в вектор, с которого можно будет получить данные на любом процессе
+        memory_manager::change_mode(READ_WRITE);  // копирование элементов в вектор, с которого можно будет получить данные на любом процессе
         for (int i = index/m; i < index/m + portion; i++) {
             ans.set_elem(i, tmp_ans[i-index/m]);
         }
@@ -51,6 +51,6 @@ int main(int argc, char** argv) { // b*a
     if (rank == 1) {
         std::cout<<t3-t1<<"\n";
     }
-    mm.finalize();
+    memory_manager::finalize();
     return 0;
 }

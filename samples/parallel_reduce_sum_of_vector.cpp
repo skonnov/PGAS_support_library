@@ -25,10 +25,10 @@ int reduction(int a, int b)
 }
 
 int main(int argc, char ** argv) {
-    mm.memory_manager_init(argc, argv);
+    memory_manager::memory_manager_init(argc, argv);
     double t1 = MPI_Wtime();
-    int rank = mm.get_MPI_rank();
-    int size = mm.get_MPI_size();
+    int rank = memory_manager::get_MPI_rank();
+    int size = memory_manager::get_MPI_size();
     assert(argc > 1);
     int n = atoi(argv[1]);
     parallel_vector pv(n);
@@ -45,12 +45,12 @@ int main(int argc, char ** argv) {
         }
         for (int i = index; i < index+portion; i++)  // инициализация элементов вектора
             pv.set_elem(i, i);
-        mm.change_mode(READ_ONLY);  // так как далее вектор изменяться не будет, режим изменяется на READ_ONLY
+        memory_manager::change_mode(READ_ONLY);  // так как далее вектор изменяться не будет, режим изменяется на READ_ONLY
         int ans = parallel_reduce(index, index+portion, pv, 0, 1, size-1, Func(pv), reduction);
         double t2 = MPI_Wtime();
         if(rank == 1)
             std::cout<<t2-t1<<std::flush;
     }
-    mm.finalize();
+    memory_manager::finalize();
     return 0;
 }

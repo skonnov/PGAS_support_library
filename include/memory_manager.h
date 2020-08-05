@@ -54,32 +54,29 @@ struct memory_line {  // память для одного parallel_vector
 };
 
 class memory_manager {
-    std::vector<memory_line> memory;  // структура-хранилище памяти и вспомогательной информации
-    std::thread helper_thr;  // вспомогательный поток
-    int rank, size;  // ранг процесса в MPI и число процессов
-    int worker_rank, worker_size;  // worker_rank = rank-1, worker_size = size-1
-    bool is_read_only_mode;  // активен ли режим READ_ONLY
-    int num_of_change_mode_procs;  // число процессов, обратившихся к мастеру для изменения режима работы
-    int num_of_change_mode;  // общее число изменений режима работы
-    std::vector<long long> times;  // вектор, сохраняющий информацию, когда в последний раз было обращение к какому-либо процессу
-    long long time;  // вспомогательный счётчик для вектора times
+    static std::vector<memory_line> memory;  // структура-хранилище памяти и вспомогательной информации
+    static std::thread helper_thr;  // вспомогательный поток
+    static int rank, size;  // ранг процесса в MPI и число процессов
+    static int worker_rank, worker_size;  // worker_rank = rank-1, worker_size = size-1
+    static bool is_read_only_mode;  // активен ли режим READ_ONLY
+    static int num_of_change_mode_procs;  // число процессов, обратившихся к мастеру для изменения режима работы
+    static int num_of_change_mode;  // общее число изменений режима работы
+    static std::vector<long long> times;  // вектор, сохраняющий информацию, когда в последний раз было обращение к какому-либо процессу
+    static long long time;  // вспомогательный счётчик для вектора times
 public:
-    void memory_manager_init(int argc, char** argv);  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
-    int get_MPI_rank();
-    int get_MPI_size();
-    int get_data(int key, int index_of_element);  // получить элемент по индексу с любого процесса
-    void set_data(int key, int index_of_element, int value);  // сохранить значение элемента по индексу с любого процесса
-    int create_object(int number_of_elements);  // создать новый memory_line и занести его в memory
-    int get_quantum_index(int index);  // получить номер кванта по индексу
-    void set_lock(int key, int quantum_index);  // заблокировать квант
-    void unset_lock(int key, int quantum_index);  // разблокировать квант
-    void change_mode(int mode);  // сменить режим работы с памятью
-    void finalize();  // функция, завершающая выполнение программы, останавливает вспомогательные потоки
+    static void memory_manager_init(int argc, char** argv);  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
+    static int get_MPI_rank();
+    static int get_MPI_size();
+    static int get_data(int key, int index_of_element);  // получить элемент по индексу с любого процесса
+    static void set_data(int key, int index_of_element, int value);  // сохранить значение элемента по индексу с любого процесса
+    static int create_object(int number_of_elements);  // создать новый memory_line и занести его в memory
+    static int get_quantum_index(int index);  // получить номер кванта по индексу
+    static void set_lock(int key, int quantum_index);  // заблокировать квант
+    static void unset_lock(int key, int quantum_index);  // разблокировать квант
+    static void change_mode(int mode);  // сменить режим работы с памятью
+    static void finalize();  // функция, завершающая выполнение программы, останавливает вспомогательные потоки
     friend void worker_helper_thread();  // функция, выполняемая вспомогательными потоками процессов-рабочих
     friend void master_helper_thread();  // функция, выполняемая вспомогательным потоком процесса-мастера
 };
 
-extern memory_manager mm;  // работа с менеджером памяти идёт через этот объект
-
 #endif  // __MEMORY_MANAGER_H__
-
