@@ -111,7 +111,7 @@ int memory_manager::get_data(int key, int index_of_element) {
                                                  // ответ мастеру о том, что данные готовы, отправлять не нужно
         return quantum[index_of_element%QUANTUM_SIZE];
     }
-    if (to_rank != rank) {  // если данные не у текущего процесса, иницируется передача данных от указанного мастером процесса
+    if (to_rank != rank) {  // если данные не у текущего процесса, инициируется передача данных от указанного мастером процесса
         assert(quantum != nullptr);
         assert(to_rank > 0 && to_rank < size);
         MPI_Recv(quantum, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
@@ -152,7 +152,7 @@ void memory_manager::set_data(int key, int index_of_element, int value) {
     MPI_Recv(&to_rank, 1, MPI_INT, 0, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);  // получение ответа от мастера
     assert(num_quantum >= 0 && num_quantum < (int)memory_manager::memory[key].num_change_mode.size());
     memory_manager::memory[key].num_change_mode[num_quantum] = memory_manager::num_of_change_mode;
-    if (to_rank != rank) {  // если данные не у текущего процесса, иницируется передача данных от указанного мастером процесса
+    if (to_rank != rank) {  // если данные не у текущего процесса, инициируется передача данных от указанного мастером процесса
         assert(quantum != nullptr);
         assert(to_rank > 0 && to_rank < size);
         MPI_Recv(quantum, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
@@ -278,7 +278,7 @@ void master_helper_thread() {
                             break;
                         }
                     }
-                    if (memory_manager::memory[key].owners[quantum].empty()) {  // квант не был иницииализирован
+                    if (memory_manager::memory[key].owners[quantum].empty()) {  // квант не был инициализирован
                             throw -1;
                     }
                     int to_rank = -2;
