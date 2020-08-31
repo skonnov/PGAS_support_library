@@ -462,17 +462,17 @@ void memory_manager::finalize() {
 }
 
 int memory_manager::get_owner(int key, int quantum_index, int requesting_process) {
-    long long minn = memory_manager::time+1;
+    long long minn = time+1;
     int to_rank = -1;
-    for (int owner: memory_manager::memory[key].owners[quantum_index]) {  // поиск процесса, с которым мастер не взаимодействовал наиболее долгое время
-        assert(owner < (int)memory_manager::times.size());
+    for (int owner: memory[key].owners[quantum_index]) {  // поиск процесса, с которым мастер не взаимодействовал наиболее долгое время
+        assert(owner < (int)times.size());
         if (owner == requesting_process) {  // данные есть также и у процесса, который отправил запрос?
             to_rank = owner;
             break;
         }
-        if (memory_manager::times[owner] < minn) {
+        if (times[owner] < minn) {
             to_rank = owner;
-            minn = memory_manager::times[owner];
+            minn = times[owner];
         }
     }
     return to_rank;
