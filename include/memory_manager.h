@@ -75,6 +75,8 @@ public:
     static void unset_lock(int key, int quantum_index);  // разблокировать квант
     static void change_mode(int mode);  // сменить режим работы с памятью
     static void finalize();  // функция, завершающая выполнение программы, останавливает вспомогательные потоки
+private:
+    static int get_owner(int key, int quantum_index, int requesting_process);
     friend void worker_helper_thread();  // функция, выполняемая вспомогательными потоками процессов-рабочих
     friend void master_helper_thread();  // функция, выполняемая вспомогательным потоком процесса-мастера
 };

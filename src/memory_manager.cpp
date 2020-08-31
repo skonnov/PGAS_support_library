@@ -88,7 +88,6 @@ int memory_manager::create_object(int number_of_elements) {
 int memory_manager::get_data(int key, int index_of_element) {
     int num_quantum = get_quantum_index(index_of_element);
     auto& quantum = memory_manager::memory[key].quantums[num_quantum];
-    bool f = false;
     if (!is_read_only_mode)   // если read_write mode, то используем мьютекс на данный квант
         memory_manager::memory[key].mutexes[num_quantum]->lock();
     if (quantum != nullptr) {  // на данном процессе есть квант?
@@ -281,19 +280,7 @@ void master_helper_thread() {
                     if (memory_manager::memory[key].owners[quantum].empty()) {  // квант не был инициализирован
                             throw -1;
                     }
-                    int to_rank = -2;
-                    long long minn = memory_manager::time+1;
-                    for (int owner: memory_manager::memory[key].owners[quantum]) {  // поиск процесса, с которым мастер не взаимодействовал наиболее долгое время
-                        assert(owner < (int)memory_manager::times.size());
-                        if (owner == status.MPI_SOURCE) {  // данные есть также и у процесса, который отправил запрос?
-                            to_rank = owner;
-                            break;
-                        }
-                        if (memory_manager::times[owner] < minn) {
-                            to_rank = owner;
-                            minn = memory_manager::times[owner];
-                        }
-                    }
+                    int to_rank = memory_manager::get_owner(key, quantum, status.MPI_SOURCE);  // получение ранга наиболее предпочтительного процесса
                     assert(to_rank > 0 && to_rank < size);
                     memory_manager::times[to_rank] = memory_manager::time;
                     memory_manager::times[status.MPI_SOURCE] = memory_manager::time++;
@@ -310,19 +297,7 @@ void master_helper_thread() {
                 } else {  // READ_WRITE mode?
                     assert(quantum < (int)memory_manager::memory[key].num_change_mode.size());
                     if (memory_manager::memory[key].num_change_mode[quantum] != memory_manager::num_of_change_mode) {  // был переход между режимами?
-                        long long minn = memory_manager::time+1;
-                        int to_rank = -1;
-                        for (int owner: memory_manager::memory[key].owners[quantum]) {  // поиск процесса, с которым мастер не взаимодействовал наиболее долгое время
-                            assert(owner < (int)memory_manager::times.size());
-                            if (owner == status.MPI_SOURCE) {  // данные есть также и у процесса, который отправил запрос?
-                                to_rank = owner;
-                                break;
-                            }
-                            if (memory_manager::times[owner] < minn) {
-                                to_rank = owner;
-                                minn = memory_manager::times[owner];
-                            }
-                        }
+                        int to_rank = memory_manager::get_owner(key, quantum, status.MPI_SOURCE);  // получение ранга наиболее предпочтительного процесса
                         memory_manager::memory[key].num_change_mode[quantum] = memory_manager::num_of_change_mode;
                         memory_manager::memory[key].quantum_owner[quantum] = {false, status.MPI_SOURCE};
                         if (to_rank == -1 || to_rank == status.MPI_SOURCE) {  // данные у процесса, отправившего запрос?
@@ -484,4 +459,21 @@ void memory_manager::finalize() {
     //     }
     // }
     MPI_Finalize();
+}
+
+int memory_manager::get_owner(int key, int quantum_index, int requesting_process) {
+    long long minn = memory_manager::time+1;
+    int to_rank = -1;
+    for (int owner: memory_manager::memory[key].owners[quantum_index]) {  // поиск процесса, с которым мастер не взаимодействовал наиболее долгое время
+        assert(owner < (int)memory_manager::times.size());
+        if (owner == requesting_process) {  // данные есть также и у процесса, который отправил запрос?
+            to_rank = owner;
+            break;
+        }
+        if (memory_manager::times[owner] < minn) {
+            to_rank = owner;
+            minn = memory_manager::times[owner];
+        }
+    }
+    return to_rank;
 }
