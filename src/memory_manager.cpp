@@ -6,6 +6,7 @@
 #include <cassert>
 #include <mutex>
 #include "memory_manager.h"
+#include "queue_quantums.h"
 
 // посылка мастеру: [операция; идентификатор структуры, откуда требуются данные; требуемый номер кванта]
 // посылка рабочему от мастера: [операция; идентификатор структуры, откуда требуются данные; 
@@ -65,6 +66,8 @@ int memory_manager::create_object(int number_of_elements) {
         line.quantums_for_lock.resize(num_of_quantums);
         line.quantum_owner.resize(num_of_quantums);
         line.owners.resize(num_of_quantums);
+        line.wait_locks.resize(num_of_quantums);
+        line.wait_quantums.resize(num_of_quantums);
         for (int i = 0; i < int(line.quantums_for_lock.size()); i++) {
             line.quantums_for_lock[i] = -1;
             line.quantum_owner[i] = {0, -1};
@@ -238,21 +241,16 @@ void master_helper_thread() {
                     MPI_Send(&tmp, 1, MPI_INT, to_rank, GET_DATA_FROM_MASTER_HELPER_LOCK, MPI_COMM_WORLD);  // уведомление о том, 
                                                                                                             // что процесс может заблокировать квант
                 } else {  // квант уже заблокирован другим процессом, данный процесс помещается в очередь ожидания по данному кванту
-                    if (memory_manager::memory[key].wait_locks.find(quantum) == memory_manager::memory[key].wait_locks.end())
-                        memory_manager::memory[key].wait_locks.insert({quantum, std::queue<int>{}});
-                    memory_manager::memory[key].wait_locks[quantum].push(status.MPI_SOURCE);
+                    memory_manager::memory[key].wait_locks.push(quantum, status.MPI_SOURCE);
                 }
                 break;
             case UNLOCK:  // разблокировка кванта
                 if (memory_manager::memory[key].quantums_for_lock[quantum] == status.MPI_SOURCE) {
                     memory_manager::memory[key].quantums_for_lock[quantum] = -1;
-                    if (memory_manager::memory[key].wait_locks.find(quantum) != memory_manager::memory[key].wait_locks.end()) {  // проверка, есть ли в очереди
+                    if (memory_manager::memory[key].wait_locks.is_contain(quantum)) {  // проверка, есть ли в очереди
                                                                                                        // ожидания по данному кванту какой-либо процесс
-                        int to_rank = memory_manager::memory[key].wait_locks[quantum].front();
-                        memory_manager::memory[key].wait_locks[quantum].pop();  // если есть, то ожидающий процесс удаляется из очереди
+                        int to_rank = memory_manager::memory[key].wait_locks.pop(quantum);
                         memory_manager::memory[key].quantums_for_lock[quantum] = to_rank;
-                        if (memory_manager::memory[key].wait_locks[quantum].size() == 0)
-                            memory_manager::memory[key].wait_locks.erase(quantum);
                         int tmp = 1;
                         MPI_Send(&tmp, 1, MPI_INT, to_rank, GET_DATA_FROM_MASTER_HELPER_LOCK, MPI_COMM_WORLD);  // уведомление о том, что процесс, изъятый
                                                                                                                 // из очереди, может заблокировать квант
@@ -329,9 +327,7 @@ void master_helper_thread() {
                         MPI_Send(to_request, 4, MPI_INT, to_rank, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);  // отправление запроса вспомогательному потоку
                                                                                                          // процесса-рабочего о переслыке данных
                     } else {  // данные не готовы к пересылке (в данный момент пересылаются другому процессу)
-                        if (memory_manager::memory[key].wait_quantums.find(quantum) == memory_manager::memory[key].wait_quantums.end())
-                            memory_manager::memory[key].wait_quantums.insert({quantum, std::queue<int>()});
-                        memory_manager::memory[key].wait_quantums[quantum].push(status.MPI_SOURCE);  // процесс помещается в очередь ожидания по данному кванту
+                        memory_manager::memory[key].wait_quantums.push(quantum, status.MPI_SOURCE);
                     }
                 }
                 break;
@@ -343,14 +339,8 @@ void master_helper_thread() {
                     assert(memory_manager::memory[key].quantum_owner[quantum].second == status.MPI_SOURCE);
                     assert(memory_manager::memory[key].quantum_owner[quantum].first == false);
                     memory_manager::memory[key].quantum_owner[quantum].first = true;
-                    if (memory_manager::memory[key].wait_quantums.find(quantum) != memory_manager::memory[key].wait_quantums.end()) {  // есть процессы, ожидающие готовности кванта?
-                        std::queue<int>& wait_queue = memory_manager::memory[key].wait_quantums[quantum];
-                        int source_rank = wait_queue.front();
-                        wait_queue.pop();  // ожидающий процесс извлекается из очереди
-                        if (wait_queue.size() == 0) {
-                            memory_manager::memory[key].wait_quantums.erase(quantum);
-                            assert(memory_manager::memory[key].wait_quantums.find(quantum) == memory_manager::memory[key].wait_quantums.end());
-                        }
+                    if (memory_manager::memory[key].wait_quantums.is_contain(quantum)) {  // есть процессы, ожидающие готовности кванта?
+                        int source_rank = memory_manager::memory[key].wait_quantums.pop(quantum);
                         int to_rank = memory_manager::memory[key].quantum_owner[quantum].second;
                         memory_manager::memory[key].quantum_owner[quantum] = {false, source_rank};
                         int to_request[4] = {GET_DATA_RW, key, quantum, source_rank};
