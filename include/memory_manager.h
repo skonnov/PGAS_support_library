@@ -37,25 +37,32 @@ enum operations {  // используется вспомогательными 
 void worker_helper_thread();
 void master_helper_thread();
 
-struct memory_line {  // память для одного parallel_vector
-    // for workers
-    std::vector<int*>quantums;  // вектор указателей на кванты
+struct memory_line_common {
+    std::vector<int> num_change_mode;  // для перехода между режимами
     int logical_size;  // общее число элементов в векторе на всех процессах
+    virtual ~memory_line_common() {}
+};
+
+struct memory_line_worker
+    : public memory_line_common {
+    std::vector<int*>quantums;  // вектор указателей на кванты
     std::vector<std::mutex*> mutexes;  // мьютексы на каждый квант, нужны, чтобы предотвратить одновременный доступ
                                        // к кванту с разных потоков в режиме READ_WRITE
-    // for master
+};
+
+struct memory_line_master
+    : public memory_line_common {
     std::vector<std::pair<bool, int>>quantum_owner; // для read_write mode, массив пар: bool - готов ли квант для передачи;
                                                                                     // int - на каком процессе расположен квант
     queue_quantums wait_locks;  // мапа очередей для процессов, ожидающих разблокировки кванта, заблокированных через set_lock
     queue_quantums wait_quantums;  // мапа очередей для процессов, ожидающих разблокировки кванта, заблокированных процессом-мастером
     std::vector<int> quantums_for_lock;  // вектор для определения номеров процессов, блокирующих кванты
     std::vector<std::vector<int>> owners; // для read_only mode, номера процессов, хранящих у себя квант
-    // for master and workers
-    std::vector<int> num_change_mode;  // для перехода между режимами
+
 };
 
 class memory_manager {
-    static std::vector<memory_line> memory;  // структура-хранилище памяти и вспомогательной информации
+    static std::vector<memory_line_common*> memory;  // структура-хранилище памяти и вспомогательной информации
     static std::thread helper_thr;  // вспомогательный поток
     static int rank, size;  // ранг процесса в MPI и число процессов
     static int worker_rank, worker_size;  // worker_rank = rank-1, worker_size = size-1
