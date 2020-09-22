@@ -61,6 +61,7 @@ public:
     static void finalize();  // функция, завершающая выполнение программы, останавливает вспомогательные потоки
 private:
     static int get_owner(int key, int quantum_index, int requesting_process);
+    static bool is_mode_changed(int key, int quantum_index);
     friend void worker_helper_thread();  // функция, выполняемая вспомогательными потоками процессов-рабочих
     friend void master_helper_thread();  // функция, выполняемая вспомогательным потоком процесса-мастера
 };
