@@ -18,6 +18,7 @@ public:
     void unset_lock(int quantum_index);  // разблокировать квант
     int get_quantum(int index);  // по глобальному индексу получить номер кванта
     int get_key() const;  // получить идентификатор вектора в memory_manager
+    int get_num_quantums() const;
     void change_mode(int index, int mode);
 };
 

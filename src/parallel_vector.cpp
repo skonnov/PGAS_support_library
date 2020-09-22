@@ -38,6 +38,10 @@ int parallel_vector::get_key() const {
     return key;
 }
 
+int parallel_vector::get_num_quantums() const {
+    return (size_vector + QUANTUM_SIZE - 1) / QUANTUM_SIZE;
+}
+
 void parallel_vector::change_mode(int index, int mode) {
     memory_manager::change_mode(key, get_quantum(index), mode);
 }
