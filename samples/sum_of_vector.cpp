@@ -19,7 +19,8 @@ int main(int argc, char** argv) {
         for(int i = 0; i < n; i++) {
             pv.set_elem(i, i);
         }
-        memory_manager::change_mode(READ_ONLY);
+        for (int i = 0; i < pv.get_num_quantums(); i++)
+            pv.change_mode(i, READ_ONLY);
         double t1 = MPI_Wtime();
         int sum = 0;
         for(int i = 0; i < n; i++) {
@@ -28,11 +29,13 @@ int main(int argc, char** argv) {
         }
         double t2 = MPI_Wtime();
         cout<<t2-t1<<" "<<sum<<" "<<rank<<"\n"<<std::flush;
-        memory_manager::change_mode(READ_WRITE);
+        for (int i = 0; i < pv.get_num_quantums(); i++)
+            pv.change_mode(i, READ_WRITE);
         for(int i = 0; i < n; i++) {
             pv.set_elem(i, i+1);
         }
-        memory_manager::change_mode(READ_ONLY);
+        for (int i = 0; i < pv.get_num_quantums(); i++)
+            pv.change_mode(i, READ_ONLY);
         t1 = MPI_Wtime();
         sum = 0;
         for(int i = 0; i < n; i++) {
@@ -41,11 +44,13 @@ int main(int argc, char** argv) {
         }
         t2 = MPI_Wtime();
         cout<<t2-t1<<" "<<sum<<" "<<rank<<"\n";
-        memory_manager::change_mode(READ_WRITE);
+        for (int i = 0; i < pv.get_num_quantums(); i++)
+            pv.change_mode(i, READ_WRITE);
         for(int i = 0; i < n; i++) {
             pv.set_elem(i, i);
         }
-        memory_manager::change_mode(READ_ONLY);
+        for (int i = 0; i < pv.get_num_quantums(); i++)
+            pv.change_mode(i, READ_ONLY);
         t1 = MPI_Wtime();
         sum = 0;
         for(int i = 0; i < n; i++) {
@@ -54,11 +59,13 @@ int main(int argc, char** argv) {
         }
         t2 = MPI_Wtime();
         cout<<t2-t1<<" "<<sum<<" "<<rank<<"\n"<<std::flush;
-        memory_manager::change_mode(READ_WRITE);
+        for (int i = 0; i < pv.get_num_quantums(); i++)
+            pv.change_mode(i, READ_WRITE);
         for(int i = 0; i < n; i++) {
             pv.set_elem(i, i+1);
         }
-        memory_manager::change_mode(READ_ONLY);
+        for (int i = 0; i < pv.get_num_quantums(); i++)
+            pv.change_mode(i, READ_ONLY);
         t1 = MPI_Wtime();
         sum = 0;
         for(int i = 0; i < n; i++) {
