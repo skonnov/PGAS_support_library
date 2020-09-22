@@ -7,33 +7,9 @@
 #include <queue>
 #include <mutex>
 #include <iostream>
+#include "common.h"
 #include "queue_quantums.h"
 
-#define QUANTUM_SIZE 500
-
-enum mods {  // используется для изменения режима работы с памятью
-    READ_ONLY,
-    READ_WRITE
-};
-
-enum tags {  // используется для корректного распределения пересылок данных через MPI
-    GET_DATA_FROM_HELPER = 123,
-    SEND_DATA_TO_HELPER  = 234,
-    SEND_DATA_TO_MASTER_HELPER = 345,
-    GET_DATA_FROM_MASTER_HELPER_LOCK = 456,
-    GET_INFO_FROM_MASTER_HELPER = 567,
-    GET_PERMISSION_FOR_CHANGE_MODE = 678
-};
-
-enum operations {  // используется вспомогательными потоками для определения типа запрашиваемой операции
-    GET_DATA_RW,
-    GET_DATA_R,
-    SET_INFO,
-    GET_INFO,
-    LOCK,
-    UNLOCK,
-    CHANGE_MODE
-};
 void worker_helper_thread();
 void master_helper_thread();
 

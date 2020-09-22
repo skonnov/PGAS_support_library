@@ -4,11 +4,10 @@
 #include <functional>
 #include <mpi.h>
 #include <iostream>
+#include "common.h"
 #include "parallel_vector.h"
   // std::function<int(int, int)>reduction - ?
   // std::function<int(int, int, const parallel_vector&, int)> func - ?
-
-#define REDUCE_TAG 4567
 
 
 // функция объединения данных на одном процессе
