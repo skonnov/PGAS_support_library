@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <mpi.h>
+#include "common.h"
 #include "memory_manager.h"
 
 class parallel_vector {
@@ -17,6 +18,7 @@ public:
     void unset_lock(int quantum_index);  // разблокировать квант
     int get_quantum(int index);  // по глобальному индексу получить номер кванта
     int get_key() const;  // получить идентификатор вектора в memory_manager
+    void change_mode(int index, int mode);
 };
 
 #endif // __PARALLEL_VECTOR_H__

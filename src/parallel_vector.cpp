@@ -37,3 +37,7 @@ int parallel_vector::get_quantum(int index) {
 int parallel_vector::get_key() const {
     return key;
 }
+
+void parallel_vector::change_mode(int index, int mode) {
+    memory_manager::change_mode(key, get_quantum(index), mode);
+}

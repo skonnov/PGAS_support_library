@@ -14,7 +14,9 @@ void worker_helper_thread();
 void master_helper_thread();
 
 struct memory_line_common {
-    std::vector<int> num_change_mode;  // для перехода между режимами
+    std::vector<int> mode;  // режим работы с квантом
+    std::vector<bool> is_mode_changed;
+    std::vector<int> num_of_change_mode_procs;
     int logical_size;  // общее число элементов в векторе на всех процессах
     virtual ~memory_line_common() {}
 };
@@ -42,11 +44,6 @@ class memory_manager {
     static std::thread helper_thr;  // вспомогательный поток
     static int rank, size;  // ранг процесса в MPI и число процессов
     static int worker_rank, worker_size;  // worker_rank = rank-1, worker_size = size-1
-    static bool is_read_only_mode;  // активен ли режим READ_ONLY
-    static int num_of_change_mode_procs;  // число процессов, обратившихся к мастеру для изменения режима работы
-    static int num_of_change_mode;  // общее число изменений режима работы
-    static std::vector<long long> times;  // вектор, сохраняющий информацию, когда в последний раз было обращение к какому-либо процессу
-    static long long time;  // вспомогательный счётчик для вектора times
 public:
     static void memory_manager_init(int argc, char** argv);  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
     static int get_MPI_rank();
@@ -57,11 +54,11 @@ public:
     static int get_quantum_index(int index);  // получить номер кванта по индексу
     static void set_lock(int key, int quantum_index);  // заблокировать квант
     static void unset_lock(int key, int quantum_index);  // разблокировать квант
-    static void change_mode(int mode);  // сменить режим работы с памятью
+    static void change_mode(int key, int quantum_index, int mode);  // сменить режим работы с памятью
     static void finalize();  // функция, завершающая выполнение программы, останавливает вспомогательные потоки
 private:
     static int get_owner(int key, int quantum_index, int requesting_process);
-    static bool is_mode_changed(int key, int quantum_index);
+    // static bool is_mode_changed(int key, int quantum_index);
     friend void worker_helper_thread();  // функция, выполняемая вспомогательными потоками процессов-рабочих
     friend void master_helper_thread();  // функция, выполняемая вспомогательным потоком процесса-мастера
 };
