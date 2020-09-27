@@ -37,3 +37,11 @@ int parallel_vector::get_quantum(int index) {
 int parallel_vector::get_key() const {
     return key;
 }
+
+int parallel_vector::get_num_quantums() const {
+    return (size_vector + QUANTUM_SIZE - 1) / QUANTUM_SIZE;
+}
+
+void parallel_vector::change_mode(int quantum_index, int mode) {
+    memory_manager::change_mode(key, quantum_index, mode);
+}
