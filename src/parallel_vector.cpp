@@ -43,5 +43,9 @@ int parallel_vector::get_num_quantums() const {
 }
 
 void parallel_vector::change_mode(int quantum_index, int mode) {
-    memory_manager::change_mode(key, quantum_index, mode);
+    memory_manager::change_mode(key, quantum_index, quantum_index+1, mode);
+}
+
+void parallel_vector::change_mode(int quantum_index_l, int quantum_index_r, int mode) {
+    memory_manager::change_mode(key, quantum_index_l, quantum_index_r, mode);
 }

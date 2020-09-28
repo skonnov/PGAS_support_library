@@ -101,8 +101,8 @@ int memory_manager::get_data(int key, int index_of_element) {
         if(memory->mode[num_quantum] == READ_WRITE)
             memory->mutexes[num_quantum]->unlock();
     }
-    int request[3] = {GET_INFO, key, num_quantum};  // обращение к мастеру с целью получить квант
-    MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
+    int request[4] = {GET_INFO, key, num_quantum, -1};  // обращение к мастеру с целью получить квант
+    MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
     int to_rank = -2;
     MPI_Status status;
     MPI_Recv(&to_rank, 1, MPI_INT, 0, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);  // получение ответа от мастера
@@ -122,7 +122,7 @@ int memory_manager::get_data(int key, int index_of_element) {
         MPI_Recv(quantum, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
     }
     request[0] = SET_INFO;
-    MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // уведомление мастера о том, что данные готовы для передачи другим процессам
+    MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // уведомление мастера о том, что данные готовы для передачи другим процессам
     assert(quantum != nullptr);
     int elem = quantum[index_of_element%QUANTUM_SIZE];
     if (memory->mode[num_quantum] == READ_WRITE)
@@ -153,8 +153,8 @@ void memory_manager::set_data(int key, int index_of_element, int value) {
         if(memory->mode[num_quantum] == READ_WRITE)
             memory->mutexes[num_quantum]->unlock();
     }
-    int request[3] = {GET_INFO, key, num_quantum};
-    MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // обращение к мастеру с целью получить квант
+    int request[4] = {GET_INFO, key, num_quantum, -1};
+    MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // обращение к мастеру с целью получить квант
     int to_rank = -2;
     MPI_Status status;
     MPI_Recv(&to_rank, 1, MPI_INT, 0, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);  // получение ответа от мастера
@@ -169,7 +169,7 @@ void memory_manager::set_data(int key, int index_of_element, int value) {
     }
     request[0] = SET_INFO;
     quantum[index_of_element%QUANTUM_SIZE] = value;
-    MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // уведомление мастера о том, что данные готовы для передачи другим процессам
+    MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // уведомление мастера о том, что данные готовы для передачи другим процессам
     memory->mutexes[num_quantum]->unlock();
 }
 
@@ -227,13 +227,13 @@ void worker_helper_thread() {
 }
 
 void master_helper_thread() {
-    int request[3] = {-2, -2, -2};
+    int request[4] = {-2, -2, -2, -2};
     MPI_Status status;
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     while(true) {
-        MPI_Recv(&request, 3, MPI_INT, MPI_ANY_SOURCE, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD, &status);
+        MPI_Recv(&request, 4, MPI_INT, MPI_ANY_SOURCE, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD, &status);
         if (request[0] == -1 && request[1] == -1 && request[2] == -1) {  // окончание работы вспомогательного потока
             for(auto line: memory_manager::memory)
                 delete line;
@@ -361,19 +361,22 @@ void master_helper_thread() {
                 }
                 break;
             case CHANGE_MODE:  // изменить режим работы с памятью
-                memory_manager::memory[key]->num_of_change_mode_procs[quantum]++;
-                if (memory_manager::memory[key]->num_of_change_mode_procs[quantum] == memory_manager::worker_size) {  // все процессы дошли до этапа изменения режима?
+                int quantum_l = request[2], quantum_r = request[3];
+                memory_manager::memory[key]->num_of_change_mode_procs[quantum_l]++;
+                if (memory_manager::memory[key]->num_of_change_mode_procs[quantum_l] == memory_manager::worker_size) {  // все процессы дошли до этапа изменения режима?
                     int ready = 1;
                     for (int i = 1; i < size; i++) {
                         MPI_Send(&ready, 1, MPI_INT, i, GET_PERMISSION_FOR_CHANGE_MODE, MPI_COMM_WORLD);  // информирование о смене режима и о том, что 
                                                                                                           // другие процессы могут продолжить выполнение программы дальше
                     }
-                    memory_manager::memory[key]->num_of_change_mode_procs[quantum] = 0;
-                    memory_manager::memory[key]->is_mode_changed[quantum] = true;
-                    if (memory_manager::memory[key]->mode[quantum] == READ_ONLY) {
-                        memory_manager::memory[key]->mode[quantum] = READ_WRITE;
-                    } else {
-                        memory_manager::memory[key]->mode[quantum] = READ_ONLY;
+                    memory_manager::memory[key]->num_of_change_mode_procs[quantum_l] = 0;
+                    for(int i = quantum_l; i < quantum_r; i++) {
+                        memory_manager::memory[key]->is_mode_changed[i] = true;
+                        if (memory_manager::memory[key]->mode[i] == READ_ONLY) {
+                            memory_manager::memory[key]->mode[i] = READ_WRITE;
+                        } else {
+                            memory_manager::memory[key]->mode[i] = READ_ONLY;
+                        }
                     }
                 }
                 break;
@@ -394,17 +397,18 @@ void memory_manager::unset_lock(int key, int quantum_index) {
     MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // отправление мастеру запроса о разблокировке кванта
 }
 
-void memory_manager::change_mode(int key, int quantum_index, int mode) {
-    if (mode == memory[key]->mode[quantum_index])
-        return;
+void memory_manager::change_mode(int key, int quantum_index_l, int quantum_index_r, int mode) {  // block quantums [l, r)
     // информирование мастера о том, что данный процесс дошёл до этапа изменения режима работы с памятью
-    int request[3] = {CHANGE_MODE, key, quantum_index};
-    MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
+    int request[4] = {CHANGE_MODE, key, quantum_index_l, quantum_index_r};
+    MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
     int is_ready;
     MPI_Status status;
     MPI_Recv(&is_ready, 1, MPI_INT, 0, GET_PERMISSION_FOR_CHANGE_MODE, MPI_COMM_WORLD, &status);  // после получения ответа данный процесс может продолжить выполнение
-    memory[key]->is_mode_changed[quantum_index] = true;
-    memory[key]->mode[quantum_index] = mode;
+    for(int i = quantum_index_l; i < quantum_index_r; i++) {
+        memory[key]->is_mode_changed[i] = true;
+        memory[key]->mode[i] = mode;
+    }
+
 }
 
 void memory_manager::finalize() {
@@ -430,7 +434,7 @@ void memory_manager::finalize() {
             MPI_Send(request, 4, MPI_INT, i, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);  // завершение работы вспомогательных потоков процессов рабочих
         }
     } else if (rank == 1) {
-        int request[3] = {-1, -1, -1};
+        int request[4] = {-1, -1, -1, -1};
         MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // завершение работы вспомогательного потока процесса-мастера
     }
     assert(helper_thr.joinable());
