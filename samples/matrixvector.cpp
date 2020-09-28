@@ -31,8 +31,7 @@ int main(int argc, char** argv) { // b*a
         }  
         for (int i = 0; i < n; i++)
             b[i] = i;
-        for (int i = 0; i < pv.get_num_quantums(); i++)
-            pv.change_mode(i, READ_ONLY);
+        pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);
         std::vector<int>tmp_ans(portion);
         int t = 0;
         for (int i = index/m; i < index/m+portion; i++) {
@@ -42,8 +41,6 @@ int main(int argc, char** argv) { // b*a
             }
             t++;
         }
-        for (int i = 0; i < pv.get_num_quantums(); i++)
-            pv.change_mode(i, READ_WRITE);
         // копирование элементов в вектор, с которого можно будет получить данные на любом процессе
         for (int i = index/m; i < index/m + portion; i++) {
             ans.set_elem(i, tmp_ans[i-index/m]);

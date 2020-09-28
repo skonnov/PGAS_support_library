@@ -45,8 +45,7 @@ int main(int argc, char ** argv) {
         }
         for (int i = index; i < index+portion; i++)  // инициализация элементов вектора
             pv.set_elem(i, i);
-        for (int i = 0; i < pv.get_num_quantums(); i++)
-            pv.change_mode(i, READ_ONLY); // так как далее вектор изменяться не будет, режим изменяется на READ_ONLY
+        pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);// так как далее вектор изменяться не будет, режим изменяется на READ_ONLY
         int ans = parallel_reduce(index, index+portion, pv, 0, 1, size-1, Func(pv), reduction);
         double t2 = MPI_Wtime();
         if(rank == 1)

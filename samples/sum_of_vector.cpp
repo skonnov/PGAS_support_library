@@ -19,8 +19,7 @@ int main(int argc, char** argv) {
         for(int i = 0; i < n; i++) {
             pv.set_elem(i, i);
         }
-        for (int i = 0; i < pv.get_num_quantums(); i++)
-            pv.change_mode(i, READ_ONLY);
+        pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);
         double t1 = MPI_Wtime();
         int sum = 0;
         for(int i = 0; i < n; i++) {
@@ -29,8 +28,7 @@ int main(int argc, char** argv) {
         }
         double t2 = MPI_Wtime();
         cout<<t2-t1<<" "<<sum<<" "<<rank<<"\n"<<std::flush;
-        for (int i = 0; i < pv.get_num_quantums(); i++)
-            pv.change_mode(i, READ_WRITE);
+        pv.change_mode(0, pv.get_num_quantums(), READ_WRITE);
         for(int i = 0; i < n; i++) {
             pv.set_elem(i, i+1);
         }
@@ -44,13 +42,11 @@ int main(int argc, char** argv) {
         }
         t2 = MPI_Wtime();
         cout<<t2-t1<<" "<<sum<<" "<<rank<<"\n";
-        for (int i = 0; i < pv.get_num_quantums(); i++)
-            pv.change_mode(i, READ_WRITE);
+        pv.change_mode(0, pv.get_num_quantums(), READ_WRITE);
         for(int i = 0; i < n; i++) {
             pv.set_elem(i, i);
         }
-        for (int i = 0; i < pv.get_num_quantums(); i++)
-            pv.change_mode(i, READ_ONLY);
+        pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);
         t1 = MPI_Wtime();
         sum = 0;
         for(int i = 0; i < n; i++) {
@@ -59,13 +55,11 @@ int main(int argc, char** argv) {
         }
         t2 = MPI_Wtime();
         cout<<t2-t1<<" "<<sum<<" "<<rank<<"\n"<<std::flush;
-        for (int i = 0; i < pv.get_num_quantums(); i++)
-            pv.change_mode(i, READ_WRITE);
+        pv.change_mode(0, pv.get_num_quantums(), READ_WRITE);
         for(int i = 0; i < n; i++) {
             pv.set_elem(i, i+1);
         }
-        for (int i = 0; i < pv.get_num_quantums(); i++)
-            pv.change_mode(i, READ_ONLY);
+        pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);
         t1 = MPI_Wtime();
         sum = 0;
         for(int i = 0; i < n; i++) {
