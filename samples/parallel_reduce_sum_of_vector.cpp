@@ -1,6 +1,7 @@
 #include <iostream>
-#include <mpi.h>
 #include <cassert>
+#include <string>
+#include <mpi.h>
 #include "memory_manager.h"
 #include "parallel_vector.h"
 #include "parallel_reduce.h"
@@ -25,7 +26,13 @@ int reduction(int a, int b)
 }
 
 int main(int argc, char ** argv) {
-    memory_manager::memory_manager_init(argc, argv);
+    std::string error_helper_string = "mpiexec -n <numproc> "+std::string(argv[0])+" <length>";
+    if (argc <= 1) {
+        std::cout << "Error: you need to pass length of vector!" << std::endl;
+        std::cout << "Usage:\n" << error_helper_string << std::endl;
+        return 1;
+    }
+    memory_manager::memory_manager_init(argc, argv, error_helper_string);
     double t1 = MPI_Wtime();
     int rank = memory_manager::get_MPI_rank();
     int size = memory_manager::get_MPI_size();

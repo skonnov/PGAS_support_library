@@ -45,7 +45,7 @@ class memory_manager {
     static int rank, size;  // ранг процесса в MPI и число процессов
     static int worker_rank, worker_size;  // worker_rank = rank-1, worker_size = size-1
 public:
-    static void memory_manager_init(int argc, char** argv);  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
+    static void memory_manager_init(int argc, char** argv, std::string error_helper = "");  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
     static int get_MPI_rank();
     static int get_MPI_size();
     static int get_data(int key, int index_of_element);  // получить элемент по индексу с любого процесса

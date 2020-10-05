@@ -1,13 +1,19 @@
 #include <iostream>
-#include <mpi.h>
 #include <cassert>
+#include <string>
+#include <mpi.h>
 #include "memory_manager.h"
 #include "parallel_vector.h"
 
 int main(int argc, char** argv) { // b*a
-    memory_manager::memory_manager_init(argc, argv);
+    std::string error_helper_string = "mpiexec -n <numproc> "+std::string(argv[0])+" <num_rows> <num_cols>";
+    if (argc <= 2) {
+        std::cout << "Error: you need to pass num of rows and cols of matrix!" << std::endl;
+        std::cout << "Usage:\n" << error_helper_string << std::endl;
+        return 1;
+    }
+    memory_manager::memory_manager_init(argc, argv, error_helper_string);
     double t1 = MPI_Wtime();
-    assert(argc > 2);
     int n = atoi(argv[1]), m = atoi(argv[2]);
     int rank, size;
     rank = memory_manager::get_MPI_rank();

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cassert>
+#include <string>
 #include <mpi.h>
 #include "parallel_vector.h"
 #include "memory_manager.h"
@@ -7,8 +8,13 @@
 using namespace std;
 
 int main(int argc, char** argv) {
-    memory_manager::memory_manager_init(argc, argv);
-    assert(argc >= 1);
+    std::string error_helper_string = "mpiexec -n <numproc> "+std::string(argv[0])+" <length>";
+    if (argc <= 1) {
+        std::cout << "Error: you need to pass length of vector!" << std::endl;
+        std::cout << "Usage:\n" << error_helper_string << std::endl;
+        return 1;
+    }
+    memory_manager::memory_manager_init(argc, argv, error_helper_string);
     int n = atoi(argv[1]);
     parallel_vector pv(n);
     int rank, size;

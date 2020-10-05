@@ -5,6 +5,7 @@
 #include <iostream>
 #include <cassert>
 #include <mutex>
+#include <string>
 #include "memory_manager.h"
 #include "queue_quantums.h"
 
@@ -22,14 +23,22 @@ int memory_manager::worker_rank;  // worker_rank = rank-1
 int memory_manager::worker_size;  // worker_size = size-1
 
 
-void memory_manager::memory_manager_init(int argc, char**argv) {
+void memory_manager::memory_manager_init(int argc, char**argv, std::string error_helper_str) {
     int provided = 0;
     MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
     if(provided != MPI_THREAD_MULTIPLE) {
-            abort();
+        std::cout<<"MPI_THREAD_MULTIPLE is not supported!" << std::endl;
+        exit(1);
     }
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
+    if (size < 2) {
+        std::cout << "Error: you need at least 2 processes!" << std::endl;
+        if(error_helper_str != "")
+            std::cout <<"Usage:\n" << error_helper_str << std::endl;
+        MPI_Finalize();
+        exit(1);
+    }
     worker_rank = rank - 1;
     worker_size = size - 1;
     if(rank == 0) {
