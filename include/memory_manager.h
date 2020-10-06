@@ -35,7 +35,7 @@ struct memory_line_master
     queue_quantums wait_locks;  // мапа очередей для процессов, ожидающих разблокировки кванта, заблокированных через set_lock
     queue_quantums wait_quantums;  // мапа очередей для процессов, ожидающих разблокировки кванта, заблокированных процессом-мастером
     std::vector<int> quantums_for_lock;  // вектор для определения номеров процессов, блокирующих кванты
-    std::vector<std::vector<int>> owners; // для read_only mode, номера процессов, хранящих у себя квант
+    std::vector<std::queue<int>> owners; // для read_only mode, номера процессов, хранящих у себя квант
 
 };
 

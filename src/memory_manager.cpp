@@ -63,23 +63,20 @@ int memory_manager::create_object(int number_of_elements) {
     if (rank == 0) {
         line = new memory_line_master;
         auto line_master = dynamic_cast<memory_line_master*>(line);
-        line_master->quantums_for_lock.resize(num_of_quantums);
-        line_master->quantum_owner.resize(num_of_quantums);
+        line_master->quantums_for_lock.resize(num_of_quantums, -1);
+        line_master->quantum_owner.resize(num_of_quantums, {0, -1});
         line_master->owners.resize(num_of_quantums);
         line_master->wait_locks.resize(num_of_quantums);
         line_master->wait_quantums.resize(num_of_quantums);
         for (int i = 0; i < int(line_master->quantums_for_lock.size()); i++) {
-            line_master->quantums_for_lock[i] = -1;
-            line_master->quantum_owner[i] = {0, -1};
-            line_master->owners[i] = std::vector<int>();
+            line_master->owners[i] = std::queue<int>();
         }
     } else {
         line = new memory_line_worker;
         auto line_worker = dynamic_cast<memory_line_worker*>(line);
         line_worker->mutexes.resize(num_of_quantums);
-        line_worker->quantums.resize(num_of_quantums);
+        line_worker->quantums.resize(num_of_quantums, nullptr);
         for (int i = 0; i < num_of_quantums; i++) {
-            line_worker->quantums[i] = nullptr;
             line_worker->mutexes[i] = new std::mutex();
         }
     }
@@ -285,10 +282,11 @@ void master_helper_thread() {
                         if (memory->quantum_owner[quantum].second == -1)
                             throw -1;
                         assert(memory->quantum_owner[quantum].first == true);
-                        memory->owners[quantum].clear();
-                        memory->owners[quantum].push_back(memory->quantum_owner[quantum].second);
+                        while(!memory->owners[quantum].empty()) // TODO: запрос на удаление кванта остальным процессам
+                            memory->owners[quantum].pop();
+                        memory->owners[quantum].push(memory->quantum_owner[quantum].second);
                         memory->is_mode_changed[quantum] = false;
-                        int to_rank = memory->owners[quantum][0];
+                        int to_rank = memory->quantum_owner[quantum].second;
                         if (to_rank == status.MPI_SOURCE) {  // после перехода оказалось, что квант находится на процессе, который отправил запрос?
                             MPI_Send(&to_rank, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
                             break;
@@ -307,7 +305,7 @@ void master_helper_thread() {
                                                                                                          // процесса-рабочего о переслыке данных
                     } else {  // в ходе поиска было обнаружено, что
                               // данные уже есть у процесса
-                        memory->owners[quantum].push_back(to_rank);
+                        memory->owners[quantum].push(to_rank);
                     }
                 } else {  // READ_WRITE mode
                     if (memory->is_mode_changed[quantum]) {  // был переход между режимами?
@@ -349,7 +347,7 @@ void master_helper_thread() {
                 break;
             case SET_INFO:  // данные готовы для пересылки
                 if (memory->mode[quantum] == READ_ONLY) {
-                    memory->owners[quantum].push_back(status.MPI_SOURCE); // процесс помещается в вектор процессов,
+                    memory->owners[quantum].push(status.MPI_SOURCE); // процесс помещается в вектор процессов,
                                                                                  // которые могут пересылать данный квант другим процессам
                 } else {  // READ_WRITE mode
                     assert(memory->quantum_owner[quantum].second == status.MPI_SOURCE);
@@ -466,14 +464,11 @@ void memory_manager::finalize() {
 }
 
 int memory_manager::get_owner(int key, int quantum_index, int requesting_process) {
-    int to_rank = -1;
     auto* memory = dynamic_cast<memory_line_master*>(memory_manager::memory[key]);
-    for (int owner: memory->owners[quantum_index]) {  // поиск процесса, с которым мастер не взаимодействовал наиболее долгое время
-        if (owner == requesting_process) {  // данные есть также и у процесса, который отправил запрос?
-            to_rank = owner;
-            break;
-        }
-    }
-    to_rank = memory->owners[quantum_index].back();
+    if(memory->owners[quantum_index].empty())
+        throw -1;
+    int to_rank = memory->owners[quantum_index].front();
+    memory->owners[quantum_index].pop();
+    memory->owners[quantum_index].push(to_rank);
     return to_rank;
 }
