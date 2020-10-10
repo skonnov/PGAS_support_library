@@ -92,31 +92,30 @@ int memory_manager::create_object(int number_of_elements) {
 int memory_manager::get_data(int key, int index_of_element) {
     assert(key >= 0 && key < (int)memory_manager::memory.size());
     auto* memory = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
-    int num_quantum = get_quantum_index(index_of_element);
-    auto& quantum = memory->quantums[num_quantum];
-    if (memory->mode[num_quantum] == READ_WRITE)   // если read_write mode, то используем мьютекс на данный квант
-        memory->mutexes[num_quantum]->lock();
-    if (!memory->is_mode_changed[num_quantum]) {  // не было изменения режима? (данные актуальны?)
+    int quantum_index = get_quantum_index(index_of_element);
+    auto& quantum = memory->quantums[quantum_index];
+    if (memory->mode[quantum_index] == READ_WRITE)   // если read_write mode, то используем мьютекс на данный квант
+        memory->mutexes[quantum_index]->lock();
+    if (!memory->is_mode_changed[quantum_index]) {  // не было изменения режима? (данные актуальны?)
         if (quantum != nullptr) {  // на данном процессе есть квант?
             int elem = quantum[index_of_element%QUANTUM_SIZE];
-            if (memory->mode[num_quantum] == READ_WRITE)
-                memory->mutexes[num_quantum]->unlock();
+            if (memory->mode[quantum_index] == READ_WRITE)
+                memory->mutexes[quantum_index]->unlock();
             return elem;  // элемент возвращается без обращения к мастеру
         }
     } else {
-        if(memory->mode[num_quantum] == READ_WRITE)
-            memory->mutexes[num_quantum]->unlock();
+        if(memory->mode[quantum_index] == READ_WRITE)
+            memory->mutexes[quantum_index]->unlock();
     }
-    int request[4] = {GET_INFO, key, num_quantum, -1};  // обращение к мастеру с целью получить квант
+    int request[4] = {GET_INFO, key, quantum_index, -1};  // обращение к мастеру с целью получить квант
     MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
     int to_rank = -2;
     MPI_Status status;
     MPI_Recv(&to_rank, 1, MPI_INT, 0, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);  // получение ответа от мастера
-    if (memory->is_mode_changed[num_quantum] && memory->mode[num_quantum] == READ_WRITE)
-        memory->mutexes[num_quantum]->lock();
-    // memory->num_change_mode[num_quantum] = memory_manager::num_of_change_mode;
-    memory->is_mode_changed[num_quantum] = false; // ???
-    if (memory->mode[num_quantum] == READ_ONLY && to_rank == rank) {  // если read_only_mode и данные уже у процесса,
+    if (memory->is_mode_changed[quantum_index] && memory->mode[quantum_index] == READ_WRITE)
+        memory->mutexes[quantum_index]->lock();
+    memory->is_mode_changed[quantum_index] = false; // ???
+    if (memory->mode[quantum_index] == READ_ONLY && to_rank == rank) {  // если read_only_mode и данные уже у процесса,
                                                  // ответ мастеру о том, что данные готовы, отправлять не нужно
         assert(quantum != nullptr);
         return quantum[index_of_element%QUANTUM_SIZE];
@@ -131,42 +130,42 @@ int memory_manager::get_data(int key, int index_of_element) {
     MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // уведомление мастера о том, что данные готовы для передачи другим процессам
     assert(quantum != nullptr);
     int elem = quantum[index_of_element%QUANTUM_SIZE];
-    if (memory->mode[num_quantum] == READ_WRITE)
-        memory->mutexes[num_quantum]->unlock();
+    if (memory->mode[quantum_index] == READ_WRITE)
+        memory->mutexes[quantum_index]->unlock();
     return elem;
 }
 
 void memory_manager::set_data(int key, int index_of_element, int value) {
     assert(key >= 0 && key < (int)memory_manager::memory.size());
     auto* memory = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
-    int num_quantum = get_quantum_index(index_of_element);
-    if(memory->mode[num_quantum] == READ_ONLY) {
+    int quantum_index = get_quantum_index(index_of_element);
+    if(memory->mode[quantum_index] == READ_ONLY) {
         throw -1;  // запись в READ_ONLY режиме запрещена
     }
     assert(index_of_element >= 0 && index_of_element < (int)memory->logical_size);
-    assert(num_quantum >= 0 && num_quantum < (int)memory->quantums.size());
-    auto& quantum = memory->quantums[num_quantum];
-    assert(num_quantum >= 0 && num_quantum < (int)memory->mutexes.size());
-    memory->mutexes[num_quantum]->lock();
+    assert(quantum_index >= 0 && quantum_index < (int)memory->quantums.size());
+    auto& quantum = memory->quantums[quantum_index];
+    assert(quantum_index >= 0 && quantum_index < (int)memory->mutexes.size());
+    memory->mutexes[quantum_index]->lock();
     assert((index_of_element%QUANTUM_SIZE) >= 0);
-    if (!memory->is_mode_changed[num_quantum]) {
+    if (!memory->is_mode_changed[quantum_index]) {
         if (quantum != nullptr) {
             quantum[index_of_element%QUANTUM_SIZE] = value;
-            memory->mutexes[num_quantum]->unlock();
+            memory->mutexes[quantum_index]->unlock();
             return;
         }
     } else {
-        if(memory->mode[num_quantum] == READ_WRITE)
-            memory->mutexes[num_quantum]->unlock();
+        if(memory->mode[quantum_index] == READ_WRITE)
+            memory->mutexes[quantum_index]->unlock();
     }
-    int request[4] = {GET_INFO, key, num_quantum, -1};
+    int request[4] = {GET_INFO, key, quantum_index, -1};
     MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // обращение к мастеру с целью получить квант
     int to_rank = -2;
     MPI_Status status;
     MPI_Recv(&to_rank, 1, MPI_INT, 0, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);  // получение ответа от мастера
-    if (memory->is_mode_changed[num_quantum] && memory->mode[num_quantum] == READ_WRITE)
-        memory->mutexes[num_quantum]->lock();
-    memory->is_mode_changed[num_quantum] = false;
+    if (memory->is_mode_changed[quantum_index] && memory->mode[quantum_index] == READ_WRITE)
+        memory->mutexes[quantum_index]->lock();
+    memory->is_mode_changed[quantum_index] = false;
     if(quantum == nullptr)
         quantum = new int[QUANTUM_SIZE];
     if (to_rank != rank) {  // если данные не у текущего процесса, инициируется передача данных от указанного мастером процесса
@@ -176,7 +175,7 @@ void memory_manager::set_data(int key, int index_of_element, int value) {
     request[0] = SET_INFO;
     quantum[index_of_element%QUANTUM_SIZE] = value;
     MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // уведомление мастера о том, что данные готовы для передачи другим процессам
-    memory->mutexes[num_quantum]->unlock();
+    memory->mutexes[quantum_index]->unlock();
 }
 
 int memory_manager::get_quantum_index(int index) {
@@ -245,29 +244,29 @@ void master_helper_thread() {
                 delete line;
             break;
         }
-        int key = request[1], quantum = request[2];
+        int key = request[1], quantum_index = request[2];
         memory_line_master* memory;
         memory = dynamic_cast<memory_line_master*>(memory_manager::memory[key]);
         assert(key >= 0 && key < (int)memory_manager::memory.size());
-        assert(quantum >= 0 && quantum < (int)memory->quantum_ready.size());
+        assert(quantum_index >= 0 && quantum_index < (int)memory->quantum_ready.size());
         switch(request[0]) {
             case LOCK:  // блокировка кванта
-                if (memory->quantums_for_lock[quantum] == -1) {  // квант не заблокирован
+                if (memory->quantums_for_lock[quantum_index] == -1) {  // квант не заблокирован
                     int to_rank = status.MPI_SOURCE;
                     int tmp = 1;
-                    memory->quantums_for_lock[quantum] = status.MPI_SOURCE;
+                    memory->quantums_for_lock[quantum_index] = status.MPI_SOURCE;
                     MPI_Send(&tmp, 1, MPI_INT, to_rank, GET_DATA_FROM_MASTER_HELPER_LOCK, MPI_COMM_WORLD);  // уведомление о том, 
                                                                                                             // что процесс может заблокировать квант
                 } else {  // квант уже заблокирован другим процессом, данный процесс помещается в очередь ожидания по данному кванту
-                    memory->wait_locks.push(quantum, status.MPI_SOURCE);
+                    memory->wait_locks.push(quantum_index, status.MPI_SOURCE);
                 }
                 break;
             case UNLOCK:  // разблокировка кванта
-                if (memory->quantums_for_lock[quantum] == status.MPI_SOURCE) {
-                    memory->quantums_for_lock[quantum] = -1;
-                    if (memory->wait_locks.is_contain(quantum)) {  // проверка, есть ли в очереди ожидания по данному кванту какой-либо процесс
-                        int to_rank = memory->wait_locks.pop(quantum);
-                        memory->quantums_for_lock[quantum] = to_rank;
+                if (memory->quantums_for_lock[quantum_index] == status.MPI_SOURCE) {
+                    memory->quantums_for_lock[quantum_index] = -1;
+                    if (memory->wait_locks.is_contain(quantum_index)) {  // проверка, есть ли в очереди ожидания по данному кванту какой-либо процесс
+                        int to_rank = memory->wait_locks.pop(quantum_index);
+                        memory->quantums_for_lock[quantum_index] = to_rank;
                         int tmp = 1;
                         MPI_Send(&tmp, 1, MPI_INT, to_rank, GET_DATA_FROM_MASTER_HELPER_LOCK, MPI_COMM_WORLD);  // уведомление о том, что процесс, изъятый
                                                                                                                 // из очереди, может заблокировать квант
@@ -275,27 +274,27 @@ void master_helper_thread() {
                 }
                 break;
             case GET_INFO:  // получить квант
-                if (memory->mode[quantum] == READ_ONLY) {
-                    assert(quantum < (int)memory->quantum_ready.size());
-                    assert(quantum < (int)memory->owners.size());
-                    if (memory->is_mode_changed[quantum]) {  // был переход между режимами?
-                        if (memory->owners[quantum].empty())
+                if (memory->mode[quantum_index] == READ_ONLY) {
+                    assert(quantum_index < (int)memory->quantum_ready.size());
+                    assert(quantum_index < (int)memory->owners.size());
+                    if (memory->is_mode_changed[quantum_index]) {  // был переход между режимами?
+                        if (memory->owners[quantum_index].empty())
                             throw -1;
-                        assert(memory->quantum_ready[quantum] == true);
-                        assert(memory->owners[quantum].size() == 1);
-                        memory->is_mode_changed[quantum] = false;
-                        int to_rank = memory->owners[quantum].front();
+                        assert(memory->quantum_ready[quantum_index] == true);
+                        assert(memory->owners[quantum_index].size() == 1);
+                        memory->is_mode_changed[quantum_index] = false;
+                        int to_rank = memory->owners[quantum_index].front();
                         if (to_rank == status.MPI_SOURCE) {  // после перехода оказалось, что квант находится на процессе, который отправил запрос?
                             MPI_Send(&to_rank, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
                             break;
                         }
                     }
-                    if (memory->owners[quantum].empty()) {  // квант не был инициализирован
+                    if (memory->owners[quantum_index].empty()) {  // квант не был инициализирован
                             throw -1;
                     }
-                    int to_rank = memory_manager::get_owner(key, quantum, status.MPI_SOURCE);  // получение ранга наиболее предпочтительного процесса
+                    int to_rank = memory_manager::get_owner(key, quantum_index, status.MPI_SOURCE);  // получение ранга наиболее предпочтительного процесса
                     assert(to_rank > 0 && to_rank < size);
-                    int to_request[4] = {GET_DATA_R, key, quantum, status.MPI_SOURCE};
+                    int to_request[4] = {GET_DATA_R, key, quantum_index, status.MPI_SOURCE};
                     MPI_Send(&to_rank, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);  // отправление информации о том, с каким процессом
                                                                                                                      // нужно взаимодействовать для получения кванта
                     if(to_rank != status.MPI_SOURCE) {
@@ -303,17 +302,17 @@ void master_helper_thread() {
                                                                                                          // процесса-рабочего о переслыке данных
                     }
                 } else {  // READ_WRITE mode
-                    if (memory->is_mode_changed[quantum]) {  // был переход между режимами?
-                        int to_rank = memory_manager::get_owner(key, quantum, status.MPI_SOURCE);  // получение ранга наиболее предпочтительного процесса
-                        memory->is_mode_changed[quantum] = false;
-                        while(memory->owners[quantum].size())
-                            memory->owners[quantum].pop();  // TODO: send to all quantums to free memory?
-                        memory->quantum_ready[quantum] = false;
-                        memory->owners[quantum].push(status.MPI_SOURCE);
+                    if (memory->is_mode_changed[quantum_index]) {  // был переход между режимами?
+                        int to_rank = memory_manager::get_owner(key, quantum_index, status.MPI_SOURCE);  // получение ранга наиболее предпочтительного процесса
+                        memory->is_mode_changed[quantum_index] = false;
+                        while(memory->owners[quantum_index].size())
+                            memory->owners[quantum_index].pop();  // TODO: send to all quantums to free memory?
+                        memory->quantum_ready[quantum_index] = false;
+                        memory->owners[quantum_index].push(status.MPI_SOURCE);
                         if (to_rank == -1 || to_rank == status.MPI_SOURCE) {  // данные у процесса, отправившего запрос?
                             MPI_Send(&status.MPI_SOURCE, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
                         } else {
-                            int to_request[4] = {GET_DATA_RW, key, quantum, status.MPI_SOURCE};
+                            int to_request[4] = {GET_DATA_RW, key, quantum_index, status.MPI_SOURCE};
                             MPI_Send(&to_rank, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);  // отправление информации о том, с каким процессом
                                                                                                                              // нужно взаимодействовать для получения кванта
                             MPI_Send(to_request, 4, MPI_INT, to_rank, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);  // отправление запроса вспомогательному потоку
@@ -321,47 +320,47 @@ void master_helper_thread() {
                         }
                         break;
                     }
-                    assert(quantum < (int)memory->quantum_ready.size());
-                    if (memory->owners[quantum].empty()) {  // данные ранее не запрашивались?
-                        memory->quantum_ready[quantum] = false;
-                        memory->owners[quantum].push(status.MPI_SOURCE);
+                    assert(quantum_index < (int)memory->quantum_ready.size());
+                    if (memory->owners[quantum_index].empty()) {  // данные ранее не запрашивались?
+                        memory->quantum_ready[quantum_index] = false;
+                        memory->owners[quantum_index].push(status.MPI_SOURCE);
                         MPI_Send(&status.MPI_SOURCE, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);  // отправление информации о том, что процесс,
                                                                                                                                    // отправивший запрос, может забрать квант без
                                                                                                                                    // пересылок данных
                         break;
                     }  // empty
-                    if (memory->quantum_ready[quantum]) {  // данные готовы к пересылке?
-                        assert(memory->owners[quantum].size() == 1);
-                        int to_rank = memory->owners[quantum].front();
-                        int to_request[4] = {GET_DATA_RW, key, quantum, status.MPI_SOURCE};
-                        memory->quantum_ready[quantum] = false;
-                        memory->owners[quantum].pop();
-                        memory->owners[quantum].push(status.MPI_SOURCE);
+                    if (memory->quantum_ready[quantum_index]) {  // данные готовы к пересылке?
+                        assert(memory->owners[quantum_index].size() == 1);
+                        int to_rank = memory->owners[quantum_index].front();
+                        int to_request[4] = {GET_DATA_RW, key, quantum_index, status.MPI_SOURCE};
+                        memory->quantum_ready[quantum_index] = false;
+                        memory->owners[quantum_index].pop();
+                        memory->owners[quantum_index].push(status.MPI_SOURCE);
                         MPI_Send(&to_rank, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);  // отправление информации о том, с каким процессом
                                                                                                                          // нужно взаимодействовать для получения кванта
                         MPI_Send(to_request, 4, MPI_INT, to_rank, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);  // отправление запроса вспомогательному потоку
                                                                                                          // процесса-рабочего о переслыке данных
                     } else {  // данные не готовы к пересылке (в данный момент пересылаются другому процессу)
-                        memory->wait_quantums.push(quantum, status.MPI_SOURCE);
+                        memory->wait_quantums.push(quantum_index, status.MPI_SOURCE);
                     }
                 }
                 break;
             case SET_INFO:  // данные готовы для пересылки
-                if (memory->mode[quantum] == READ_ONLY) {
-                    memory->owners[quantum].push(status.MPI_SOURCE); // процесс помещается в вектор процессов,
+                if (memory->mode[quantum_index] == READ_ONLY) {
+                    memory->owners[quantum_index].push(status.MPI_SOURCE); // процесс помещается в вектор процессов,
                                                                                  // которые могут пересылать данный квант другим процессам
                 } else {  // READ_WRITE mode
-                    assert(memory->owners[quantum].front() == status.MPI_SOURCE);
-                    assert(memory->quantum_ready[quantum] == false);
-                    memory->quantum_ready[quantum] = true;
-                    if (memory->wait_quantums.is_contain(quantum)) {  // есть процессы, ожидающие готовности кванта?
-                        int source_rank = memory->wait_quantums.pop(quantum);
-                        int to_rank = memory->owners[quantum].front();
-                        memory->quantum_ready[quantum] = false;
-                        assert(memory->owners[quantum].size() == 1);
-                        memory->owners[quantum].pop();
-                        memory->owners[quantum].push(source_rank);
-                        int to_request[4] = {GET_DATA_RW, key, quantum, source_rank};
+                    assert(memory->owners[quantum_index].front() == status.MPI_SOURCE);
+                    assert(memory->quantum_ready[quantum_index] == false);
+                    memory->quantum_ready[quantum_index] = true;
+                    if (memory->wait_quantums.is_contain(quantum_index)) {  // есть процессы, ожидающие готовности кванта?
+                        int source_rank = memory->wait_quantums.pop(quantum_index);
+                        int to_rank = memory->owners[quantum_index].front();
+                        memory->quantum_ready[quantum_index] = false;
+                        assert(memory->owners[quantum_index].size() == 1);
+                        memory->owners[quantum_index].pop();
+                        memory->owners[quantum_index].push(source_rank);
+                        int to_request[4] = {GET_DATA_RW, key, quantum_index, source_rank};
                         assert(source_rank != to_rank);
                         assert(to_rank > 0 && to_rank < size);
                         MPI_Send(&to_rank, 1, MPI_INT, source_rank, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);  // отправление информации о том, с каким процессом
