@@ -30,8 +30,7 @@ struct memory_line_worker
 
 struct memory_line_master
     : public memory_line_common {
-    std::vector<std::pair<bool, int>>quantum_owner; // для read_write mode, массив пар: bool - готов ли квант для передачи;
-                                                                                    // int - на каком процессе расположен квант
+    std::vector<bool> quantum_ready;  // готов ли квант для передачи
     queue_quantums wait_locks;  // мапа очередей для процессов, ожидающих разблокировки кванта, заблокированных через set_lock
     queue_quantums wait_quantums;  // мапа очередей для процессов, ожидающих разблокировки кванта, заблокированных процессом-мастером
     std::vector<int> quantums_for_lock;  // вектор для определения номеров процессов, блокирующих кванты
