@@ -15,7 +15,9 @@ enum tags {  // используется для корректного расп�
     GET_DATA_FROM_MASTER_HELPER_LOCK = 103,
     GET_INFO_FROM_MASTER_HELPER      = 104,
     GET_PERMISSION_FOR_CHANGE_MODE   = 105,
-    REDUCE_TAG                       = 106
+    REDUCE_TAG                       = 106,
+    FINALIZE_WORKER                  = 107,
+    FINALIZE_MASTER                  = 108
 };
 
 enum operations {  // используется вспомогательными потоками для определения типа запрашиваемой операции

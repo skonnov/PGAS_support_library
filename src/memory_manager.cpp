@@ -437,17 +437,17 @@ void memory_manager::finalize() {
     int cnt = 0;
     if(rank != 0) {
         int tmp = 1;
-        MPI_Send(&tmp, 1, MPI_INT, 0, 23221, MPI_COMM_WORLD);
+        MPI_Send(&tmp, 1, MPI_INT, 0, FINALIZE_WORKER, MPI_COMM_WORLD);
         MPI_Status status;
-        MPI_Recv(&tmp, 1, MPI_INT, 0, 12455, MPI_COMM_WORLD, &status);
+        MPI_Recv(&tmp, 1, MPI_INT, 0, FINALIZE_MASTER, MPI_COMM_WORLD, &status);
     } else {
         int tmp;
         for(int i = 1; i < size; i++) {
             MPI_Status status;
-            MPI_Recv(&tmp, 1, MPI_INT, i, 23221, MPI_COMM_WORLD, &status);
+            MPI_Recv(&tmp, 1, MPI_INT, i, FINALIZE_WORKER, MPI_COMM_WORLD, &status);
         }
         for(int i = 1; i < size; i++) {
-            MPI_Send(&tmp, 1, MPI_INT, i, 12455, MPI_COMM_WORLD);
+            MPI_Send(&tmp, 1, MPI_INT, i, FINALIZE_MASTER, MPI_COMM_WORLD);
         }
     }
     if (rank == 0) {
