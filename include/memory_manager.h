@@ -55,6 +55,7 @@ public:
     static void set_lock(int key, int quantum_index);  // заблокировать квант
     static void unset_lock(int key, int quantum_index);  // разблокировать квант
     static void change_mode(int key, int quantum_index_l, int quantum_index_r, int mode);  // сменить режим работы с памятью
+    static void print_quantum(int key, int quantum_index);
     static void finalize();  // функция, завершающая выполнение программы, останавливает вспомогательные потоки
 private:
     static int get_owner(int key, int quantum_index, int requesting_process);

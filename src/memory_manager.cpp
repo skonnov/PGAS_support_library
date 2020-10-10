@@ -418,6 +418,19 @@ void memory_manager::change_mode(int key, int quantum_index_l, int quantum_index
 
 }
 
+void memory_manager::print_quantum(int key, int quantum_index) {
+    if(memory_manager::rank < 1 || memory_manager::rank >= size)
+        throw -1;
+    auto memory = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
+    if(memory->mode[quantum_index] == READ_WRITE)
+        memory->mutexes[quantum_index]->lock();
+    assert(memory->quantums[quantum_index] != nullptr);
+    for(int i = 0; i < QUANTUM_SIZE; i++)
+        std::cout<<memory->quantums[quantum_index][i]<<" ";
+    if(memory->mode[quantum_index] == READ_WRITE)
+        memory->mutexes[quantum_index]->unlock();
+}
+
 void memory_manager::finalize() {
     int cnt = 0;
     if(rank != 0) {
