@@ -2,6 +2,7 @@
 #include <cassert>
 #include <string>
 #include <mpi.h>
+#include <fstream>
 #include "parallel_vector.h"
 #include "memory_manager.h"
 
@@ -16,7 +17,7 @@ int main(int argc, char** argv) {
     }
     memory_manager::memory_manager_init(argc, argv, error_helper_string);
     int n = atoi(argv[1]);
-    parallel_vector pv(n);
+    parallel_vector pv(n), pv2(n);
     int rank, size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -25,13 +26,21 @@ int main(int argc, char** argv) {
             pv.set_elem(i, i);
         }
         pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);
+        pv.print("test.txt");
+        pv2.read("test.txt", n);
         double t1 = MPI_Wtime();
+        if (rank == 1) {
+            for(int i = 0; i < n; i++)
+                std::cout<<pv2.get_elem(i)<<" ";
+            std::cout<<std::endl;
+        }
         int sum = 0;
         for(int i = 0; i < n; i++) {
             int tmp = pv.get_elem(i);
             sum += pv.get_elem(i);
         }
         double t2 = MPI_Wtime();
+        pv.print("test.txt");
         cout<<t2-t1<<" "<<sum<<" "<<rank<<"\n"<<std::flush;
         pv.change_mode(0, pv.get_num_quantums(), READ_WRITE);
         for(int i = 0; i < n; i++) {
