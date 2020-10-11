@@ -45,6 +45,7 @@ class memory_manager {
     static int worker_rank, worker_size;  // worker_rank = rank-1, worker_size = size-1
     static int proc_count_ready;
     static MPI_File fh;
+    static MPI_Comm workers_comm;
 public:
     static void memory_manager_init(int argc, char** argv, std::string error_helper = "");  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
     static int get_MPI_rank();

@@ -24,6 +24,7 @@ int memory_manager::worker_rank;  // worker_rank = rank-1
 int memory_manager::worker_size;  // worker_size = size-1
 int memory_manager::proc_count_ready = 0;
 MPI_File memory_manager::fh;
+MPI_Comm memory_manager::workers_comm;
 
 void memory_manager::memory_manager_init(int argc, char**argv, std::string error_helper_str) {
     int provided = 0;
@@ -48,6 +49,14 @@ void memory_manager::memory_manager_init(int argc, char**argv, std::string error
     } else {
         helper_thr = std::thread(worker_helper_thread);
     }
+
+    std::vector<int> procs(size-1);
+    for(int i = 1; i < size; i++)
+        procs[i-1] = i;
+    MPI_Group group_world, group_workers;
+    MPI_Comm_group(MPI_COMM_WORLD, &group_world);
+    MPI_Group_incl(group_world, worker_size, procs.data(), &group_workers);
+    MPI_Comm_create(MPI_COMM_WORLD, group_workers, &workers_comm);
     // создание своего типа для пересылки посылок ???
 }
 
@@ -480,15 +489,14 @@ void memory_manager::change_mode(int key, int quantum_index_l, int quantum_index
 }
 
 void memory_manager::print(int key, const std::string& path) {
-    int err = MPI_File_open(MPI_COMM_WORLD, path.data(), MPI_MODE_WRONLY | MPI_MODE_CREATE | MPI_MODE_APPEND, MPI_INFO_NULL, &fh);  // TODO: create MPI_COMM_WORKERS
-    assert(err == 0);
-    if (rank != 0) {
-        int request[4] = {PRINT, key, -1, -1};
-        MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
-        int is_ready;
-        MPI_Status status;
-        MPI_Recv(&is_ready, 1, MPI_INT, 0, GET_PERMISSION_TO_CONTINUE, MPI_COMM_WORLD, &status);
-    }
+    int err = MPI_File_open(workers_comm, path.data(), MPI_MODE_WRONLY | MPI_MODE_CREATE | MPI_MODE_APPEND, MPI_INFO_NULL, &fh);  // TODO: create MPI_COMM_WORKERS
+    if (err)
+        throw -1;
+    int request[4] = {PRINT, key, -1, -1};
+    MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
+    int is_ready;
+    MPI_Status status;
+    MPI_Recv(&is_ready, 1, MPI_INT, 0, GET_PERMISSION_TO_CONTINUE, MPI_COMM_WORLD, &status);
     MPI_File_close(&fh);
 }
 
