@@ -413,8 +413,9 @@ void master_helper_thread() {
                     memory_manager::proc_count_ready = 0;
                     std::set<int>s1, s2;
                     while (l_quantum_index < (int)memory->owners.size()) {
-                        if (r_quantum_index < (int)memory->owners.size())
+                        if (r_quantum_index < (int)memory->owners.size()) {
                             assert(memory->quantum_ready[r_quantum_index]);
+                        }
                         if (s1.empty()) {
                             for (auto proc: memory->owners[r_quantum_index])
                                 s1.insert(proc);
@@ -496,12 +497,8 @@ void memory_manager::print_quantum(int key, int quantum_index) {
         throw -1;
     auto memory = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
     assert(memory->quantums[quantum_index] != nullptr);
-    // std::cout<<" |!| "<<rank<<", "<<quantum_index<<" |!| "<<std::flush;
-    // std::cout<<std::flush;
     MPI_Status status;
-    MPI_File_write(fh, memory->quantums[key], std::min(memory->logical_size, QUANTUM_SIZE), MPI_INT, &status);
-    // for (int i = 0; i < std::min(memory->logical_size, QUANTUM_SIZE); i++)
-    //     std::cout<<memory->quantums[quantum_index][i]<<" | ";
+    MPI_File_write_at(fh, quantum_index*QUANTUM_SIZE*sizeof(int), memory->quantums[quantum_index], std::min(memory->logical_size, QUANTUM_SIZE), MPI_INT, &status);
     std::cout<<std::flush;
 }
 
