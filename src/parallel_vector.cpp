@@ -42,6 +42,10 @@ int parallel_vector::get_num_quantums() const {
     return (size_vector + QUANTUM_SIZE - 1) / QUANTUM_SIZE;
 }
 
+void parallel_vector::read(const std::string& path, int number_of_elements) {
+    memory_manager::read(key, path, number_of_elements);
+}
+
 void parallel_vector::print(const std::string& path) const {
     memory_manager::print(key, path);
 }
