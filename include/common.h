@@ -1,7 +1,7 @@
 #ifndef __COMMON_H__
 #define __COMMON_H__
 
-#define QUANTUM_SIZE 500
+#define QUANTUM_SIZE 5
 
 enum mods {  // используется для изменения режима работы с памятью
     READ_ONLY,
@@ -15,9 +15,10 @@ enum tags {  // используется для корректного расп�
     GET_DATA_FROM_MASTER_HELPER_LOCK = 103,
     GET_INFO_FROM_MASTER_HELPER      = 104,
     GET_PERMISSION_FOR_CHANGE_MODE   = 105,
-    REDUCE_TAG                       = 106,
-    FINALIZE_WORKER                  = 107,
-    FINALIZE_MASTER                  = 108
+    GET_PERMISSION_TO_CONTINUE       = 106,
+    REDUCE_TAG                       = 107,
+    FINALIZE_WORKER                  = 108,
+    FINALIZE_MASTER                  = 109
 };
 
 enum operations {  // используется вспомогательными потоками для определения типа запрашиваемой операции
@@ -27,7 +28,8 @@ enum operations {  // используется вспомогательными 
     GET_INFO,
     LOCK,
     UNLOCK,
-    CHANGE_MODE
+    CHANGE_MODE,
+    PRINT
 };
 
 #endif  // __COMMON_H__

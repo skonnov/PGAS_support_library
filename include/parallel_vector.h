@@ -19,6 +19,7 @@ public:
     int get_quantum(int index);  // по глобальному индексу получить номер кванта
     int get_key() const;  // получить идентификатор вектора в memory_manager
     int get_num_quantums() const;
+    void print(const std::string& path) const;
     void change_mode(int quantum_index, int mode);
     void change_mode(int quantum_index_l, int quantum_index_r, int mode);
 };
