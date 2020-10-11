@@ -586,6 +586,9 @@ int memory_manager::get_owner(int key, int quantum_index, int requesting_process
     auto* memory = dynamic_cast<memory_line_master*>(memory_manager::memory[key]);
     if(memory->owners[quantum_index].empty())
         throw -1;
+    for(auto rank: memory->owners[quantum_index])
+        if (rank == requesting_process)
+            return requesting_process;
     int to_rank = memory->owners[quantum_index].front();
     memory->owners[quantum_index].pop_front();
     memory->owners[quantum_index].push_back(to_rank);
