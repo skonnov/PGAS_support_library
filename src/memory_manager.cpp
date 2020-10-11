@@ -504,7 +504,7 @@ void memory_manager::read(int key, const std::string& path, int number_of_elemen
             std::ifstream fs(path, std::ios::in | std::ios::binary);
             fs.seekg(offset*sizeof(int));
             int data;
-            for(int i = 0; i < quantum_portion * QUANTUM_SIZE; i++) {
+            for(int i = 0; i < std::min(quantum_portion * QUANTUM_SIZE, number_of_elements); i++) {
                 int logical_index = offset + i;
                 fs.read((char*)&data, sizeof(data));
                 memory_manager::set_data(key, logical_index, data);
