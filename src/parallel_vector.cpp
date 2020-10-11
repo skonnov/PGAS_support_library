@@ -42,6 +42,14 @@ int parallel_vector::get_num_quantums() const {
     return (size_vector + QUANTUM_SIZE - 1) / QUANTUM_SIZE;
 }
 
+void parallel_vector::read(const std::string& path, int number_of_elements) {
+    memory_manager::read(key, path, number_of_elements);
+}
+
+void parallel_vector::print(const std::string& path) const {
+    memory_manager::print(key, path);
+}
+
 void parallel_vector::change_mode(int quantum_index, int mode) {
     memory_manager::change_mode(key, quantum_index, quantum_index+1, mode);
 }

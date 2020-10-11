@@ -34,7 +34,7 @@ struct memory_line_master
     queue_quantums wait_locks;  // мапа очередей для процессов, ожидающих разблокировки кванта, заблокированных через set_lock
     queue_quantums wait_quantums;  // мапа очередей для процессов, ожидающих разблокировки кванта, заблокированных процессом-мастером
     std::vector<int> quantums_for_lock;  // вектор для определения номеров процессов, блокирующих кванты
-    std::vector<std::queue<int>> owners; // для read_only mode, номера процессов, хранящих у себя квант
+    std::vector<std::deque<int>> owners; // для read_only mode, номера процессов, хранящих у себя квант
 
 };
 
@@ -43,6 +43,9 @@ class memory_manager {
     static std::thread helper_thr;  // вспомогательный поток
     static int rank, size;  // ранг процесса в MPI и число процессов
     static int worker_rank, worker_size;  // worker_rank = rank-1, worker_size = size-1
+    static int proc_count_ready;
+    static MPI_File fh;
+    static MPI_Comm workers_comm;
 public:
     static void memory_manager_init(int argc, char** argv, std::string error_helper = "");  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
     static int get_MPI_rank();
@@ -54,9 +57,11 @@ public:
     static void set_lock(int key, int quantum_index);  // заблокировать квант
     static void unset_lock(int key, int quantum_index);  // разблокировать квант
     static void change_mode(int key, int quantum_index_l, int quantum_index_r, int mode);  // сменить режим работы с памятью
-    static void print_quantum(int key, int quantum_index);
+    static void read(int key, const std::string& path, int num_elems);
+    static void print(int key, const std::string& path);
     static void finalize();  // функция, завершающая выполнение программы, останавливает вспомогательные потоки
 private:
+    static void print_quantum(int key, int quantum_index);
     static int get_owner(int key, int quantum_index, int requesting_process);
     // static bool is_mode_changed(int key, int quantum_index);
     friend void worker_helper_thread();  // функция, выполняемая вспомогательными потоками процессов-рабочих
