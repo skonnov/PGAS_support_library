@@ -33,7 +33,6 @@ int main(int argc, char ** argv) {
         return 1;
     }
     memory_manager::memory_manager_init(argc, argv, error_helper_string);
-    double t1 = MPI_Wtime();
     int rank = memory_manager::get_MPI_rank();
     int size = memory_manager::get_MPI_size();
     assert(argc > 1);
@@ -54,9 +53,6 @@ int main(int argc, char ** argv) {
             pv.set_elem(i, i);
         pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);// так как далее вектор изменяться не будет, режим изменяется на READ_ONLY
         int ans = parallel_reduce(index, index+portion, pv, 0, 1, size-1, Func(pv), reduction);
-        double t2 = MPI_Wtime();
-        if(rank == 1)
-            std::cout<<t2-t1<<std::flush;
     }
     memory_manager::finalize();
     return 0;
