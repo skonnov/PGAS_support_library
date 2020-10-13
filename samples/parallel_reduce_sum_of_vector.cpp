@@ -1,7 +1,6 @@
 #include <iostream>
 #include <cassert>
 #include <string>
-#include <mpi.h>
 #include "memory_manager.h"
 #include "parallel_vector.h"
 #include "parallel_reduce.h"

@@ -9,6 +9,7 @@
 #include <iostream>
 #include "common.h"
 #include "queue_quantums.h"
+#include "mpi.h"
 
 void worker_helper_thread();
 void master_helper_thread();
