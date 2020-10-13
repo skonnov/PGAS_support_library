@@ -1,12 +1,16 @@
 #ifndef __MEMORY_MANAGER_H__
 #define __MEMORY_MANAGER_H__
 
-#include <map>
 #include <thread>
 #include <vector>
-#include <queue>
+#include <deque>
 #include <mutex>
 #include <iostream>
+#include <fstream>
+#include <cassert>
+#include <string>
+#include <set>
+#include <mpi.h>
 #include "common.h"
 #include "queue_quantums.h"
 

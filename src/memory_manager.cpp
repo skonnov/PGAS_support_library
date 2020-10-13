@@ -1,15 +1,4 @@
-#include <thread>
-#include <mpi.h>
-#include <vector>
-#include <climits>
-#include <iostream>
-#include <cassert>
-#include <mutex>
-#include <string>
-#include <set>
-#include <fstream>
 #include "memory_manager.h"
-#include "queue_quantums.h"
 
 // посылка мастеру: [операция; идентификатор структуры, откуда требуются данные; требуемый номер кванта]
 // посылка рабочему от мастера: [операция; идентификатор структуры, откуда требуются данные; 

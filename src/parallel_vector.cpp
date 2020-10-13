@@ -1,9 +1,4 @@
-#include <iostream>
-#include <vector>
-#include <mpi.h>
-#include <cassert>
 #include "parallel_vector.h"
-#include "memory_manager.h"
 
 parallel_vector::parallel_vector(const int& number_of_elems) {
     key = memory_manager::create_object(number_of_elems);
