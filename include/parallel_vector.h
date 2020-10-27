@@ -20,6 +20,7 @@ public:
     int get_key() const;  // получить идентификатор вектора в memory_manager
     int get_num_quantums() const;
     void read(const std::string& path, int number_of_elements);
+    void read(const std::string& path, int number_of_elements, int offset, int num_elem_proc);
     void print(const std::string& path) const;
     void change_mode(int quantum_index, int mode);
     void change_mode(int quantum_index_l, int quantum_index_r, int mode);

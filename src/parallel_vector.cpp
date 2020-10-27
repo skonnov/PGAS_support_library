@@ -41,6 +41,10 @@ void parallel_vector::read(const std::string& path, int number_of_elements) {
     memory_manager::read(key, path, number_of_elements);
 }
 
+void parallel_vector::read(const std::string& path, int number_of_elements, int offset, int num_elem_proc) {
+    memory_manager::read(key, path, number_of_elements, offset, num_elem_proc);
+}
+
 void parallel_vector::print(const std::string& path) const {
     memory_manager::print(key, path);
 }

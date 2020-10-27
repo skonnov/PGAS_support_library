@@ -479,9 +479,6 @@ void memory_manager::change_mode(int key, int quantum_index_l, int quantum_index
 }
 
 void memory_manager::read(int key, const std::string& path, int number_of_elements) {
-    int err = MPI_File_open(workers_comm, path.data(), MPI_MODE_WRONLY | MPI_MODE_CREATE | MPI_MODE_APPEND, MPI_INFO_NULL, &fh);
-    if (err)
-        throw -1;
     int index_of_element = 0;
     int num_of_quantums = (number_of_elements + QUANTUM_SIZE - 1) / QUANTUM_SIZE;
     int offset = 0;
@@ -502,6 +499,17 @@ void memory_manager::read(int key, const std::string& path, int number_of_elemen
         offset += quantum_portion * QUANTUM_SIZE;
     }
     MPI_Barrier(workers_comm);  // ???
+}
+
+void memory_manager::read(int key, const std::string& path, int number_of_elements, int offset, int num_of_elem_proc) {
+    std::ifstream fs(path, std::ios::in | std::ios::binary);
+    fs.seekg(offset*sizeof(int));
+    int data;
+    for(int i = 0; i < std::min(num_of_elem_proc, number_of_elements); i++) {
+        int logical_index = offset + i;
+        fs.read((char*)&data, sizeof(data));
+        memory_manager::set_data(key, logical_index, data);
+    }
 }
 
 void memory_manager::print(int key, const std::string& path) {
