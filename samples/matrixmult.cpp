@@ -1,3 +1,5 @@
+#include <iostream>
+#include <cmath>
 #include "memory_manager.h"
 #include "parallel_vector.h"
 
@@ -48,7 +50,7 @@ int main(int argc, char** argv) {
     }
     memory_manager::memory_manager_init(argc, argv);
     int size_workers = memory_manager::get_MPI_size()-1;
-    int q = sqrt(double(size_workers));
+    int q = static_cast<int>(sqrt(static_cast<double>(size_workers)));
     if (q*q != size_workers) {
         std::cout<<q<<std::endl;
         memory_manager::finalize();
