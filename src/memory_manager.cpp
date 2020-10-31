@@ -123,7 +123,7 @@ int memory_manager::get_data(int key, int index_of_element) {
     }
     if (to_rank != rank) {  // если данные не у текущего процесса, инициируется передача данных от указанного мастером процесса
         if (quantum == nullptr)
-            quantum = new int[QUANTUM_SIZE];  // TEMPORARY, NEED TO REORGANIZE GET_QUANTUM SYSTEM
+            quantum = memory->allocator.alloc();
         assert(to_rank > 0 && to_rank < size);
         MPI_Recv(quantum, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
     }
@@ -168,7 +168,7 @@ void memory_manager::set_data(int key, int index_of_element, int value) {
         memory->mutexes[quantum_index]->lock();
     memory->is_mode_changed[quantum_index] = false;
     if(quantum == nullptr)
-        quantum = new int[QUANTUM_SIZE];
+        quantum = memory->allocator.alloc();
     if (to_rank != rank) {  // если данные не у текущего процесса, инициируется передача данных от указанного мастером процесса
         assert(to_rank > 0 && to_rank < size);
         MPI_Recv(quantum, QUANTUM_SIZE, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
@@ -197,10 +197,6 @@ void worker_helper_thread() {
             for (int key = 0; key < int(memory_manager::memory.size()); key++) {
                 auto* memory_line = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
                 for(int i = 0; i < int(memory_line->quantums.size()); i++) {
-                    if(memory_line->quantums[i] != nullptr) {
-                        delete[] memory_line->quantums[i];
-                        memory_line->quantums[i] = nullptr;
-                    }
                     delete memory_line->mutexes[i];
                 }
                 delete memory_line;
@@ -226,7 +222,7 @@ void worker_helper_thread() {
                 memory->mutexes[quantum_index]->lock();
                 MPI_Send(memory->quantums[quantum_index], QUANTUM_SIZE,
                                         MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD);
-                delete[] memory->quantums[quantum_index];  // после отправки данных в READ_WRITE режиме квант на данном процессе удаляется
+                memory->allocator.free(&(memory->quantums[quantum_index]));  // после отправки данных в READ_WRITE режиме квант на данном процессе удаляется
                 memory->quantums[quantum_index] = nullptr;
                 memory->mutexes[quantum_index]->unlock();
                 break;

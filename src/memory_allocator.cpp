@@ -1,5 +1,5 @@
 #include "memory_allocator.h"
-
+#include <iostream>
 int* memory_allocator::alloc() {
     if (free_quantums.empty())
         resize_internal();
@@ -15,7 +15,7 @@ void memory_allocator::free(int** quantum) {
 
 void memory_allocator::resize_internal() {
     int teq = memory.size();
-    memory.push_back(st*QUANTUM_SIZE);
+    memory.resize(memory.size() + st*QUANTUM_SIZE);
     for(int i = 0; i < st; i++) {
         free_quantums.push(memory.data()+teq);
         teq += QUANTUM_SIZE;
