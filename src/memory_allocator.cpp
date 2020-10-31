@@ -1,5 +1,5 @@
 #include "memory_allocator.h"
-#include <iostream>
+
 int* memory_allocator::alloc() {
     if (free_quantums.empty())
         resize_internal();
