@@ -12,6 +12,7 @@
 #include <set>
 #include <mpi.h>
 #include "common.h"
+#include "memory_allocator.h"
 #include "queue_quantums.h"
 
 void worker_helper_thread();
@@ -27,7 +28,8 @@ struct memory_line_common {
 
 struct memory_line_worker
     : public memory_line_common {
-    std::vector<int*>quantums;  // вектор указателей на кванты
+    std::vector<int*> quantums;  // вектор указателей на кванты
+    memory_allocator allocator;
     std::vector<std::mutex*> mutexes;  // мьютексы на каждый квант, нужны, чтобы предотвратить одновременный доступ
                                        // к кванту с разных потоков в режиме READ_WRITE
 };
