@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <queue>
+#include "common.h"
 
 class memory_allocator {
     int st = 1;
@@ -10,7 +11,7 @@ class memory_allocator {
     std::queue<int*> free_quantums;
 public:
     int* alloc();
-    void free(int* quantum);
+    void free(int** quantum);
 private:
     void resize_internal();
 };
