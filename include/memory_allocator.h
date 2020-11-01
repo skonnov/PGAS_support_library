@@ -7,11 +7,12 @@
 
 class memory_allocator {
     int st = 1;
-    std::vector<int> memory;
-    std::queue<int*> free_quantums;
+    std::vector<int*> memory {};
+    std::queue<int*> free_quantums {};
 public:
     int* alloc();
     void free(int** quantum);
+    ~memory_allocator();
 private:
     void resize_internal();
 };
