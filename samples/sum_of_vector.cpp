@@ -15,7 +15,10 @@ int main(int argc, char** argv) {
         std::cout << "Usage:\n" << error_helper_string << std::endl;
         return 1;
     }
-    memory_manager::memory_manager_init(argc, argv, error_helper_string);
+    int quantum_size = DEFAULT_QUANTUM_SIZE;
+    if(argc == 3)
+        quantum_size = atoi(argv[2]);
+    memory_manager::memory_manager_init(argc, argv, quantum_size, error_helper_string);
     int n = atoi(argv[1]);
     parallel_vector pv(n), pv2(n);
     int rank, size;
@@ -27,9 +30,10 @@ int main(int argc, char** argv) {
         }
         pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);
         pv.print("test.txt");
-        pv2.read("test.txt", n);
+        // pv2.read("test.txt", n);
         double t1 = MPI_Wtime();
         if (rank == 1) {
+            pv2.read("test.txt", n, 0, n);
             for(int i = 0; i < n; i++)
                 std::cout<<pv2.get_elem(i)<<" ";
             std::cout<<std::endl;

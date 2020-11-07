@@ -14,11 +14,15 @@ void memory_allocator::free(int** quantum) {
 }
 
 void memory_allocator::resize_internal() {
-    memory.emplace_back(new int[st*QUANTUM_SIZE]);
+    memory.emplace_back(new int[st*quantum_size]);
     for(int i = 0; i < st; i++) {
-        free_quantums.push(memory.back()+i*QUANTUM_SIZE);
+        free_quantums.push(memory.back()+i*quantum_size);
     }
     st *= 2;
+}
+
+void memory_allocator::set_quantum_size(int size_quantum) {
+    quantum_size = size_quantum;
 }
 
 memory_allocator::~memory_allocator() {

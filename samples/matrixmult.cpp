@@ -48,7 +48,10 @@ int main(int argc, char** argv) {
     if (argc <= 1) {
         return 1;
     }
-    memory_manager::memory_manager_init(argc, argv);
+    int quantum_size = DEFAULT_QUANTUM_SIZE;
+    if(argc == 3)
+        quantum_size = atoi(argv[2]);
+    memory_manager::memory_manager_init(argc, argv, quantum_size);
     int size_workers = memory_manager::get_MPI_size()-1;
     int q = static_cast<int>(sqrt(static_cast<double>(size_workers)));
     if (q*q != size_workers) {
@@ -80,8 +83,8 @@ int main(int argc, char** argv) {
                 pv2.set_elem(i*n+j, j*n+i);
             }
         }
-        pv1.change_mode(0, n*n/QUANTUM_SIZE, READ_ONLY);
-        pv2.change_mode(0, n*n/QUANTUM_SIZE, READ_ONLY);
+        pv1.change_mode(0, n*n/memory_manager::get_quantum_size(), READ_ONLY);
+        pv2.change_mode(0, n*n/memory_manager::get_quantum_size(), READ_ONLY);
         for (int iter = 0; iter < q; iter++) {
             int i_begin = grid_ind.first * num_in_block;
             int j_begin = ((grid_ind.first + iter)%q)* num_in_block;

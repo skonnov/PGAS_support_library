@@ -1,7 +1,7 @@
 #ifndef __COMMON_H__
 #define __COMMON_H__
 
-#define QUANTUM_SIZE 500
+#define DEFAULT_QUANTUM_SIZE 500
 
 enum mods {  // используется для изменения режима работы с памятью
     READ_ONLY,
