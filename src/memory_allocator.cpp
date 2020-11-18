@@ -10,7 +10,7 @@ int* memory_allocator::alloc() {
 
 void memory_allocator::free(int** quantum) {
     free_quantums.push(*quantum);
-    quantum = nullptr;
+    *quantum = nullptr;
 }
 
 void memory_allocator::resize_internal() {
