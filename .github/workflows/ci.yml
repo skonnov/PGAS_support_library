@@ -3,8 +3,9 @@ on: [push]
 jobs:
   mac-os-build:
     runs-on: macos-latest
-    run: brew update-reset;
-    run: brew install open-mpi;
-    run: mkdir build && cd build
-    run: cmake ..
-    run: cmake --build . --config release -- -j4
+    steps:
+      run: brew update-reset;
+      run: brew install open-mpi;
+      run: mkdir build && cd build
+      run: cmake ..
+      run: cmake --build . --config release -- -j4
