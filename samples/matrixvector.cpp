@@ -12,10 +12,7 @@ int main(int argc, char** argv) { // b*a
         std::cout << "Usage:\n" << error_helper_string << std::endl;
         return 1;
     }
-    int quantum_size = DEFAULT_QUANTUM_SIZE;
-    if(argc == 4)
-        quantum_size = atoi(argv[3]);
-    memory_manager::memory_manager_init(argc, argv, quantum_size, error_helper_string);
+    memory_manager::memory_manager_init(argc, argv, error_helper_string);
     double t1 = MPI_Wtime();
     int n = atoi(argv[1]), m = atoi(argv[2]);
     int rank, size;

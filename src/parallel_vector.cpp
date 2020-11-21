@@ -1,7 +1,7 @@
 #include "parallel_vector.h"
 
-parallel_vector::parallel_vector(const int& number_of_elems) {
-    key = memory_manager::create_object(number_of_elems);
+parallel_vector::parallel_vector(const int& number_of_elems, const int& quantum_size) {
+    key = memory_manager::create_object(number_of_elems, quantum_size);
     size_vector = number_of_elems; 
 }
 
@@ -26,7 +26,7 @@ void parallel_vector::unset_lock(int quantum_index) {
 }
 
 int parallel_vector::get_quantum(int index) {
-    return memory_manager::get_quantum_index(index);
+    return memory_manager::get_quantum_index(key, index);
 }
 
 int parallel_vector::get_key() const {
@@ -34,7 +34,11 @@ int parallel_vector::get_key() const {
 }
 
 int parallel_vector::get_num_quantums() const {
-    return (size_vector + memory_manager::get_quantum_size() - 1) / memory_manager::get_quantum_size();
+    return (size_vector + memory_manager::get_quantum_size(key) - 1) / memory_manager::get_quantum_size(key);
+}
+
+int parallel_vector::get_quantum_size() const {
+    return memory_manager::get_quantum_size(key);
 }
 
 void parallel_vector::read(const std::string& path, int number_of_elements) {

@@ -23,6 +23,7 @@ struct memory_line_common {
     std::vector<bool> is_mode_changed;
     std::vector<int> num_of_change_mode_procs;
     int logical_size;  // общее число элементов в векторе на всех процессах
+    int quantum_size;
     virtual ~memory_line_common() {}
 };
 
@@ -52,16 +53,15 @@ class memory_manager {
     static int proc_count_ready;
     static MPI_File fh;
     static MPI_Comm workers_comm;
-    static int quantum_size;
 public:
-    static void memory_manager_init(int argc, char** argv, int quantum_size = DEFAULT_QUANTUM_SIZE, std::string error_helper = "");  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
+    static void memory_manager_init(int argc, char** argv, std::string error_helper = "");  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
     static int get_MPI_rank();
     static int get_MPI_size();
     static int get_data(int key, int index_of_element);  // получить элемент по индексу с любого процесса
     static void set_data(int key, int index_of_element, int value);  // сохранить значение элемента по индексу с любого процесса
-    static int create_object(int number_of_elements);  // создать новый memory_line и занести его в memory
-    static int get_quantum_index(int index);  // получить номер кванта по индексу
-    static int get_quantum_size();  // получить размер кванта
+    static int create_object(int number_of_elements, int quantum_size = DEFAULT_QUANTUM_SIZE);  // создать новый memory_line и занести его в memory
+    static int get_quantum_index(int key, int index);  // получить номер кванта по индексу
+    static int get_quantum_size(int key);  // получить размер кванта
     static void set_lock(int key, int quantum_index);  // заблокировать квант
     static void unset_lock(int key, int quantum_index);  // разблокировать квант
     static void change_mode(int key, int quantum_index_l, int quantum_index_r, int mode);  // сменить режим работы с памятью

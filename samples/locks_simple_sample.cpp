@@ -14,16 +14,13 @@ int main(int argc, char** argv) {
         std::cout << "Usage:\n" << error_helper_string << std::endl;
         return 1;
     }
-    int quantum_size = DEFAULT_QUANTUM_SIZE;
-    if(argc == 3)
-        quantum_size = atoi(argv[2]);
-    memory_manager::memory_manager_init(argc, argv, quantum_size, error_helper_string);
+    memory_manager::memory_manager_init(argc, argv, error_helper_string);
     int n = atoi(argv[1]);
     parallel_vector pv(n);
     int rank, size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if(rank == 1) {
+    if(rank != 0) {
         for (int i = 0; i < n; i++) {
             pv.set_elem(i, 0);
         }

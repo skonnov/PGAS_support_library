@@ -48,14 +48,10 @@ int main(int argc, char** argv) {
     if (argc <= 1) {
         return 1;
     }
-    int quantum_size = DEFAULT_QUANTUM_SIZE;
-    if(argc == 3)
-        quantum_size = atoi(argv[2]);
-    memory_manager::memory_manager_init(argc, argv, quantum_size);
+    memory_manager::memory_manager_init(argc, argv);
     int size_workers = memory_manager::get_MPI_size()-1;
     int q = static_cast<int>(sqrt(static_cast<double>(size_workers)));
     if (q*q != size_workers) {
-        std::cout<<q<<std::endl;
         memory_manager::finalize();
         return 2;
     }
@@ -67,9 +63,11 @@ int main(int argc, char** argv) {
     }
     parallel_vector pv1(n*n), pv2(n*n), pv3(n*n);
     int rank = memory_manager::get_MPI_rank();
+    std::pair<int, int> grid_ind = get_grid_rank(rank, q);
+    MPI_Barrier(MPI_COMM_WORLD);
+    double t1 = MPI_Wtime();
     if (rank != 0) {
         // init
-        std::pair<int, int> grid_ind = get_grid_rank(rank, q);
         int i_begin = grid_ind.first * num_in_block;
         int j_begin = grid_ind.second * num_in_block;
         for (int i = i_begin; i < i_begin + num_in_block; i++) {
@@ -83,8 +81,11 @@ int main(int argc, char** argv) {
                 pv2.set_elem(i*n+j, j*n+i);
             }
         }
-        pv1.change_mode(0, n*n/memory_manager::get_quantum_size(), READ_ONLY);
-        pv2.change_mode(0, n*n/memory_manager::get_quantum_size(), READ_ONLY);
+    }
+    if(rank != 0)
+    {
+        pv1.change_mode(0, n*n/pv1.get_quantum_size(), READ_ONLY);
+        pv2.change_mode(0, n*n/pv2.get_quantum_size(), READ_ONLY);
         for (int iter = 0; iter < q; iter++) {
             int i_begin = grid_ind.first * num_in_block;
             int j_begin = ((grid_ind.first + iter)%q)* num_in_block;
@@ -96,8 +97,11 @@ int main(int argc, char** argv) {
         }
     }
     MPI_Barrier(MPI_COMM_WORLD);
-    if(rank == 1)
-        print(&pv1, &pv2, &pv3, n);
+    double t2 = MPI_Wtime();
+    if(rank == 0)
+        std::cout<<t2-t1<<"\n";
+    // if(rank == 1)
+    //     print(&pv1, &pv2, &pv3, n);
     memory_manager::finalize();
     return 0;
 }
