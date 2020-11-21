@@ -17,8 +17,8 @@ script:
   - cmake ..
   - cmake --build . --config release -- -j4
   - cd Release
-  - travis_wait 60 mpiexec --oversubscribe -n 4 ./sum_of_vector 50
-  - travis_wait 60 mpiexec --oversubscribe -n 4 ./matrixvector 50 50
-  - travis_wait 60 mpiexec --oversubscribe -n 5 ./matrixmult 2
-  - travis_wait 60 mpiexec --oversubscribe -n 5 ./locks_simple_sample 50
-  - travis_wait 60 mpiexec --oversubscribe -n 5 ./parallel_reduce_sum_of_vector 50
+  - mpiexec --oversubscribe -n 4 ./sum_of_vector 50
+  - mpiexec --oversubscribe -n 4 ./matrixvector 50 50
+  - mpiexec --oversubscribe -n 5 ./matrixmult 2
+  - mpiexec --oversubscribe -n 5 ./locks_simple_sample 50
+  - mpiexec --oversubscribe -n 5 ./parallel_reduce_sum_of_vector 50
