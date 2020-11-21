@@ -1,5 +1,5 @@
 name: ci
-on: [push]
+on: [push, pull_request]
 jobs:
   mac-os-build:
     runs-on: macos-latest
@@ -7,6 +7,8 @@ jobs:
       - uses: actions/checkout@v2
       - run: brew update-reset;
       - run: brew install open-mpi;
-      - run: mkdir build && cd build
-      - run: cmake ..
-      - run: cmake --build . --config release -- -j4
+      - run: mkdir build
+      - working-directory: build
+        run: cmake ..
+      - working-directory: build
+        run: cmake --build . --config release -- -j4
