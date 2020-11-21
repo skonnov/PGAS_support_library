@@ -12,3 +12,13 @@ jobs:
         run: cmake ..
       - working-directory: build
         run: cmake --build . --config release -- -j4
+      - working-directory: build/release
+        run: mpiexec -n 4 ./sum_of_vector 50
+      - working-directory: build/release
+        run: mpiexec -n 4 ./matrixvector 50 50
+      - working-directory: build/release
+        run: mpiexec -n 5 ./matrixmult 2
+      - working-directory: build/release
+        run: mpiexec -n 5 ./locks_simple_sample 50
+      - working-directory:  build/release
+        run: mpiexec -n 5 ./parallel_reduce_sum_of_vector 50
