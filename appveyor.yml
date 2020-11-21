@@ -11,6 +11,7 @@ install:
   - msmpisdk.msi /passive
 
 build_script:
+  - timeout: 5
   - cmd: mkdir build
   - cmd: cd build
   - cmd: cmake ^
@@ -19,3 +20,9 @@ build_script:
         -D MPI_CXX_INCLUDE_PATH:PATH="%MPI_HOME%/Include" ^
         -D MPI_CXX_LIBRARIES:PATH="%MPI_HOME%/Lib/x86/msmpi.lib" ..
   - cmd: cmake --build . --config release
+  - cmd: cd release
+  - cmd: mpiexec -n 4 ./sum_of_vector 50
+  - cmd: mpiexec -n 4 ./matrixvector 50 50
+  - cmd: mpiexec -n 5 ./matrixmult 2
+  - cmd: mpiexec -n 5 ./locks_simple_sample 50
+  - cmd: mpiexec -n 5 ./parallel_reduce_sum_of_vector 50
