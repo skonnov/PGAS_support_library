@@ -4,6 +4,7 @@ jobs:
   mac-os-build:
     runs-on: macos-latest
     steps:
+      - uses: actions/checkout@v2
       - run: brew update-reset;
       - run: brew install open-mpi;
       - run: mkdir build && cd build
