@@ -1,0 +1,25 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  mac-os-build:
+    timeout-minutes: 2
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: brew update-reset;
+      - run: brew install open-mpi;
+      - run: mkdir build
+      - working-directory: build
+        run: cmake ..
+      - working-directory: build
+        run: cmake --build . --config release -- -j4
+      - working-directory: build/release
+        run: mpiexec --oversubscribe -n 4 ./sum_of_vector 50
+      - working-directory: build/release
+        run: mpiexec --oversubscribe -n 4 ./matrixvector 50 50
+      - working-directory: build/release
+        run: mpiexec --oversubscribe -n 5 ./matrixmult 2
+      - working-directory: build/release
+        run: mpiexec --oversubscribe -n 5 ./locks_simple_sample 50
+      - working-directory:  build/release
+        run: mpiexec --oversubscribe -n 5 ./parallel_reduce_sum_of_vector 50
