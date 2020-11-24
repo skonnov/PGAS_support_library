@@ -10,8 +10,7 @@ class parallel_vector {
     int key;  // идентификатор вектора в memory_manager
     int size_vector;  // глобальный размер вектора
 public:
-    parallel_vector();
-    parallel_vector(const int& size, const int& quantum_size = DEFAULT_QUANTUM_SIZE);
+    parallel_vector(const int& size=DEFAULT_QUANTUM_SIZE, const int& quantum_size = DEFAULT_QUANTUM_SIZE);
     int get_elem(const int& index) const;  // получить элемент по глобальному индексу
     void set_elem(const int& index, const int& value);  // сохранить элемент по глобальному индексу
     void set_lock(int quantum_index);  // заблокировать квант
@@ -20,6 +19,7 @@ public:
     int get_key() const;  // получить идентификатор вектора в memory_manager
     int get_num_quantums() const;
     int get_quantum_size() const;
+    int size() const;
     void read(const std::string& path, int number_of_elements);
     void read(const std::string& path, int number_of_elements, int offset, int num_elem_proc);
     void print(const std::string& path) const;
