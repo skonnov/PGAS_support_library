@@ -1,6 +1,7 @@
 #include "parallel_priority_queue.h"
 #include "parallel_reduce.h"
 #include <algorithm>
+#include <climits>
 
 parallel_priority_queue::parallel_priority_queue(int _num_of_quantums_proc, int _quantum_size) {
     worker_rank = memory_manager::get_MPI_rank()-1;
