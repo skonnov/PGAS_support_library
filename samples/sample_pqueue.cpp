@@ -25,5 +25,6 @@ int main(int argc, char** argv) {
     }
     if(rank == 1)
         std::cout<<ppq.get_max() << std::endl;
+    MPI_Finalize();
     return 0;
 }

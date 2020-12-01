@@ -9,14 +9,16 @@ parallel_priority_queue::parallel_priority_queue(int _num_of_quantums_proc, int 
     num_of_quantums_proc = _num_of_quantums_proc;
     quantum_size = _quantum_size;
     num_of_elems_proc = num_of_quantums_proc*quantum_size;
-    global_index_l = worker_rank*num_of_elems_proc;
+    global_index_l = worker_rank*num_of_elems_proc*2;
     maxes = parallel_vector(worker_size, 1);
     sizes = parallel_vector(worker_size, 1);
-    maxes.set_elem(worker_rank, 0);  // 0???
-    sizes.set_elem(worker_rank, 0);  // 0???
     pqueues = parallel_vector(2*worker_size*num_of_elems_proc, quantum_size);
-    for(int i = global_index_l; i < global_index_l + num_of_elems_proc; i++)
-        sizes.set_elem(i, 0);  // 0???
+    if (worker_rank >= 0) {
+        maxes.set_elem(worker_rank, 0);  // 0???
+        sizes.set_elem(worker_rank, 0);  // 0???
+        for (int i = global_index_l; i < global_index_l + num_of_elems_proc * 2; i++)
+            pqueues.set_elem(i, 0);  // 0???
+    }
 }
 
 void parallel_priority_queue::insert(int elem) {  // need to be called by all worker_processes
@@ -26,11 +28,11 @@ void parallel_priority_queue::insert(int elem) {  // need to be called by all wo
     int minn = INT_MAX;
     for (int i = 0; i < worker_size; i++) {
         int size_i = sizes.get_elem(i);
-        if(size_i < minn) {
+        if (size_i < minn) {
             id_min = i;
             minn = size_i;
         }
-    }
+    } // bad, need to to smth else
     if(worker_rank == id_min)
         insert_internal(elem);
 }
