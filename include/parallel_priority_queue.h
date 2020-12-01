@@ -8,10 +8,14 @@
 class parallel_priority_queue {
     int worker_rank, worker_size;
     parallel_vector maxes, sizes, pqueues;
-    int num_of_quantums_proc, quantum_size;
+    int num_of_quantums_proc, quantum_size, num_of_elems_proc;
+    int global_index_l;
+public:
     parallel_priority_queue(int _num_of_quantums_proc, int _quantum_size=DEFAULT_QUANTUM_SIZE);
     void insert(int elem);
     int get_max();
+private:
+    void insert_internal(int elem);
 };
 
 #endif
