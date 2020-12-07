@@ -36,14 +36,15 @@ void parallel_priority_queue::insert(int elem) {  // need to be called by all wo
             }
         } // bad, need smth else
     }
+    MPI_Barrier(MPI_COMM_WORLD);
     if(worker_rank == id_min)
         insert_internal(elem);
 }
 
 void parallel_priority_queue::insert_internal(int elem) {
     int local_index = sizes.get_elem(worker_rank);
-    local_index += num_of_elems_proc-1;
     sizes.set_elem(worker_rank, sizes.get_elem(worker_rank) + 1);
+    local_index += num_of_elems_proc-1;
     for (int i = local_index; i > 0; i = (i-1) >> 1) {
         pqueues.set_elem(global_index_l + i, elem);
         int elem2 = pqueues.get_elem(global_index_l + ((i-1)>>1));
@@ -69,7 +70,11 @@ public:
     }
 };
 
-int parallel_priority_queue::get_max() {
+int parallel_priority_queue::get_max(int rank) {
     auto reduction = [](int a, int b){return std::max(a, b);};
-    return parallel_reduce(worker_rank, worker_rank+1, maxes, INT_MIN, 1, worker_size /*global_size*/, Func(maxes), reduction, worker_rank + 1 /*global_rank*/);
+    return parallel_reduce(worker_rank, worker_rank+1, maxes, INT_MIN, 1, worker_size /*global_size*/, Func(maxes), reduction, rank /*global_rank*/);
+}
+
+int parallel_priority_queue::size() const {
+    return num_of_elems_proc*worker_size;
 }

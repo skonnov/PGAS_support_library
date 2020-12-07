@@ -13,7 +13,8 @@ class parallel_priority_queue {
 public:
     parallel_priority_queue(int _num_of_quantums_proc, int _quantum_size=DEFAULT_QUANTUM_SIZE);
     void insert(int elem);
-    int get_max();
+    int get_max(int rank);
+    int size() const;
 private:
     void insert_internal(int elem);
 };
