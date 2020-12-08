@@ -18,13 +18,14 @@ int main(int argc, char** argv) {
     parallel_priority_queue ppq(num_of_quantums_proc, quantum_size);
     int rank = memory_manager::get_MPI_rank();
     int size = memory_manager::get_MPI_size();
-    if (rank != 0) {
-        for (int i = 0; i < num_of_quantums_proc*quantum_size*(size-1); i++) {
-            ppq.insert(i);
-        }
+    for (int i = 0; i < ppq.size(); i++) {
+        ppq.insert(i);
     }
-    if(rank == 1)
-        std::cout<<ppq.get_max() << std::endl;
-    MPI_Finalize();
+    if(rank != 0) {
+        int maxx = ppq.get_max(1);
+        if (rank == 1)
+            std::cout<<maxx << std::endl;
+    }
+    memory_manager::finalize();
     return 0;
 }
