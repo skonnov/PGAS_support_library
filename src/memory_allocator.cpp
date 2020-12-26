@@ -1,6 +1,7 @@
 #include "memory_allocator.h"
 
 int* memory_allocator::alloc() {
+    const std::lock_guard<std::mutex> lockg(lock);
     if (free_quantums.empty())
         resize_internal();
     int* quantum = free_quantums.front();
@@ -9,6 +10,7 @@ int* memory_allocator::alloc() {
 }
 
 void memory_allocator::free(int** quantum) {
+    const std::lock_guard<std::mutex> lockg(lock);
     free_quantums.push(*quantum);
     *quantum = nullptr;
 }

@@ -106,6 +106,8 @@ int memory_manager::get_data(int key, int index_of_element) {
                 memory->mutexes[quantum_index]->unlock();
             return elem;  // элемент возвращается без обращения к мастеру
         }
+        if (memory->mode[quantum_index] == READ_WRITE)
+            memory->mutexes[quantum_index]->unlock();
     } else {
         if(memory->mode[quantum_index] == READ_WRITE)
             memory->mutexes[quantum_index]->unlock();
@@ -115,8 +117,6 @@ int memory_manager::get_data(int key, int index_of_element) {
     int to_rank = -2;
     MPI_Status status;
     MPI_Recv(&to_rank, 1, MPI_INT, 0, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);  // получение ответа от мастера
-    if (memory->is_mode_changed[quantum_index] && memory->mode[quantum_index] == READ_WRITE)
-        memory->mutexes[quantum_index]->lock();
     memory->is_mode_changed[quantum_index] = false; // ???
     if (memory->mode[quantum_index] == READ_ONLY && to_rank == rank) {  // если read_only_mode и данные уже у процесса,
                                                  // ответ мастеру о том, что данные готовы, отправлять не нужно
@@ -130,11 +130,9 @@ int memory_manager::get_data(int key, int index_of_element) {
         MPI_Recv(quantum, memory->quantum_size, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
     }
     request[0] = SET_INFO;
-    MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // уведомление мастера о том, что данные готовы для передачи другим процессам
     assert(quantum != nullptr);
     int elem = quantum[index_of_element%memory->quantum_size];
-    if (memory->mode[quantum_index] == READ_WRITE)
-        memory->mutexes[quantum_index]->unlock();
+    MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // уведомление мастера о том, что данные готовы для передачи другим процессам
     return elem;
 }
 
@@ -157,6 +155,7 @@ void memory_manager::set_data(int key, int index_of_element, int value) {
             memory->mutexes[quantum_index]->unlock();
             return;
         }
+        memory->mutexes[quantum_index]->unlock();
     } else {
         if(memory->mode[quantum_index] == READ_WRITE)
             memory->mutexes[quantum_index]->unlock();
@@ -166,8 +165,6 @@ void memory_manager::set_data(int key, int index_of_element, int value) {
     int to_rank = -2;
     MPI_Status status;
     MPI_Recv(&to_rank, 1, MPI_INT, 0, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);  // получение ответа от мастера
-    if (memory->is_mode_changed[quantum_index] && memory->mode[quantum_index] == READ_WRITE)
-        memory->mutexes[quantum_index]->lock();
     memory->is_mode_changed[quantum_index] = false;
     if(quantum == nullptr) {
         quantum = memory->allocator.alloc();
@@ -179,7 +176,6 @@ void memory_manager::set_data(int key, int index_of_element, int value) {
     request[0] = SET_INFO;
     quantum[index_of_element%memory->quantum_size] = value;
     MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // уведомление мастера о том, что данные готовы для передачи другим процессам
-    memory->mutexes[quantum_index]->unlock();
 }
 
 int memory_manager::get_quantum_index(int key, int index) {

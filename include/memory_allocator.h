@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <queue>
+#include <mutex>
 #include "common.h"
 
 class memory_allocator {
@@ -10,6 +11,7 @@ class memory_allocator {
     int quantum_size;
     std::vector<int*> memory {};
     std::queue<int*> free_quantums {};
+    std::mutex lock;
 public:
     int* alloc();
     void free(int** quantum);

@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
     }
     memory_manager::memory_manager_init(argc, argv, error_helper_string);
     int n = atoi(argv[1]);
-    parallel_vector pv(n, 30), pv2(n);
+    parallel_vector pv(n, 1), pv2(n);
     int rank, size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -42,13 +42,14 @@ int main(int argc, char** argv) {
         }
         double t2 = MPI_Wtime();
         pv.print("test.txt");
-        cout<<t2-t1<<" "<<sum<<" "<<rank<<"\n"<<std::flush;
+        cout<<t2-t1<<" "<<sum<<" "<<rank<<std::endl;
         pv.change_mode(0, pv.get_num_quantums(), READ_WRITE);
+        if(rank == 1)
+            std::cout<<"------"<<std::endl;
         for(int i = 0; i < n; i++) {
             pv.set_elem(i, i+1);
         }
-        for (int i = 0; i < pv.get_num_quantums(); i++)
-            pv.change_mode(i, READ_ONLY);
+        pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);
         t1 = MPI_Wtime();
         sum = 0;
         for(int i = 0; i < n; i++) {
@@ -56,8 +57,10 @@ int main(int argc, char** argv) {
             sum += pv.get_elem(i);
         }
         t2 = MPI_Wtime();
-        cout<<t2-t1<<" "<<sum<<" "<<rank<<"\n";
+        cout<<t2-t1<<" "<<sum<<" "<<rank<<std::endl;
         pv.change_mode(0, pv.get_num_quantums(), READ_WRITE);
+        if(rank == 1)
+            std::cout<<"------"<<std::endl;
         for(int i = 0; i < n; i++) {
             pv.set_elem(i, i);
         }
@@ -69,8 +72,10 @@ int main(int argc, char** argv) {
             sum += pv.get_elem(i);
         }
         t2 = MPI_Wtime();
-        cout<<t2-t1<<" "<<sum<<" "<<rank<<"\n"<<std::flush;
+        cout<<t2-t1<<" "<<sum<<" "<<rank<<std::endl;
         pv.change_mode(0, pv.get_num_quantums(), READ_WRITE);
+        if(rank == 1)
+            std::cout<<"------"<<std::endl;
         for(int i = 0; i < n; i++) {
             pv.set_elem(i, i+1);
         }
