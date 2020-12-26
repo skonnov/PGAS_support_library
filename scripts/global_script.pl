@@ -1,17 +1,43 @@
 use List::Util qw[min max];
 use POSIX;
 
+use Cwd qw(abs_path);
+my $path = abs_path($0);
+
+print "Build library...\n";
+
+chdir('..') or die "$!";
+if (-d "build") {
+    if ($^O eq "linux") {
+        `rm -r build`;
+    } elsif ($^O eq "MSWin32") {
+        `rmdir build /s /q`;
+    }
+}
+`mkdir build`;
+chdir('build') or die "$!";
+`cmake ..`;
+`cmake --build . --config release`;
+chdir('../scripts') or die "$!";
+
+print "Library has been built successfully!\n";
+print "Run samples...\n";
+
 $it_sov = 1000000;
 $it_mv = 1000;
-$it_sov_step = 1000000, $it_mv_step = 1000;
-$it_sov_max = 150000000, $it_mv_max = 20000;
-$min_proc = 2, $max_proc = 4;
+$it_mm = 100;
+$it_sov_step = 1000000, $it_mv_step = 1000, $it_mm_step = 100;
+$it_sov_max = 150000000, $it_mv_max = 20000, $it_mm_max = 1800;
+$min_proc = 2, $max_proc = 32;
+@procs_mm = (2, 5, 10, 17, 37);
+
 
 $datetime = strftime "%Y-%m-%d-%H-%M-%S", localtime time;
 $path_parallel_reduce_sum_of_vector = ">> ./output_parallel_reduce_sum_of_vector_".$datetime.".txt";
 $path_matrixvector = ">> ./output_matrixvector_".$datetime.".txt";
+$path_matrixmult = ">> ./output_matrixmult_".$datetime.".txt";
 
-while($it_sov < $it_sov_max || $it_mv < $it_mv_max) {
+while ($it_sov < $it_sov_max || $it_mv < $it_mv_max || $it_mm < $it_mm_max) {
     if ($it_sov < $it_sov_max) {
         open(WF, $path_parallel_reduce_sum_of_vector) or die;
         for ($j = $min_proc; $j <= $max_proc; $j = $j*2) {
@@ -20,9 +46,9 @@ while($it_sov < $it_sov_max || $it_mv < $it_mv_max) {
                 $tmp = `mpiexec -n $j ../build/Release/parallel_reduce_sum_of_vector $it_sov`;
                 $result = min($result + 0.0, $tmp+0.0);
             }
-            print WF $result;
-            print WF " ";
+            print WF $j, ": ", $result, " ";
         }
+        print WF "\n";
         print "parallel_reduce for $it_sov\n";
         $it_sov += $it_sov_step;
         close(WF);
@@ -35,13 +61,29 @@ while($it_sov < $it_sov_max || $it_mv < $it_mv_max) {
                 $tmp = `mpiexec -n $j ../build/Release/matrixvector $it_mv $it_mv`;
                 $result = min($result + 0.0, $tmp+0.0);
             }
-            print WF2 $result;
-            print WF2 " ";
+            print WF2 $j, ": ", $result, " ";
         }
         print WF2 "\n";
         print "matrixvector for $it_mv\n";
         $it_mv += $it_mv_step;
         close(WF2);
+    }
+    if ($it_mm < $it_mm_max) {
+        open(WF3, $path_matrixmult) or die;
+        for ($proc = 0; $proc < 3; $proc++) {
+            $result = 250000.0;
+            if ($it_mm % int(sqrt(@procs_mm[$proc]-1)) == 0) {
+                for ($k = 0; $k < 3; $k++) {
+                    $tmp = `mpiexec -n @procs_mm[$proc] ../build/Release/matrixmult $it_mm`;
+                    $result = min($result + 0.0, $tmp+0.0);
+                }
+                print WF3 @procs_mm[$proc], ": ", $result, " ";
+                print "done matrix mult for @procs_mm[$proc] procs and $it_mm elems\n";
+            }
+        }
+        print WF3 "\n";
+        $it_mm += $it_mm_step;
+        close(WF3);
     }
 }
 
