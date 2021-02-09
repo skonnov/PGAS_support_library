@@ -17,7 +17,7 @@ parallel_priority_queue::parallel_priority_queue(int _num_of_quantums_proc, int 
     maxes = parallel_vector(worker_size, 1);
     sizes = parallel_vector(worker_size, 1);
 
-    pqueues = parallel_vector(2*worker_size*num_of_elems_proc, quantum_size);
+    pqueues = parallel_vector(worker_size*num_of_elems_proc, quantum_size);
 
     if (worker_rank >= 0) {
         maxes.set_elem(worker_rank, default_value);
@@ -50,7 +50,6 @@ void parallel_priority_queue::insert(int elem) {  // need to be called by all pr
 }
 
 void parallel_priority_queue::insert_internal(int elem) {
-    // std::cout<<worker_rank<<" begin "<<elem<<std::endl;
     int sizes_worker = sizes.get_elem(worker_rank);
     int current_index = sizes_worker;
     if (sizes_worker == num_of_elems_proc)

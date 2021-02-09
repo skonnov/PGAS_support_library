@@ -2,7 +2,7 @@
 
 int* memory_allocator::alloc() {
     const std::lock_guard<std::mutex> lockg(lock);
-    if (free_quantums.empty())
+    if (free_quantums.empty())  // если свободные кванты закончились, создаются новые
         resize_internal();
     int* quantum = free_quantums.front();
     free_quantums.pop();

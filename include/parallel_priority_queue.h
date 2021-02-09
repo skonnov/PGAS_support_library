@@ -8,9 +8,9 @@
 
 class parallel_priority_queue {
     int worker_rank, worker_size;
-    parallel_vector maxes, sizes, pqueues;
-    int num_of_quantums_proc, quantum_size, num_of_elems_proc;
-    int global_index_l;
+    parallel_vector maxes, sizes, pqueues;  // максимальные элементы на каждом процессе, размер приоритетной очереди на каждом процессе, вектор для храненения приоритетной очереди
+    int num_of_quantums_proc, quantum_size, num_of_elems_proc;  // число квантов на одном процессе, размер кванта, число элементов на одном процессе
+    int global_index_l;  // смещение в pqueues от начала в глобальной памяти
     int default_value;
 public:
     parallel_priority_queue(int _num_of_quantums_proc, int _quantum_size=DEFAULT_QUANTUM_SIZE, int _default_value = INT_MIN);
@@ -20,7 +20,7 @@ public:
 private:
     void remove_max_internal();
     void insert_internal(int elem);
-    void heapify(int index);
+    void heapify(int index);  // переупорядочивание элементов в приоритетной очереди на одном процессе
 };
 
 #endif

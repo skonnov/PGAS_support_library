@@ -65,14 +65,13 @@ public:
     static void set_lock(int key, int quantum_index);  // заблокировать квант
     static void unset_lock(int key, int quantum_index);  // разблокировать квант
     static void change_mode(int key, int quantum_index_l, int quantum_index_r, int mode);  // сменить режим работы с памятью
-    static void read(int key, const std::string& path, int num_elems);
-    static void read(int key, const std::string& path, int number_of_elements, int offset, int num_of_elem_proc);
+    static void read(int key, const std::string& path, int number_of_elements);  // прочитать из файла number_of_elements элементов
+    static void read(int key, const std::string& path, int number_of_elements, int offset, int num_of_elem_proc); // прочитать из файла со смещением от начала, равным offset,number_of_elements элементов
     static void print(int key, const std::string& path);
     static void finalize();  // функция, завершающая выполнение программы, останавливает вспомогательные потоки
 private:
     static void print_quantum(int key, int quantum_index);
-    static int get_owner(int key, int quantum_index, int requesting_process);
-    // static bool is_mode_changed(int key, int quantum_index);
+    static int get_owner(int key, int quantum_index, int requesting_process);  // получить номер кванта, хранящего квант в текущий момент времени
     friend void worker_helper_thread();  // функция, выполняемая вспомогательными потоками процессов-рабочих
     friend void master_helper_thread();  // функция, выполняемая вспомогательным потоком процесса-мастера
 };

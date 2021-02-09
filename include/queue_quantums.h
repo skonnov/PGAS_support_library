@@ -6,7 +6,7 @@
 
 class queue_quantums
 {
-    std::vector<std::queue<int>> v_queues;
+    std::vector<std::queue<int>> v_queues;  // вектор очередей, хранящих номера процессов, которые ждут освобождения квантов
 public:
     queue_quantums(int num_quantums = 0);
     void push(int quantum_number, int process);

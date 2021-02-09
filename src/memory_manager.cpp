@@ -511,7 +511,7 @@ void memory_manager::read(int key, const std::string& path, int number_of_elemen
 }
 
 void memory_manager::print(int key, const std::string& path) {
-    int err = MPI_File_open(workers_comm, path.data(), MPI_MODE_WRONLY | MPI_MODE_CREATE | MPI_MODE_APPEND, MPI_INFO_NULL, &fh);  // TODO: create MPI_COMM_WORKERS
+    int err = MPI_File_open(workers_comm, path.data(), MPI_MODE_WRONLY | MPI_MODE_CREATE | MPI_MODE_APPEND, MPI_INFO_NULL, &fh);
     if (err)
         throw -1;
     int request[4] = {PRINT, key, -1, -1};
