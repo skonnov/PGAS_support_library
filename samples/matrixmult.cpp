@@ -8,13 +8,12 @@ std::pair<int, int> get_grid_rank(int MPI_rank, int q) {
 }
 
 void matrix_mult(parallel_vector* pv1, parallel_vector* pv2, parallel_vector * pv3, int i1, int j1, int i2, int j2, int i3, int j3, int n, int num_in_block) {
-    for(int i = 0; i < num_in_block; i++) {
-        for(int j = 0; j < num_in_block; j++) {
+    for (int i = 0; i < num_in_block; i++) {
+        for (int j = 0; j < num_in_block; j++) {
             int i3_teq = i3 + i;
             int j3_teq = j3 + j;
             int temp = pv3->get_elem(i3_teq*n+j3_teq);
-            for(int k = 0; k < num_in_block; k++) {
-                // std::cout<<"("<<i3_teq<<" "<<j3_teq<<") ("<<(i1+i)<<" "<<j1+k<<") ("<<(i2+j)<<" "<<j2+k<<")\n";
+            for (int k = 0; k < num_in_block; k++) {
                 temp += pv1->get_elem((i1+i)*n+j1+k)*pv2->get_elem((i2+j)*n+j2+k);
             }
             pv3->set_elem(i3_teq*n+j3_teq, temp);
@@ -24,20 +23,20 @@ void matrix_mult(parallel_vector* pv1, parallel_vector* pv2, parallel_vector * p
 
 void print(parallel_vector* pv1, parallel_vector* pv2, parallel_vector * pv3, int n) {
     for (int i = 0; i < n*n; i++) {
-        if(i && i%n == 0)
+        if (i && i%n == 0)
             std::cout<<std::endl;
         std::cout<<pv1->get_elem(i)<<" ";
     }
     std::cout<<std::endl<<std::endl;
     for (int i = 0; i < n*n; i++) {
-        if(i && i%n == 0)
+        if (i && i%n == 0)
             std::cout<<std::endl;
         std::cout<<pv2->get_elem(i)<<" ";
     }
     std::cout<<std::endl<<std::endl;
 
     for (int i = 0; i < n*n; i++) {
-        if(i && i%n == 0)
+        if (i && i%n == 0)
             std::cout<<std::endl;
         std::cout<<pv3->get_elem(i)<<" ";
     }
