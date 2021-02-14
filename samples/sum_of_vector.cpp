@@ -17,10 +17,20 @@ int main(int argc, char** argv) {
     }
     memory_manager::memory_manager_init(argc, argv, error_helper_string);
     int n = atoi(argv[1]);
-    parallel_vector pv(n, 1), pv2(n);
+    parallel_vector pv(n, 1), pv2(n, 1);
     int rank, size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if(rank != 0) {
+        for (int j = 0; j < 100; j++) {
+            for(int i = 0; i < n; i++) {
+                pv.set_elem(i, i);
+            }
+            std::cout<<"----------------------"<<j<<"----------------------"<<std::endl;
+        }
+    }
+    memory_manager::finalize();
+    return 0;
     if(rank != 0) {
         for(int i = 0; i < n; i++) {
             pv.set_elem(i, i);
@@ -45,11 +55,13 @@ int main(int argc, char** argv) {
         cout<<t2-t1<<" "<<sum<<" "<<rank<<std::endl;
         pv.change_mode(0, pv.get_num_quantums(), READ_WRITE);
         if(rank == 1)
-            std::cout<<"------"<<std::endl;
+            std::cout<<"------ 1"<<std::endl;
         for(int i = 0; i < n; i++) {
             pv.set_elem(i, i+1);
         }
+        std::cout << "-- before change_mode "<<rank<<std::endl;
         pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);
+        std::cout << "-- after change_mode "<<rank<<std::endl;
         t1 = MPI_Wtime();
         sum = 0;
         for(int i = 0; i < n; i++) {
@@ -60,11 +72,13 @@ int main(int argc, char** argv) {
         cout<<t2-t1<<" "<<sum<<" "<<rank<<std::endl;
         pv.change_mode(0, pv.get_num_quantums(), READ_WRITE);
         if(rank == 1)
-            std::cout<<"------"<<std::endl;
+            std::cout<<"------ 2"<<std::endl;
         for(int i = 0; i < n; i++) {
             pv.set_elem(i, i);
         }
+        std::cout << "-- before change_mode "<<rank<<std::endl;
         pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);
+        std::cout << "-- after change_mode "<<rank<<std::endl;
         t1 = MPI_Wtime();
         sum = 0;
         for(int i = 0; i < n; i++) {
@@ -75,11 +89,13 @@ int main(int argc, char** argv) {
         cout<<t2-t1<<" "<<sum<<" "<<rank<<std::endl;
         pv.change_mode(0, pv.get_num_quantums(), READ_WRITE);
         if(rank == 1)
-            std::cout<<"------"<<std::endl;
+            std::cout<<"------ 3"<<std::endl;
         for(int i = 0; i < n; i++) {
             pv.set_elem(i, i+1);
         }
+        std::cout << "-- before change_mode "<<rank<<std::endl;
         pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);
+        std::cout << "-- after change_mode "<<rank<<std::endl;
         t1 = MPI_Wtime();
         sum = 0;
         for(int i = 0; i < n; i++) {

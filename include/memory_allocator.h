@@ -15,7 +15,7 @@ class memory_allocator {
 public:
     int* alloc();
     void free(int** quantum);
-    void set_quantum_size(int size_quantum);
+    void set_quantum_size(int size_quantum);  // rewrite it w/ using constructor?
     ~memory_allocator();
 private:
     void resize_internal();

@@ -33,17 +33,18 @@ enum operations {  // используется вспомогательными 
 };
 
 enum error_codes {
-    ERR_UNKNOWN       = -1,
-    ERR_OUT_OF_BOUNDS = -2,
-    ERR_NULLPTR       = -3,
-    ERR_WRONG_RANK    = -4
+    ERR_UNKNOWN        = -1,
+    ERR_OUT_OF_BOUNDS  = -2,
+    ERR_NULLPTR        = -3,
+    ERR_WRONG_RANK     = -4,
+    WRITE_IN_READ_MODE = -5
 };
 
 #define CHECK(expression, error_code)                                                                                    \
     if(!(expression)) {                                                                                                  \
         int rank;                                                                                                        \
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);                                                                            \
-        std::cout<<"Check error on proccess w/ MPI_rank #"<<rank<<", file: "<<__FILE__<<", line: "<<__LINE__<<std::endl; \
+        std::cerr<<"Check error on proccess w/ MPI_rank #"<<rank<<", file: "<<__FILE__<<", line: "<<__LINE__<<std::endl; \
         MPI_Abort(MPI_COMM_WORLD, error_code);                                                                           \
     }
 
