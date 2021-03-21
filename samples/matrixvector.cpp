@@ -18,8 +18,8 @@ int main(int argc, char** argv) { // b*a
     int rank, size;
     rank = memory_manager::get_MPI_rank();
     size = memory_manager::get_MPI_size();
-    parallel_vector pv(n*m);
-    parallel_vector ans(m);
+    parallel_vector<int> pv(n*m);
+    parallel_vector<int> ans(m);
     std::vector<int> b(n);
     if (rank != 0) {
         int worker_rank = rank - 1;

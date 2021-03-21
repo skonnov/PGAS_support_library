@@ -6,10 +6,11 @@
 #include "parallel_vector.h"
 #include "parallel_reduce.h"
 
+template<class T>
 class Func {
-    parallel_vector* a;
+    parallel_vector<T>* a;
 public:
-    Func(parallel_vector& pv) {
+    Func(parallel_vector<T>& pv) {
         a = &pv;
     }
     int operator()(int l, int r, int identity) const {
@@ -38,7 +39,7 @@ int main(int argc, char ** argv) {
     int size = memory_manager::get_MPI_size();
     assert(argc > 1);
     int n = atoi(argv[1]);
-    parallel_vector pv(n);
+    parallel_vector<int> pv(n);
     if (rank != 0) {
         int worker_rank = rank-1;
         int worker_size = size-1;
@@ -53,7 +54,7 @@ int main(int argc, char ** argv) {
         for (int i = index; i < index+portion; i++)  // инициализация элементов вектора
             pv.set_elem(i, i);
         pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);// так как далее вектор изменяться не будет, режим изменяется на READ_ONLY
-        int ans = parallel_reduce(index, index+portion, pv, 0, 1, size-1, Func(pv), reduction);
+        int ans = parallel_reduce(index, index+portion, pv, 0, 1, size-1, Func<int>(pv), reduction);
         double t2 = MPI_Wtime();
         if(rank == 1)
             std::cout<<t2-t1<<std::flush;

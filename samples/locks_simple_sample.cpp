@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
     }
     memory_manager::memory_manager_init(argc, argv, error_helper_string);
     int n = atoi(argv[1]);
-    parallel_vector pv(n);
+    parallel_vector<int> pv(n);
     int rank, size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);

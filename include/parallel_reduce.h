@@ -62,8 +62,8 @@ int reduce_operation(int ans, const Reduction& reduction, int process_begin, int
 // func – функтор, используемый для сбора данных на одном процессе;
 // reduction – функтор, используемый для объединения данных с разных процессов;
 // process – номер процесса, на котором редуцируются данные
-template<class Func, class Reduction>
-int parallel_reduce(int l, int r, const parallel_vector& pv, int identity, int process_begin, int process_end, const Func& func, const Reduction& reduction, int process = 1) {
+template<class Func, class Reduction, class T>
+int parallel_reduce(int l, int r, const parallel_vector<T>& pv, int identity, int process_begin, int process_end, const Func& func, const Reduction& reduction, int process = 1) {
     int ans = identity;
     ans = func(l, r, identity);
     return reduce_operation(ans, reduction, process_begin, process_end, process);
