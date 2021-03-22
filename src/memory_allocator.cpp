@@ -1,34 +1,34 @@
 #include "memory_allocator.h"
 
-int* memory_allocator::alloc() {
+char* memory_allocator::alloc() {
     const std::lock_guard<std::mutex> lockg(lock);
     if (free_quantums.empty())  // если свободные кванты закончились, создаются новые
         resize_internal();
-    int* quantum = free_quantums.front();
+    char* quantum = free_quantums.front();
     free_quantums.pop();
     return quantum;
 }
 
-void memory_allocator::free(int** quantum) {
+void memory_allocator::free(char** quantum) {
     const std::lock_guard<std::mutex> lockg(lock);
     free_quantums.push(*quantum);
     *quantum = nullptr;
 }
 
 void memory_allocator::resize_internal() {
-    memory.emplace_back(new int[st*quantum_size]);
+    memory.emplace_back(new char[st*quantum_size]);
     for(int i = 0; i < st; i++) {
         free_quantums.push(memory.back()+i*quantum_size);
     }
     st *= 2;
 }
 
-void memory_allocator::set_quantum_size(int size_quantum) {
-    quantum_size = size_quantum;
+void memory_allocator::set_quantum_size(int size_quantum, int size_of) {
+    quantum_size = size_quantum * size_of;
 }
 
 memory_allocator::~memory_allocator() {
-    for(int* i: memory) {
+    for(auto* i: memory) {
         delete[] i;
     }
 }

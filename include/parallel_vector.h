@@ -30,7 +30,7 @@ public:
 
 template<class T>
 parallel_vector<T>::parallel_vector(const int& number_of_elems, const int& quantum_size) {
-    key = memory_manager::create_object(number_of_elems, quantum_size);
+    key = memory_manager::create_object<T>(number_of_elems, quantum_size);
     size_vector = number_of_elems;
 }
 
@@ -38,14 +38,14 @@ template<class T>
 int parallel_vector<T>::get_elem(const int& index) const {
     if(index < 0 || index >= size_vector)
         throw -1;
-    return memory_manager::get_data(key, index);
+    return memory_manager::get_data<T>(key, index);
 }
 
 template<class T>
 void parallel_vector<T>::set_elem(const int& index, const int& value) {
     if(index < 0 || index >= size_vector)
         throw -1;
-    memory_manager::set_data(key, index, value);
+    memory_manager::set_data<T>(key, index, value);
 }
 
 template<class T>
@@ -85,12 +85,12 @@ int parallel_vector<T>::size() const {
 
 template<class T>
 void parallel_vector<T>::read(const std::string& path, int number_of_elements) {
-    memory_manager::read(key, path, number_of_elements);
+    memory_manager::read<T>(key, path, number_of_elements);
 }
 
 template<class T>
 void parallel_vector<T>::read(const std::string& path, int number_of_elements, int offset, int num_elem_proc) {
-    memory_manager::read(key, path, number_of_elements, offset, num_elem_proc);
+    memory_manager::read<T>(key, path, number_of_elements, offset, num_elem_proc);
 }
 
 template<class T>
