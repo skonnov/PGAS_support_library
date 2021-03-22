@@ -12,6 +12,7 @@
 #include <set>
 #include <mpi.h>
 #include "common.h"
+#include "detail.h"
 #include "memory_allocator.h"
 #include "queue_quantums.h"
 
@@ -34,6 +35,7 @@ struct memory_line_worker
     std::vector<std::mutex*> mutexes;  // мьютексы на каждый квант, нужны, чтобы предотвратить одновременный доступ
                                        // к кванту с разных потоков в режиме READ_WRITE
     MPI_Datatype type;
+    int size_of;
 };
 
 struct memory_line_master
@@ -58,17 +60,18 @@ public:
     static void memory_manager_init(int argc, char** argv, std::string error_helper = "");  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
     static int get_MPI_rank();
     static int get_MPI_size();
-    template <class T> static int get_data(int key, int index_of_element);  // получить элемент по индексу с любого процесса
-    template <class T> static void set_data(int key, int index_of_element, int value);  // сохранить значение элемента по индексу с любого процесса
+    template <class T> static T get_data(int key, int index_of_element);  // получить элемент по индексу с любого процесса
+    template <class T> static void set_data(int key, int index_of_element, T value);  // сохранить значение элемента по индексу с любого процесса
     template <class T> static int create_object(int number_of_elements, int quantum_size = DEFAULT_QUANTUM_SIZE);  // создать новый memory_line и занести его в memory
     static int get_quantum_index(int key, int index);  // получить номер кванта по индексу
     static int get_quantum_size(int key);  // получить размер кванта
     static void set_lock(int key, int quantum_index);  // заблокировать квант
     static void unset_lock(int key, int quantum_index);  // разблокировать квант
-    static void change_mode(int key, int quantum_index_l, int quantum_index_r, int mode);  // сменить режим работы с памятью
+    static void change_mode(int key, int quantum_index_l, int quantum_index_r, mods mode);  // сменить режим работы с памятью
     template <class T> static void read(int key, const std::string& path, int number_of_elements);  // прочитать из файла number_of_elements элементов
     template <class T> static void read(int key, const std::string& path, int number_of_elements, int offset, int num_of_elem_proc); // прочитать из файла со смещением от начала, равным offset,number_of_elements элементов
     static void print(int key, const std::string& path);
+    static MPI_Datatype get_MPI_datatype(int key);
     static void finalize();  // функция, завершающая выполнение программы, останавливает вспомогательные потоки
 private:
     static void print_quantum(int key, int quantum_index);
@@ -101,6 +104,8 @@ int memory_manager::create_object(int number_of_elements, int quantum_size) {
         for (int i = 0; i < num_of_quantums; i++) {
             line_worker->mutexes[i] = new std::mutex();
         }
+        line_worker->type = get_mpi_type<T>();
+        line_worker->size_of = sizeof(T);
     }
     line->quantum_size = quantum_size;
     line->mode.resize(num_of_quantums, READ_WRITE);
@@ -113,7 +118,7 @@ int memory_manager::create_object(int number_of_elements, int quantum_size) {
 }
 
 template <class T>
-int memory_manager::get_data(int key, int index_of_element) {
+T memory_manager::get_data(int key, int index_of_element) {
     CHECK(key >= 0 && key < (int)memory_manager::memory.size(), ERR_OUT_OF_BOUNDS);
     auto* memory = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
     int quantum_index = get_quantum_index(key, index_of_element);
@@ -122,7 +127,7 @@ int memory_manager::get_data(int key, int index_of_element) {
         memory->mutexes[quantum_index]->lock();
     if (!memory->is_mode_changed[quantum_index]) {  // не было изменения режима? (данные актуальны?)
         if (quantum != nullptr) {  // на данном процессе есть квант?
-            int elem = (reinterpret_cast<T*>(quantum))[index_of_element%memory->quantum_size];
+            T elem = (reinterpret_cast<T*>(quantum))[index_of_element%memory->quantum_size];
             if (memory->mode[quantum_index] == READ_WRITE)
                 memory->mutexes[quantum_index]->unlock();
             return elem;  // элемент возвращается без обращения к мастеру
@@ -145,20 +150,22 @@ int memory_manager::get_data(int key, int index_of_element) {
         return (reinterpret_cast<T*>(quantum))[index_of_element%memory->quantum_size];
     }
     if (to_rank != rank) {  // если данные не у текущего процесса, инициируется передача данных от указанного мастером процесса
-        if (quantum == nullptr)
+        if (quantum == nullptr) {
             quantum = memory->allocator.alloc();
+        }
         CHECK(to_rank > 0 && to_rank < size, ERR_WRONG_RANK);
-        MPI_Recv(quantum, memory->quantum_size, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
+        CHECK(quantum != nullptr, ERR_NULLPTR);
+        MPI_Recv(quantum, memory->quantum_size, memory->type, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
     }
     request[0] = SET_INFO;
     CHECK(quantum != nullptr, ERR_NULLPTR);
-    int elem = (reinterpret_cast<T*>(quantum))[index_of_element%memory->quantum_size];
+    T elem = (reinterpret_cast<T*>(quantum))[index_of_element%memory->quantum_size];
     MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // уведомление мастера о том, что данные готовы для передачи другим процессам
     return elem;
 }
 
 template <class T>
-void memory_manager::set_data(int key, int index_of_element, int value) {
+void memory_manager::set_data(int key, int index_of_element, T value) {
     CHECK(key >= 0 && key < (int)memory_manager::memory.size(), ERR_OUT_OF_BOUNDS);
     auto* memory = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
     int quantum_index = get_quantum_index(key, index_of_element);
@@ -192,7 +199,7 @@ void memory_manager::set_data(int key, int index_of_element, int value) {
     }
     if (to_rank != rank) {  // если данные не у текущего процесса, инициируется передача данных от указанного мастером процесса
         CHECK(to_rank > 0 && to_rank < size, ERR_WRONG_RANK);
-        MPI_Recv(quantum, memory->quantum_size, MPI_INT, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
+        MPI_Recv(quantum, memory->quantum_size, memory->type, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
     }
     request[0] = SET_INFO;
     (reinterpret_cast<T*>(quantum))[index_of_element%memory->quantum_size] = value;
@@ -212,7 +219,7 @@ void memory_manager::read(int key, const std::string& path, int number_of_elemen
         if(worker_rank == w_rank) {
             std::ifstream fs(path, std::ios::in | std::ios::binary);
             fs.seekg(offset*sizeof(int));
-            int data;
+            T data;
             for(int i = 0; i < std::min(quantum_portion * memory->quantum_size, number_of_elements); i++) {
                 int logical_index = offset + i;
                 fs.read((char*)&data, sizeof(data));
@@ -228,7 +235,7 @@ template <class T>
 void memory_manager::read(int key, const std::string& path, int number_of_elements, int offset, int num_of_elem_proc) {
     std::ifstream fs(path, std::ios::in | std::ios::binary);
     fs.seekg(offset*sizeof(int));
-    int data;
+    T data;
     for(int i = 0; i < std::min(num_of_elem_proc, number_of_elements); i++) {
         int logical_index = offset + i;
         fs.read((char*)&data, sizeof(data));
