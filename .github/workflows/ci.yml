@@ -2,7 +2,7 @@ name: ci
 on: [push, pull_request]
 jobs:
   mac-os-build:
-    timeout-minutes: 5
+    timeout-minutes: 10
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
