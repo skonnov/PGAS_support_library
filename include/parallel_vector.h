@@ -11,7 +11,9 @@ class parallel_vector {
     int key;  // идентификатор вектора в memory_manager
     int size_vector;  // глобальный размер вектора
 public:
-    parallel_vector(const int& size=DEFAULT_QUANTUM_SIZE, const int& quantum_size = DEFAULT_QUANTUM_SIZE);
+    parallel_vector(const int& number_of_elems=DEFAULT_QUANTUM_SIZE, const int& quantum_size = DEFAULT_QUANTUM_SIZE);
+    parallel_vector(int count, int* blocklens, MPI_Aint* indices, MPI_Datatype types,
+                    const int& number_of_elems=DEFAULT_QUANTUM_SIZE, const int& quantum_size = DEFAULT_QUANTUM_SIZE);
     T get_elem(const int& index) const;  // получить элемент по глобальному индексу
     void set_elem(const int& index, const T& value);  // сохранить элемент по глобальному индексу
     void set_lock(int quantum_index);  // заблокировать квант
@@ -33,6 +35,11 @@ template<class T>
 parallel_vector<T>::parallel_vector(const int& number_of_elems, const int& quantum_size) {
     key = memory_manager::create_object<T>(number_of_elems, quantum_size);
     size_vector = number_of_elems;
+}
+template<class T>
+parallel_vector<T>::parallel_vector(int count, int* blocklens, MPI_Aint* indices, MPI_Datatype types,
+                                    const int& number_of_elems, const int& quantum_size) {
+    key = memory_manager::create_object<T>(number_of_elems, quantum_size, count, blocklens, indices, types);
 }
 
 template<class T>

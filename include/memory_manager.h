@@ -62,6 +62,7 @@ public:
     static int get_MPI_size();
     template <class T> static T get_data(int key, int index_of_element);  // получить элемент по индексу с любого процесса
     template <class T> static void set_data(int key, int index_of_element, T value);  // сохранить значение элемента по индексу с любого процесса
+    template <class T> int create_object(int number_of_elements, int quantum_size, int count, int* blocklens, MPI_Aint* indices, MPI_Datatype types);
     template <class T> static int create_object(int number_of_elements, int quantum_size = DEFAULT_QUANTUM_SIZE);  // создать новый memory_line и занести его в memory
     static int get_quantum_index(int key, int index);  // получить номер кванта по индексу
     static int get_quantum_size(int key);  // получить размер кванта
@@ -79,6 +80,15 @@ private:
     friend void worker_helper_thread();  // функция, выполняемая вспомогательными потоками процессов-рабочих
     friend void master_helper_thread();  // функция, выполняемая вспомогательным потоком процесса-мастера
 };
+
+template <class T>
+int memory_manager::create_object(int number_of_elements, int quantum_size, int count, int* blocklens, MPI_Aint* indices, MPI_Datatype types) {
+    int key = memory_manager::create_object(number_of_elements, quantum_size);
+    if (rank) {
+        dynamic_cast<memory_line_worker*>(memory[key])->type = create_mpi_type(count, blocklens, indices, types);
+    }
+    return key;
+}
 
 template <class T>
 int memory_manager::create_object(int number_of_elements, int quantum_size) {

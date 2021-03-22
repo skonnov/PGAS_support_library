@@ -8,11 +8,26 @@
 
 #include <mpi.h>
 
-template <typename T>
+template <class T>
+MPI_Datatype create_mpi_type(int count, int* blocklens, MPI_Aint* indices, MPI_Datatype types) {
+    MPI_Datatype new_type;
+    MPI_Type_struct(count, blocklens, indices, types, &new_type);
+    MPI_Datatype resized_new_type;
+    MPI_Type_create_resized(new_type,
+                            // lower bound == min(indices) == indices[0]
+                            indices[0],
+                            (MPI_Aint)sizeof(T),
+                            &resized_new_type);
+    MPI_Type_commit(&resized_new_type);
+    MPI_Type_free(&new_type);
+    return resized_new_type;
+}
+
+template <class T>
 MPI_Datatype get_mpi_type() noexcept
 {
     MPI_Datatype mpi_type = MPI_DATATYPE_NULL;
-    
+
     if (std::is_same<T, char>::value)
     {
         mpi_type = MPI_CHAR;
@@ -122,7 +137,7 @@ MPI_Datatype get_mpi_type() noexcept
         mpi_type = MPI_C_LONG_DOUBLE_COMPLEX;
     }
 
-    return mpi_type;    
+    return mpi_type;
 }
 
 #endif // __DETAIL_H__
