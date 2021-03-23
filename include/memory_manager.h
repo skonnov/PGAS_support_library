@@ -124,7 +124,7 @@ int memory_manager::create_object(int number_of_elements, int quantum_size) {
     line->logical_size = number_of_elements;
     memory.emplace_back(line);
     MPI_Barrier(MPI_COMM_WORLD);
-    return memory.size()-1;
+    return int(memory.size())-1;
 }
 
 template <class T>
@@ -218,7 +218,6 @@ void memory_manager::set_data(int key, int index_of_element, T value) {
 
 template <class T>
 void memory_manager::read(int key, const std::string& path, int number_of_elements) {
-    int index_of_element = 0;
     auto* memory = memory_manager::memory[key];
     int num_of_quantums = (number_of_elements + memory->quantum_size - 1) / memory->quantum_size;
     int offset = 0;

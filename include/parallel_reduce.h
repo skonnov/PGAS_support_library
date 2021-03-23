@@ -20,7 +20,7 @@ T reduce_operation(T ans, const Reduction& reduction, int process_begin, int pro
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-    double tmpans = ans;
+    T tmpans = ans;
     int tmprank = 0;
     int t = 1;
     std::vector<int>vtmprank(size+100);
@@ -38,7 +38,7 @@ T reduce_operation(T ans, const Reduction& reduction, int process_begin, int pro
     for(int i = 1; i < n; i = i * 2) {
         if(tmprank * 2*i < n) {
             MPI_Status status;
-            double tmp;
+            T tmp;
             int sender = vtmprank[tmprank + n/(2*i)];
             if(tmprank + n/(2*i) >= t)
                 continue;
@@ -63,7 +63,7 @@ T reduce_operation(T ans, const Reduction& reduction, int process_begin, int pro
 // reduction – функтор, используемый для объединения данных с разных процессов;
 // process – номер процесса, на котором редуцируются данные
 template<class Func, class Reduction, class T>
-int parallel_reduce(int l, int r, const parallel_vector<T>& pv, T identity, int process_begin, int process_end, const Func& func, const Reduction& reduction, int process = 1) {
+T parallel_reduce(int l, int r, const parallel_vector<T>& pv, T identity, int process_begin, int process_end, const Func& func, const Reduction& reduction, int process = 1) {
     T ans = identity;
     ans = func(l, r, identity);
     return reduce_operation(ans, reduction, process_begin, process_end, pv.get_MPI_datatype(), process);

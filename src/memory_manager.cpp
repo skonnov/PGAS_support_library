@@ -382,7 +382,6 @@ void memory_manager::print_quantum(int key, int quantum_index) {
  }
 
 void memory_manager::finalize() {
-    int cnt = 0;
     if(rank != 0) {
         int tmp = 1;
         MPI_Send(&tmp, 1, MPI_INT, 0, FINALIZE_WORKER, MPI_COMM_WORLD);
