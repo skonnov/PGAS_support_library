@@ -9,7 +9,7 @@
 #include <mpi.h>
 
 template <class T>
-MPI_Datatype create_mpi_type(int count, int* blocklens, MPI_Aint* indices, MPI_Datatype* types) {
+MPI_Datatype create_mpi_type(int count, const int* blocklens, const MPI_Aint* indices, const MPI_Datatype* types) {
     MPI_Datatype new_type;
     MPI_Type_create_struct(count, blocklens, indices, types, &new_type);
     MPI_Datatype resized_new_type;
