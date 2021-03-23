@@ -11,7 +11,7 @@
 template <class T>
 MPI_Datatype create_mpi_type(int count, int* blocklens, MPI_Aint* indices, MPI_Datatype types) {
     MPI_Datatype new_type;
-    MPI_Type_struct(count, blocklens, indices, types, &new_type);
+    MPI_Type_create_struct(count, blocklens, indices, types, &new_type);
     MPI_Datatype resized_new_type;
     MPI_Type_create_resized(new_type,
                             // lower bound == min(indices) == indices[0]
