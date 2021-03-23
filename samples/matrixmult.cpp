@@ -7,7 +7,8 @@ std::pair<int, int> get_grid_rank(int MPI_rank, int q) {
     return { (MPI_rank-1)/q, (MPI_rank-1)%q };
 }
 
-void matrix_mult(parallel_vector* pv1, parallel_vector* pv2, parallel_vector * pv3, int i1, int j1, int i2, int j2, int i3, int j3, int n, int num_in_block) {
+template<class T>
+void matrix_mult(parallel_vector<T>* pv1, parallel_vector<T>* pv2, parallel_vector<T> * pv3, int i1, int j1, int i2, int j2, int i3, int j3, int n, int num_in_block) {
     for (int i = 0; i < num_in_block; i++) {
         for (int j = 0; j < num_in_block; j++) {
             int i3_teq = i3 + i;
@@ -21,7 +22,8 @@ void matrix_mult(parallel_vector* pv1, parallel_vector* pv2, parallel_vector * p
     }
 }
 
-void print(parallel_vector* pv1, parallel_vector* pv2, parallel_vector * pv3, int n) {
+template<class T>
+void print(parallel_vector<T>* pv1, parallel_vector<T>* pv2, parallel_vector<T> * pv3, int n) {
     for (int i = 0; i < n*n; i++) {
         if (i && i%n == 0)
             std::cout<<std::endl;
@@ -60,7 +62,7 @@ int main(int argc, char** argv) {
         memory_manager::finalize();
         return 3;
     }
-    parallel_vector pv1(n*n), pv2(n*n), pv3(n*n);
+    parallel_vector<int> pv1(n*n), pv2(n*n), pv3(n*n);
     int rank = memory_manager::get_MPI_rank();
     std::pair<int, int> grid_ind = get_grid_rank(rank, q);
     MPI_Barrier(MPI_COMM_WORLD);

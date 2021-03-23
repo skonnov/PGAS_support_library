@@ -15,12 +15,12 @@
 // reduction – функция объединения данных с двух процессов;
 // process_begin, process_end – номера участвующих в редукции процессов;
 // process – номер процесса, на котором редуцируются данные
-template<class Reduction>
-int reduce_operation(int ans, const Reduction& reduction, int process_begin, int process_end, int process = 1) {
+template<class Reduction, class T>
+T reduce_operation(T ans, const Reduction& reduction, int process_begin, int process_end, MPI_Datatype type, int process = 1) {
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-    int tmpans = ans;
+    T tmpans = ans;
     int tmprank = 0;
     int t = 1;
     std::vector<int>vtmprank(size+100);
@@ -38,17 +38,17 @@ int reduce_operation(int ans, const Reduction& reduction, int process_begin, int
     for(int i = 1; i < n; i = i * 2) {
         if(tmprank * 2*i < n) {
             MPI_Status status;
-            int tmp;
+            T tmp;
             int sender = vtmprank[tmprank + n/(2*i)];
             if(tmprank + n/(2*i) >= t)
                 continue;
-            MPI_Recv(&tmp, 1, MPI_INT, sender, REDUCE_TAG, MPI_COMM_WORLD, &status);
+            MPI_Recv(&tmp, 1, type, sender, REDUCE_TAG, MPI_COMM_WORLD, &status);
             tmpans = reduction(tmp, tmpans);
         }
         else
         {
             int destination = vtmprank[tmprank - n/(2*i)];
-            MPI_Send(&tmpans, 1, MPI_INT, destination, REDUCE_TAG, MPI_COMM_WORLD);
+            MPI_Send(&tmpans, 1, type, destination, REDUCE_TAG, MPI_COMM_WORLD);
             break;
         }        
     }
@@ -62,11 +62,11 @@ int reduce_operation(int ans, const Reduction& reduction, int process_begin, int
 // func – функтор, используемый для сбора данных на одном процессе;
 // reduction – функтор, используемый для объединения данных с разных процессов;
 // process – номер процесса, на котором редуцируются данные
-template<class Func, class Reduction>
-int parallel_reduce(int l, int r, const parallel_vector& pv, int identity, int process_begin, int process_end, const Func& func, const Reduction& reduction, int process = 1) {
-    int ans = identity;
+template<class Func, class Reduction, class T>
+T parallel_reduce(int l, int r, const parallel_vector<T>& pv, T identity, int process_begin, int process_end, const Func& func, const Reduction& reduction, int process = 1) {
+    T ans = identity;
     ans = func(l, r, identity);
-    return reduce_operation(ans, reduction, process_begin, process_end, process);
+    return reduce_operation(ans, reduction, process_begin, process_end, pv.get_MPI_datatype(), process);
 }
 
 #endif // __PARALLEL_REDUCE_H__

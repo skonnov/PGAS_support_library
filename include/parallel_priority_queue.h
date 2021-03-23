@@ -8,7 +8,7 @@
 
 class parallel_priority_queue {
     int worker_rank, worker_size;
-    parallel_vector maxes, sizes, pqueues;  // максимальные элементы на каждом процессе, размер приоритетной очереди на каждом процессе, вектор для храненения приоритетной очереди
+    parallel_vector<int> maxes, sizes, pqueues;  // максимальные элементы на каждом процессе, размер приоритетной очереди на каждом процессе, вектор для храненения приоритетной очереди
     int num_of_quantums_proc, quantum_size, num_of_elems_proc;  // число квантов на одном процессе, размер кванта, число элементов на одном процессе
     int global_index_l;  // смещение в pqueues от начала в глобальной памяти
     int default_value;

@@ -43,7 +43,7 @@ enum error_codes {
     if(!(expression)) {                                                                                                  \
         int rank;                                                                                                        \
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);                                                                            \
-        std::cout<<"Check error on proccess w/ MPI_rank #"<<rank<<", file: "<<__FILE__<<", line: "<<__LINE__<<std::endl; \
+        std::cout<<"Check error on process w/ MPI_rank #"<<rank<<", file: "<<__FILE__<<", line: "<<__LINE__<<std::endl;  \
         MPI_Abort(MPI_COMM_WORLD, error_code);                                                                           \
     }
 

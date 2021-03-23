@@ -14,10 +14,10 @@ parallel_priority_queue::parallel_priority_queue(int _num_of_quantums_proc, int 
     num_of_elems_proc = num_of_quantums_proc*quantum_size;
     global_index_l = worker_rank*(num_of_elems_proc);
 
-    maxes = parallel_vector(worker_size, 1);
-    sizes = parallel_vector(worker_size, 1);
+    maxes = parallel_vector<int>(worker_size, 1);
+    sizes = parallel_vector<int>(worker_size, 1);
 
-    pqueues = parallel_vector(worker_size*num_of_elems_proc, quantum_size);
+    pqueues = parallel_vector<int>(worker_size*num_of_elems_proc, quantum_size);
 
     if (worker_rank >= 0) {
         maxes.set_elem(worker_rank, default_value);
@@ -71,9 +71,9 @@ void parallel_priority_queue::insert_internal(int elem) {
 }
 
 class Func {
-    parallel_vector* a;
+    parallel_vector<int>* a;
 public:
-    Func(parallel_vector& pv) {
+    Func(parallel_vector<int>& pv) {
         a = &pv;
     }
     int operator()(int l, int r, int identity) const {
