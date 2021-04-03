@@ -11,7 +11,7 @@
 
 
 // функция объединения данных на одном процессе
-// аргументы: ans - значение, полученное после выполнения функции parallel_reduce; 
+// аргументы: ans - значение, полученное после выполнения функции parallel_reduce;
 // reduction – функция объединения данных с двух процессов;
 // process_begin, process_end – номера участвующих в редукции процессов;
 // process – номер процесса, на котором редуцируются данные
@@ -50,7 +50,7 @@ T reduce_operation(T ans, const Reduction& reduction, int process_begin, int pro
             int destination = vtmprank[tmprank - n/(2*i)];
             MPI_Send(&tmpans, 1, type, destination, REDUCE_TAG, MPI_COMM_WORLD);
             break;
-        }        
+        }
     }
     return tmpans;
 }
