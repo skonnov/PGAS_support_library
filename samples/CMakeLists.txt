@@ -2,7 +2,7 @@ file(GLOB samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
 foreach(sample ${samples})
     get_filename_component(exe ${sample} NAME_WE)
     add_executable(${exe} ${sample})
-    target_link_libraries(${exe} LIBS)
+    target_link_libraries(${exe} PGAS_SL)
     if(MPI_FOUND)
         target_link_libraries(${exe} ${MPI_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
