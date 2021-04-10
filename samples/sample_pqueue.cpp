@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
     }
 
     memory_manager::memory_manager_init(argc, argv);
-    parallel_priority_queue ppq(num_of_quantums_proc, quantum_size, 0);
+    parallel_priority_queue<int> ppq(0, num_of_quantums_proc, quantum_size);
     int rank = memory_manager::get_MPI_rank();
     int size = memory_manager::get_MPI_size();
 
