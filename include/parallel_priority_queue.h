@@ -5,29 +5,42 @@
 #include "parallel_vector.h"
 #include "parallel_reduce.h"
 #include "memory_manager.h"
+#include "detail.h"
 #include "common.h"
 #include <algorithm>
 #include <climits>
+
+template<class T>
+struct info {
+    T maxx;
+    int size;
+};
 
 template <class T>
 class parallel_priority_queue {
     int worker_rank, worker_size;
     parallel_vector<T> pqueues;
-    parallel_vector<T> maxes;
-    parallel_vector<int> sizes;  // максимальные элементы на каждом процессе, размер приоритетной очереди на каждом процессе, вектор для храненения приоритетной очереди
+    parallel_vector<info<T>> ms;  // максимальные элементы на каждом процессе и размер приоритетной очереди на каждом процессе
     int num_of_quantums_proc, quantum_size, num_of_elems_proc;  // число квантов на одном процессе, размер кванта, число элементов на одном процессе
     int global_index_l;  // смещение в pqueues от начала в глобальной памяти
     T default_value;
 public:
     parallel_priority_queue(T _default_value, int _num_of_quantums_proc, int _quantum_size=DEFAULT_QUANTUM_SIZE);
+    // parallel_priority_queue(int count, const int* blocklens, const MPI_Aint* indices, const MPI_Datatype* types,
+    //                         T _default_value, int _num_of_quantums_proc, int _quantum_size=DEFAULT_QUANTUM_SIZE);
     void insert(T elem);
-    int get_max(int rank);
+    T get_max(int rank);
     void remove_max();
 private:
     void remove_max_internal();
     void insert_internal(T elem);
     void heapify(int index);  // переупорядочивание элементов в приоритетной очереди на одном процессе
 };
+
+// template<class T>
+// parallel_priority_queue<T>::parallel_priority_queue(int count, const int* blocklens, const MPI_Aint* indices, const MPI_Datatype* types,
+//                             T _default_value, int _num_of_quantums_proc, int _quantum_size) {
+//                             }
 
 template<class T>
 parallel_priority_queue<T>::parallel_priority_queue(T _default_value, int _num_of_quantums_proc, int _quantum_size) {
@@ -41,14 +54,20 @@ parallel_priority_queue<T>::parallel_priority_queue(T _default_value, int _num_o
     num_of_elems_proc = num_of_quantums_proc*quantum_size;
     global_index_l = worker_rank*(num_of_elems_proc);
 
-    maxes = parallel_vector<T>(worker_size, 1);
-    sizes = parallel_vector<int>(worker_size, 1);
+    int count = 2;
+    int blocklens[] = {1, 1};
+    MPI_Aint indices[] = {
+        (MPI_Aint)offsetof(info<T>, maxx),
+        (MPI_Aint)offsetof(info<T>, size)
+    };
+    MPI_Datatype types[] = { get_mpi_type<T>(), MPI_INT };
+    
+    ms = parallel_vector<info<T>>(count, blocklens, indices, types, worker_size, 1);
 
     pqueues = parallel_vector<T>(worker_size*num_of_elems_proc, quantum_size);
 
     if (worker_rank >= 0) {
-        maxes.set_elem(worker_rank, default_value);
-        sizes.set_elem(worker_rank, 0);
+        ms.set_elem(worker_rank, {default_value, 0});
         for (int i = global_index_l; i < global_index_l + num_of_elems_proc; i++)
             pqueues.set_elem(i, default_value);
     }
@@ -63,9 +82,9 @@ void parallel_priority_queue<T>::insert(T elem) {  // need to be called by all p
     int id_min = 0;
     T minn;
     if (worker_rank >= 0) {
-        minn = sizes.get_elem(0);
+        minn = ms.get_elem(0).size;
         for (int i = 1; i < worker_size; i++) {
-            int size_i = sizes.get_elem(i);
+            int size_i = ms.get_elem(i).size;
             if (size_i < minn) {
                 id_min = i;
                 minn = size_i;
@@ -80,7 +99,7 @@ void parallel_priority_queue<T>::insert(T elem) {  // need to be called by all p
 
 template<class T>
 void parallel_priority_queue<T>::insert_internal(T elem) {
-    int sizes_worker = sizes.get_elem(worker_rank);
+    int sizes_worker = ms.get_elem(worker_rank).size;
     int current_index = sizes_worker;
     if (sizes_worker == num_of_elems_proc)
         throw -1;
@@ -96,26 +115,26 @@ void parallel_priority_queue<T>::insert_internal(T elem) {
         current_index = parent_index;
         parent_index = (current_index - 1)/2;
     }
-    maxes.set_elem(worker_rank, pqueues.get_elem(global_index_l));
-    sizes.set_elem(worker_rank, sizes_worker + 1);
+    ms.set_elem(worker_rank, { pqueues.get_elem(global_index_l), sizes_worker + 1 });
 }
 
-template<class T>
+template<class TInfo>
 class Func {
-    parallel_vector<T>* a;
+    parallel_vector<TInfo>* a;
 public:
-    Func(parallel_vector<T>& pv) {
+    Func(parallel_vector<TInfo>& pv) {
         a = &pv;
     }
-    T operator()(int l, int r, T identity) const {
+    TInfo operator()(int l, int r, TInfo identity) const {
         return a->get_elem(l);
     }
 };
 
 template<class T>
-int parallel_priority_queue<T>::get_max(int rank) {
-    auto reduction = [](T a, T b){return std::max(a, b);};
-    return parallel_reduce(worker_rank, worker_rank+1, maxes, default_value, 1, worker_size /*global_size*/, Func<T>(maxes), reduction, rank /*global_rank*/);
+T parallel_priority_queue<T>::get_max(int rank) {
+    auto reduction = [](info<T> a, info<T> b){return (a.maxx > b.maxx) ? a : b;};
+    auto ans = parallel_reduce(worker_rank, worker_rank+1, ms, { default_value, 0 }, 1, worker_size /*global_size*/, Func<info<T>>(ms), reduction, rank /*global_rank*/);
+    return ans.maxx;
 }
 
 template<class T>
@@ -125,12 +144,11 @@ void parallel_priority_queue<T>::remove_max() {
     bool empty = true;
     if (worker_rank >= 0) {
         for (int i = 0; i < worker_size; i++) {
-            int size = sizes.get_elem(i);
-            if(size) {
-                T max_i = maxes.get_elem(i);
-                if (max_i > maxx) {
+            auto ms_elem = ms.get_elem(i);
+            if(ms_elem.size) {
+                if (ms_elem.maxx > maxx) {
                     id_max = i;
-                    maxx = max_i;
+                    maxx = ms_elem.maxx;
                 }
                 empty = false;
             }
@@ -149,7 +167,7 @@ void parallel_priority_queue<T>::remove_max() {
 template<class T>
 void parallel_priority_queue<T>::heapify(int index) {
     int left = 2 * index + 1, right = 2 * index + 2;
-    int size = sizes.get_elem(worker_rank);
+    int size = ms.get_elem(worker_rank).size;
     if (left < size) {
         T parent_value = pqueues.get_elem(index + global_index_l);
         T left_value = pqueues.get_elem(left + global_index_l);
@@ -172,17 +190,17 @@ void parallel_priority_queue<T>::heapify(int index) {
 
 template<class T>
 void parallel_priority_queue<T>::remove_max_internal() {
-    int size = sizes.get_elem(worker_rank);
-    if (size == 0) {
+    auto ms_elem = ms.get_elem(worker_rank);
+    if (ms_elem.size == 0) {
         throw -1;
     }
-    pqueues.set_elem(global_index_l, pqueues.get_elem(global_index_l + size - 1));
-    sizes.set_elem(worker_rank, size - 1);
+    pqueues.set_elem(global_index_l, pqueues.get_elem(global_index_l + ms_elem.size - 1));
+    ms.set_elem(worker_rank, {ms_elem.maxx, ms_elem.size - 1});
     heapify(0);
-    if (size - 1 == 0)
-        maxes.set_elem(worker_rank, default_value);
+    if (ms_elem.size - 1 == 0)
+        ms.set_elem(worker_rank, {default_value, ms_elem.size - 1});
     else
-        maxes.set_elem(worker_rank, pqueues.get_elem(global_index_l));
+        ms.set_elem(worker_rank, {pqueues.get_elem(global_index_l), ms_elem.size - 1});
 }
 
 
