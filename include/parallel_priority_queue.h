@@ -4,10 +4,25 @@
 #include <climits>
 #include "parallel_vector.h"
 #include "parallel_reduce.h"
+#include "parallel_reduce_all.h"
 #include "memory_manager.h"
 #include "common.h"
 #include <algorithm>
 #include <climits>
+
+#define COMMA ,  // to avoid errors w/ offsetof for types w/ commas
+
+template <class T1, class T2>
+struct pair {
+    T1 first;
+    T2 second;
+
+    pair() {}
+    pair(const T1& a, const T2&b) {
+        first = a;
+        second = b;
+    }
+};
 
 template <class T>
 class parallel_priority_queue {
@@ -18,6 +33,7 @@ class parallel_priority_queue {
     int num_of_quantums_proc, quantum_size, num_of_elems_proc;  // число квантов на одном процессе, размер кванта, число элементов на одном процессе
     int global_index_l;  // смещение в pqueues от начала в глобальной памяти
     T default_value;
+    MPI_Datatype pair_type;
 public:
     parallel_priority_queue(T _default_value, int _num_of_quantums_proc, int _quantum_size=DEFAULT_QUANTUM_SIZE);
     void insert(T elem);
@@ -53,37 +69,45 @@ parallel_priority_queue<T>::parallel_priority_queue(T _default_value, int _num_o
             pqueues.set_elem(i, default_value);
     }
 
+    int count = 2;
+    int blocklens[] = {1, 1};
+    MPI_Aint indices[] = {
+        (MPI_Aint)offsetof(pair<int COMMA int>, first),
+        (MPI_Aint)offsetof(pair<int COMMA int>, second)
+    };
+    MPI_Datatype types[] = { MPI_INT, MPI_INT };
+    pair_type = create_mpi_type<pair<int,int>>(2, blocklens, indices, types);
     MPI_Barrier(MPI_COMM_WORLD);
 }
 
-template<class T>
-void parallel_priority_queue<T>::insert(T elem) {  // need to be called by all processes
-    // TODO: check rank w/ min size of priority_queue through parallel_reduce
-    // need to update parallel_reduce
-    int id_min = 0;
-    T minn;
-    if (worker_rank >= 0) {
-        minn = sizes.get_elem(0);
-        for (int i = 1; i < worker_size; i++) {
-            int size_i = sizes.get_elem(i);
-            if (size_i < minn) {
-                id_min = i;
-                minn = size_i;
-            }
-        } // bad, need smth else
+template<class T, class T2>
+class Func1 {
+    parallel_vector<T>* a;
+public:
+    Func1(parallel_vector<T>& pv) {
+        a = &pv;
     }
-    MPI_Barrier(MPI_COMM_WORLD);
-    if(worker_rank == id_min)
+    T2 operator()(int l, int r, T2 identity) const {
+        return { a->get_elem(l), memory_manager::get_MPI_rank()-1 };
+    }
+};
+
+template<class T>
+void parallel_priority_queue<T>::insert(T elem) {
+    auto reduction = [](pair<int, int> a, pair<int, int> b) { return (a.first < b.first) ? a : b; };
+    pair<int, int> size{-2, -2};
+    if (worker_rank >= 0)
+        size = parallel_reduce_all(worker_rank, worker_rank+1, sizes, pair<int, int>(INT_MAX, INT_MAX), 1, worker_size+1, Func1<int, pair<int, int>>(sizes), reduction, pair_type);
+    if(worker_rank == size.second)
         insert_internal(elem);
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD); // ???
 }
 
 template<class T>
 void parallel_priority_queue<T>::insert_internal(T elem) {
     int sizes_worker = sizes.get_elem(worker_rank);
     int current_index = sizes_worker;
-    if (sizes_worker == num_of_elems_proc)
-        throw -1;
+    CHECK(sizes_worker < num_of_elems_proc, ERR_UNKNOWN);
     pqueues.set_elem(current_index + global_index_l, elem);
     int parent_index = (current_index - 1) / 2;
     while(parent_index >= 0 && current_index > 0) {
