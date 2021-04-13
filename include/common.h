@@ -17,9 +17,10 @@ enum tags {  // используется для корректного расп�
     GET_PERMISSION_FOR_CHANGE_MODE   = 105,
     GET_PERMISSION_TO_CONTINUE       = 106,
     REDUCE_TAG                       = 107,
-    REDUCE_ALL_TAG                   = 108,
-    FINALIZE_WORKER                  = 109,
-    FINALIZE_MASTER                  = 110
+    REDUCE_ALL_TAG1                  = 108,
+    REDUCE_ALL_TAG2                  = 109,
+    FINALIZE_WORKER                  = 110,
+    FINALIZE_MASTER                  = 111
 };
 
 enum operations {  // используется вспомогательными потоками для определения типа запрашиваемой операции
