@@ -144,27 +144,11 @@ int parallel_priority_queue<T>::get_max(int rank) {
 
 template<class T>
 void parallel_priority_queue<T>::remove_max() {
-    T maxx = default_value;
-    int id_max = 0;
-    bool empty = true;
-    if (worker_rank >= 0) {
-        for (int i = 0; i < worker_size; i++) {
-            int size = sizes.get_elem(i);
-            if(size) {
-                T max_i = maxes.get_elem(i);
-                if (max_i > maxx) {
-                    id_max = i;
-                    maxx = max_i;
-                }
-                empty = false;
-            }
-        } // bad, need smth else
-    }
-    if(worker_rank >= 0 && empty) {
-        throw -1;
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (worker_rank == id_max) {
+    auto reduction = [](pair<int, int> a, pair<int, int> b) { return (a.first >= b.first) ? a : b; };
+    pair<int, int> size{-2, -2};
+    if (worker_rank >= 0)
+        size = parallel_reduce_all(worker_rank, worker_rank+1, sizes, pair<int, int>(INT_MAX, INT_MAX), 1, worker_size+1, Func1<int, pair<int, int>>(sizes), reduction, pair_type);
+    if (worker_rank == size.second) {
         remove_max_internal();
     }
     MPI_Barrier(MPI_COMM_WORLD);
