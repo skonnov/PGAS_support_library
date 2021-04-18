@@ -10,8 +10,6 @@
 #include <algorithm>
 #include <climits>
 
-#define COMMA ,  // to avoid errors w/ offsetof for types w/ commas
-
 struct pair_reduce_all {
     int first, second;
 
