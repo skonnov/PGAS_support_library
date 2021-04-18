@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
     }
 
     memory_manager::memory_manager_init(argc, argv);
-    parallel_priority_queue ppq(num_of_quantums_proc, quantum_size, 0);
+    parallel_priority_queue<int> ppq(0, num_of_quantums_proc, quantum_size);
     int rank = memory_manager::get_MPI_rank();
     int size = memory_manager::get_MPI_size();
 
@@ -27,13 +27,15 @@ int main(int argc, char** argv) {
                 std::cout<<"!";
             ppq.remove_max();
         }
-        MPI_Barrier(MPI_COMM_WORLD);
+        // MPI_Barrier(MPI_COMM_WORLD);
         if(rank != 0) {
             int maxx = ppq.get_max(1);
-            if(rank == 1 && i%10 == 0 && maxx%10 != 0)
+            if(rank == 1 && i%10 == 0 && maxx%10 != 0) {
                 std::cout<<"ALYARMA!!!"<<std::endl;
+                CHECK(0, -5);
+            }
             if (rank == 1)
-                std::cout<< maxx << std::endl;
+                std::cout << maxx << std::endl;
         }
     }
     if(rank != 0) {

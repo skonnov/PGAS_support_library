@@ -33,19 +33,19 @@ T reduce_all_operation(T data, const Reduction& reduction, int process_begin, in
     while(n < t)
         n *= 2;
     for(int i = 1; i < n; i = i * 2) {
-        if(tmprank * 2*i < n) {
+        if(tmprank * 2 * i < n) {
+            if(tmprank + n / (2 * i) >= t)
+                continue;
             MPI_Status status;
             T tmp;
             int sender = vtmprank[tmprank + n/(2*i)];
-            if(tmprank + n/(2*i) >= t)
-                continue;
-            MPI_Recv(&tmp, 1, type, sender, REDUCE_TAG, MPI_COMM_WORLD, &status);
+            MPI_Recv(&tmp, 1, type, sender, REDUCE_ALL_TAG1, MPI_COMM_WORLD, &status);
             tmpans = reduction(tmp, tmpans);
         }
         else
         {
             int destination = vtmprank[tmprank - n/(2*i)];
-            MPI_Send(&tmpans, 1, type, destination, REDUCE_TAG, MPI_COMM_WORLD);
+            MPI_Send(&tmpans, 1, type, destination, REDUCE_ALL_TAG1, MPI_COMM_WORLD);
             break;
         }
     }
@@ -55,16 +55,15 @@ T reduce_all_operation(T data, const Reduction& reduction, int process_begin, in
             if (tmprank + i >= t)
                 break;
             int destination = vtmprank[tmprank+i];
-            MPI_Send(&ans, 1, type, destination, REDUCE_ALL_TAG, MPI_COMM_WORLD);
+            MPI_Send(&ans, 1, type, destination, REDUCE_ALL_TAG2, MPI_COMM_WORLD);
         }
         else if (tmprank < 2 * i)
         {
-            int source = vtmprank[tmprank - i];
+            int sender = vtmprank[tmprank - i];
             MPI_Status status;
-            MPI_Recv(&ans, 1, type, source, REDUCE_ALL_TAG, MPI_COMM_WORLD, &status);
+            MPI_Recv(&ans, 1, type, sender, REDUCE_ALL_TAG2, MPI_COMM_WORLD, &status);
         }
     }
-
     return ans;
 }
 
@@ -75,11 +74,19 @@ T reduce_all_operation(T data, const Reduction& reduction, int process_begin, in
 // func – функтор, используемый для сбора данных на одном процессе;
 // reduction – функтор, используемый для объединения данных с разных процессов;
 // process – номер процесса, на котором редуцируются данные
-template<class Func, class Reduction, class T>
-T parallel_reduce_all(int l, int r, const parallel_vector<T>& pv, T identity, int process_begin, int process_end, const Func& func, const Reduction& reduction) {
+template<class Func, class Reduction, class T, class T2>
+T parallel_reduce_all(int l, int r, const parallel_vector<T2>& pv, T identity, int process_begin, int process_end, const Func& func, const Reduction& reduction) {
     T ans = identity;
     ans = func(l, r, identity);
     return reduce_all_operation(ans, reduction, process_begin, process_end, pv.get_MPI_datatype());
 }
+
+template<class Func, class Reduction, class T, class T2>
+T parallel_reduce_all(int l, int r, const parallel_vector<T2>& pv, T identity, int process_begin, int process_end, const Func& func, const Reduction& reduction, MPI_Datatype type) {
+    T ans = identity;
+    ans = func(l, r, identity);
+    return reduce_all_operation(ans, reduction, process_begin, process_end, type);
+}
+
 
 #endif // __PARALLEL_REDUCE_ALL_H__
