@@ -47,23 +47,28 @@ void print(parallel_vector<T>* pv1, parallel_vector<T>* pv2, parallel_vector<T> 
 
 int main(int argc, char** argv) {
     if (argc <= 1) {
+        std::cout<<"wrong count of args!"<<std::endl;
         return 1;
     }
     memory_manager::memory_manager_init(argc, argv);
+    int rank = memory_manager::get_MPI_rank();
     int size_workers = memory_manager::get_MPI_size()-1;
     int q = static_cast<int>(sqrt(static_cast<double>(size_workers)));
     if (q*q != size_workers) {
+        if (rank == 0)
+            std::cout<<"count of processes must be q*q+1, q - integer!"<<std::endl;
         memory_manager::finalize();
         return 2;
     }
     int n = atoi(argv[1]);
     int num_in_block = n/q;
     if (n%q) {
+        if (rank == 0)
+            std::cout<<"The size n of the matrix n*n must be must be divisible by the sqrt of the num of processes!"<<std::endl;
         memory_manager::finalize();
         return 3;
     }
     parallel_vector<int> pv1(n*n), pv2(n*n), pv3(n*n);
-    int rank = memory_manager::get_MPI_rank();
     std::pair<int, int> grid_ind = get_grid_rank(rank, q);
     MPI_Barrier(MPI_COMM_WORLD);
     double t1 = MPI_Wtime();
