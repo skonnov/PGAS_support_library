@@ -12,13 +12,11 @@
 
 #define COMMA ,  // to avoid errors w/ offsetof for types w/ commas
 
-template <class T1, class T2>
-struct pair {
-    T1 first;
-    T2 second;
+struct pair_reduce_all {
+    int first, second;
 
-    pair() {}
-    pair(const T1& a, const T2&b) {
+    pair_reduce_all() {}
+    pair_reduce_all(const int& a, const int& b) {
         first = a;
         second = b;
     }
@@ -72,11 +70,11 @@ parallel_priority_queue<T>::parallel_priority_queue(T _default_value, int _num_o
     int count = 2;
     int blocklens[] = {1, 1};
     MPI_Aint indices[] = {
-        (MPI_Aint)offsetof(pair<int COMMA int>, first),
-        (MPI_Aint)offsetof(pair<int COMMA int>, second)
+        (MPI_Aint)offsetof(pair_reduce_all, first),
+        (MPI_Aint)offsetof(pair_reduce_all, second)
     };
     MPI_Datatype types[] = { MPI_INT, MPI_INT };
-    pair_type = create_mpi_type<pair<int,int>>(2, blocklens, indices, types);
+    pair_type = create_mpi_type<pair_reduce_all>(2, blocklens, indices, types);
     MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -94,10 +92,10 @@ public:
 
 template<class T>
 void parallel_priority_queue<T>::insert(T elem) {
-    auto reduction = [](pair<int, int> a, pair<int, int> b) { return (a.first < b.first) ? a : b; };
-    pair<int, int> size{-2, -2};
+    auto reduction = [](pair_reduce_all a, pair_reduce_all b) { return (a.first < b.first) ? a : b; };
+    pair_reduce_all size{-2, -2};
     if (worker_rank >= 0)
-        size = parallel_reduce_all(worker_rank, worker_rank+1, sizes, pair<int, int>(INT_MAX, INT_MAX), 1, worker_size+1, Func1<int, pair<int, int>>(sizes), reduction, pair_type);
+        size = parallel_reduce_all(worker_rank, worker_rank+1, sizes, pair_reduce_all(INT_MAX, INT_MAX), 1, worker_size+1, Func1<int, pair_reduce_all>(sizes), reduction, pair_type);
     if(worker_rank == size.second)
         insert_internal(elem);
 }
@@ -143,10 +141,10 @@ int parallel_priority_queue<T>::get_max(int rank) {
 
 template<class T>
 void parallel_priority_queue<T>::remove_max() {
-    auto reduction = [](pair<int, int> a, pair<int, int> b) { return (a.first >= b.first) ? a : b; };
-    pair<int, int> size{-2, -2};
+    auto reduction = [](pair_reduce_all a, pair_reduce_all b) { return (a.first >= b.first) ? a : b; };
+    pair_reduce_all size{-2, -2};
     if (worker_rank >= 0)
-        size = parallel_reduce_all(worker_rank, worker_rank+1, sizes, pair<int, int>(INT_MAX, INT_MAX), 1, worker_size+1, Func1<int, pair<int, int>>(sizes), reduction, pair_type);
+        size = parallel_reduce_all(worker_rank, worker_rank+1, sizes, pair_reduce_all(INT_MAX, INT_MAX), 1, worker_size+1, Func1<int, pair_reduce_all>(sizes), reduction, pair_type);
     if (worker_rank == size.second) {
         remove_max_internal();
     }
