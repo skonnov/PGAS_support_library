@@ -95,7 +95,7 @@ void parallel_priority_queue<T>::insert(T elem) {
     auto reduction = [](pair_reduce_all a, pair_reduce_all b) { return (a.first < b.first) ? a : b; };
     pair_reduce_all size{-2, -2};
     if (worker_rank >= 0)
-        size = parallel_reduce_all(worker_rank, worker_rank+1, sizes, pair_reduce_all(INT_MAX, INT_MAX), 1, worker_size+1, Func1<int, pair_reduce_all>(sizes), reduction, pair_type);
+        size = parallel_reduce_all(worker_rank, worker_rank+1, sizes, pair_reduce_all(INT_MAX, INT_MAX), 1, worker_size, Func1<int, pair_reduce_all>(sizes), reduction, pair_type);
     if(worker_rank == size.second)
         insert_internal(elem);
 }
@@ -144,7 +144,7 @@ void parallel_priority_queue<T>::remove_max() {
     auto reduction = [](pair_reduce_all a, pair_reduce_all b) { return (a.first >= b.first) ? a : b; };
     pair_reduce_all size{-2, -2};
     if (worker_rank >= 0)
-        size = parallel_reduce_all(worker_rank, worker_rank+1, sizes, pair_reduce_all(INT_MAX, INT_MAX), 1, worker_size+1, Func1<int, pair_reduce_all>(sizes), reduction, pair_type);
+        size = parallel_reduce_all(worker_rank, worker_rank+1, sizes, pair_reduce_all(INT_MAX, INT_MAX), 1, worker_size, Func1<int, pair_reduce_all>(sizes), reduction, pair_type);
     if (worker_rank == size.second) {
         remove_max_internal();
     }
