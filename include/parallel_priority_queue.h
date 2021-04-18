@@ -2,13 +2,13 @@
 #define __PARALLEL_PRIORITY_QUEUE__
 
 #include <climits>
+#include <algorithm>
+#include <cstddef>
+#include "common.h"
 #include "parallel_vector.h"
 #include "parallel_reduce.h"
 #include "parallel_reduce_all.h"
 #include "memory_manager.h"
-#include "common.h"
-#include <algorithm>
-#include <climits>
 
 struct pair_reduce_all {
     int first, second;
