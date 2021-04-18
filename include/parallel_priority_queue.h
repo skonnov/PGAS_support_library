@@ -100,7 +100,6 @@ void parallel_priority_queue<T>::insert(T elem) {
         size = parallel_reduce_all(worker_rank, worker_rank+1, sizes, pair<int, int>(INT_MAX, INT_MAX), 1, worker_size+1, Func1<int, pair<int, int>>(sizes), reduction, pair_type);
     if(worker_rank == size.second)
         insert_internal(elem);
-    MPI_Barrier(MPI_COMM_WORLD); // ???
 }
 
 template<class T>
@@ -151,7 +150,6 @@ void parallel_priority_queue<T>::remove_max() {
     if (worker_rank == size.second) {
         remove_max_internal();
     }
-    MPI_Barrier(MPI_COMM_WORLD);
 }
 
 template<class T>
