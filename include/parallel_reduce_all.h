@@ -24,7 +24,7 @@ T reduce_all_operation(T data, const Reduction& reduction, int process_begin, in
     int tmprank = 0;
     int t = 0;
     std::vector<int>vtmprank(size+100);
-    for(int i = process_begin; i < process_end; i++) {
+    for(int i = process_begin; i <= process_end; i++) {
         vtmprank[t++] = i;
         if(rank == i)
             tmprank = t-1;
