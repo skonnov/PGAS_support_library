@@ -36,7 +36,7 @@ T reduce_operation(T ans, const Reduction& reduction, int process_begin, int pro
     while(n < t)
         n *= 2;
     for(int i = 1; i < n; i = i * 2) {
-        if(tmprank * 2*i < n) {
+        if(tmprank * 2 * i < n) {
             MPI_Status status;
             T tmp;
             int sender = vtmprank[tmprank + n/(2*i)];
@@ -56,17 +56,24 @@ T reduce_operation(T ans, const Reduction& reduction, int process_begin, int pro
 }
 
 
-// аргументы: аргументы: [l, r) – диапазон глобальных индексов на отдельном процессе;
+// аргументы: аргументы: [l, r] – диапазон глобальных индексов на отдельном процессе;
 // pv – вектор, над которым осуществляется функция редукции;
 // process_begin, process_end – номера участвующих в редукции процессов;
 // func – функтор, используемый для сбора данных на одном процессе;
 // reduction – функтор, используемый для объединения данных с разных процессов;
 // process – номер процесса, на котором редуцируются данные
-template<class Func, class Reduction, class T>
-T parallel_reduce(int l, int r, const parallel_vector<T>& pv, T identity, int process_begin, int process_end, const Func& func, const Reduction& reduction, int process = 1) {
+template<class Func, class Reduction, class T, class T2>
+T parallel_reduce(int l, int r, const parallel_vector<T2>& pv, T identity, int process_begin, int process_end, const Func& func, const Reduction& reduction, int process) {
     T ans = identity;
     ans = func(l, r, identity);
     return reduce_operation(ans, reduction, process_begin, process_end, pv.get_MPI_datatype(), process);
+}
+
+template<class Func, class Reduction, class T, class T2>
+T parallel_reduce(int l, int r, const parallel_vector<T2>& pv, T identity, int process_begin, int process_end, const Func& func, const Reduction& reduction, MPI_Datatype type, int process) {
+    T ans = identity;
+    ans = func(l, r, identity);
+    return reduce_operation(ans, reduction, process_begin, process_end, type, process);
 }
 
 #endif // __PARALLEL_REDUCE_H__

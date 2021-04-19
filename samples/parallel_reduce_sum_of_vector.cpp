@@ -57,7 +57,7 @@ int main(int argc, char ** argv) {
             pv.set_elem(i, i+0.5);
         }
         pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);// так как далее вектор изменяться не будет, режим изменяется на READ_ONLY
-        double ans = parallel_reduce(index, index+portion, pv, 0., 1, size-1, Func<double>(pv), reduction<double>);
+        double ans = parallel_reduce(index, index+portion, pv, 0., 1, size-1, Func<double>(pv), reduction<double>, 1);
         // double ans2 = parallel_reduce_all(index, index+portion, pv, 0., 1, size-1, Func<double>(pv), reduction<double>);
         // std::cout<<rank<<" "<<ans<<" "<<ans2<<std::endl;
         double t2 = MPI_Wtime();
