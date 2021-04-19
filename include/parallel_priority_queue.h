@@ -33,7 +33,7 @@ class parallel_priority_queue {
 public:
     parallel_priority_queue(T _default_value, int _num_of_quantums_proc, int _quantum_size=DEFAULT_QUANTUM_SIZE);
     void insert(T elem);
-    int get_max(int rank);
+    T get_max(int rank);
     void remove_max();
 private:
     void remove_max_internal();
@@ -132,7 +132,7 @@ public:
 };
 
 template<class T>
-int parallel_priority_queue<T>::get_max(int rank) {
+T parallel_priority_queue<T>::get_max(int rank) {
     auto reduction = [](T a, T b){return std::max(a, b);};
     return parallel_reduce(worker_rank, worker_rank+1, maxes, default_value, 1, worker_size /*global_size*/, Func<T>(maxes), reduction, rank /*global_rank*/);
 }
@@ -142,7 +142,7 @@ void parallel_priority_queue<T>::remove_max() {
     auto reduction = [](pair_reduce_all a, pair_reduce_all b) { return (a.first >= b.first) ? a : b; };
     pair_reduce_all size{-2, -2};
     if (worker_rank >= 0)
-        size = parallel_reduce_all(worker_rank, worker_rank+1, sizes, pair_reduce_all(INT_MAX, INT_MAX), 1, worker_size, Func1<int, pair_reduce_all>(sizes), reduction, pair_type);
+        size = parallel_reduce_all(worker_rank, worker_rank+1, maxes, pair_reduce_all(INT_MAX, INT_MAX), 1, worker_size, Func1<int, pair_reduce_all>(sizes), reduction, pair_type);
     if (worker_rank == size.second) {
         remove_max_internal();
     }
