@@ -117,7 +117,7 @@ void parallel_priority_queue<T>::insert(T elem, int from_worker_rank) {
 
 template<class T>
 int parallel_priority_queue<T>::get_size() {
-    auto func = [this](int begin, int end, T identity) { return sizes.get_elem(begin); };
+    auto func = [this](int begin, int end, int identity) { return sizes.get_elem(begin); };
     auto reduction = [](int a, int b){ return a+b; };
     int size = parallel_reduce_all(worker_rank, worker_rank+1, sizes, 0, 1, worker_size, func, reduction);
     return size;
