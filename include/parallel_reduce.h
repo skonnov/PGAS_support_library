@@ -43,7 +43,7 @@ T reduce_operation(T ans, const Reduction& reduction, int process_begin, int pro
             if(tmprank + n/(2*i) >= t)
                 continue;
             MPI_Recv(&tmp, 1, type, sender, REDUCE_TAG, MPI_COMM_WORLD, &status);
-            tmpans = reduction(tmp, tmpans);
+            tmpans = reduction(tmpans, tmp);
         }
         else
         {
@@ -64,6 +64,10 @@ T reduce_operation(T ans, const Reduction& reduction, int process_begin, int pro
 // process – номер процесса, на котором редуцируются данные
 template<class Func, class Reduction, class T, class T2>
 T parallel_reduce(int l, int r, const parallel_vector<T2>& pv, T identity, int process_begin, int process_end, const Func& func, const Reduction& reduction, int process) {
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank != process && (rank < process_begin || rank > process_end))
+        return identity;
     T ans = identity;
     ans = func(l, r, identity);
     return reduce_operation(ans, reduction, process_begin, process_end, pv.get_MPI_datatype(), process);
@@ -71,6 +75,10 @@ T parallel_reduce(int l, int r, const parallel_vector<T2>& pv, T identity, int p
 
 template<class Func, class Reduction, class T, class T2>
 T parallel_reduce(int l, int r, const parallel_vector<T2>& pv, T identity, int process_begin, int process_end, const Func& func, const Reduction& reduction, MPI_Datatype type, int process) {
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank != process && (rank < process_begin || rank > process_end))
+        return identity;
     T ans = identity;
     ans = func(l, r, identity);
     return reduce_operation(ans, reduction, process_begin, process_end, type, process);

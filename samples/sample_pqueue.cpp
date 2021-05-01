@@ -38,11 +38,19 @@ int main(int argc, char** argv) {
                 std::cout << maxx << std::endl;
         }
     }
+
     if(rank != 0) {
         int maxx = ppq.get_max(1);
         if (rank == 1)
             std::cout<< maxx << std::endl;
+        std::cout<<rank<<" "<<ppq.get_size()<<std::endl;
     }
+
+
+    if(rank == 3)
+        ppq.insert(5, 2);
+    else
+        ppq.insert(0, 2);
 
     memory_manager::finalize();
     return 0;

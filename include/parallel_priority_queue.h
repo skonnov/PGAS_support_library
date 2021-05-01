@@ -10,11 +10,11 @@
 #include "parallel_reduce_all.h"
 #include "memory_manager.h"
 
-struct pair_reduce_all {
+struct pair_reduce {
     int first, second;
 
-    pair_reduce_all() {}
-    pair_reduce_all(const int& a, const int& b) {
+    pair_reduce() {}
+    pair_reduce(const int& a, const int& b) {
         first = a;
         second = b;
     }
@@ -33,7 +33,10 @@ class parallel_priority_queue {
 public:
     parallel_priority_queue(T _default_value, int _num_of_quantums_proc, int _quantum_size=DEFAULT_QUANTUM_SIZE);
     void insert(T elem);
+    void insert(T elem, int from_worker_rank);
+    int get_size();
     T get_max(int rank);
+    // T get_and_remove_max();
     void remove_max();
 private:
     void remove_max_internal();
@@ -68,11 +71,11 @@ parallel_priority_queue<T>::parallel_priority_queue(T _default_value, int _num_o
     int count = 2;
     int blocklens[] = {1, 1};
     MPI_Aint indices[] = {
-        (MPI_Aint)offsetof(pair_reduce_all, first),
-        (MPI_Aint)offsetof(pair_reduce_all, second)
+        (MPI_Aint)offsetof(pair_reduce, first),
+        (MPI_Aint)offsetof(pair_reduce, second)
     };
     MPI_Datatype types[] = { MPI_INT, MPI_INT };
-    pair_type = create_mpi_type<pair_reduce_all>(2, blocklens, indices, types);
+    pair_type = create_mpi_type<pair_reduce>(2, blocklens, indices, types);
     MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -90,12 +93,34 @@ public:
 
 template<class T>
 void parallel_priority_queue<T>::insert(T elem) {
-    auto reduction = [](pair_reduce_all a, pair_reduce_all b) { return (a.first < b.first) ? a : b; };
-    pair_reduce_all size{-2, -2};
+    auto reduction = [](pair_reduce a, pair_reduce b) { return (a.first < b.first) ? a : b; };
+    pair_reduce size{-2, -2};
     if (worker_rank >= 0)
-        size = parallel_reduce_all(worker_rank, worker_rank+1, sizes, pair_reduce_all(INT_MAX, INT_MAX), 1, worker_size, Func1<int, pair_reduce_all>(sizes), reduction, pair_type);
+        size = parallel_reduce_all(worker_rank, worker_rank+1, sizes, pair_reduce(INT_MAX, INT_MAX), 1, worker_size, Func1<int, pair_reduce>(sizes), reduction, pair_type);
     if(worker_rank == size.second)
         insert_internal(elem);
+}
+
+template<class T>
+void parallel_priority_queue<T>::insert(T elem, int from_worker_rank) {
+    auto reduction = [](pair_reduce a, pair_reduce b) { return (a.first < b.first) ? a : b; };
+    pair_reduce size{-2, -2};
+    if (worker_rank >= 0)
+        size = parallel_reduce_all(worker_rank, worker_rank+1, sizes, pair_reduce(INT_MAX, INT_MAX), 1, worker_size, Func1<int, pair_reduce>(sizes), reduction, pair_type);
+    auto func = [elem](int begin, int end, T identity) { return elem; };
+    auto reduction2 = [](int a, int b) { return b; };
+    if (worker_rank >= 0)
+        elem = parallel_reduce(0, 0, sizes, 0, from_worker_rank+1, from_worker_rank+1, func, reduction2, size.second+1);
+    if (worker_rank == size.second)
+        insert_internal(elem);
+}
+
+template<class T>
+int parallel_priority_queue<T>::get_size() {
+    auto func = [this](int begin, int end, T identity) { return sizes.get_elem(begin); };
+    auto reduction = [](int a, int b){ return a+b; };
+    int size = parallel_reduce_all(worker_rank, worker_rank+1, sizes, 0, 1, worker_size, func, reduction);
+    return size;
 }
 
 template<class T>
@@ -137,12 +162,24 @@ T parallel_priority_queue<T>::get_max(int rank) {
     return parallel_reduce(worker_rank, worker_rank+1, maxes, default_value, 1, worker_size /*global_size*/, Func<T>(maxes), reduction, rank /*global_rank*/);
 }
 
+// template<class T>
+// T parallel_priority_queue<T>::get_and_remove_max() {
+//     auto reduction = [](pair_reduce a, pair_reduce b) { return (a.first >= b.first) ? a : b; };
+//     pair_reduce size{-2, -2};
+//     if (worker_rank >= 0)
+//         size = parallel_reduce_all(worker_rank, worker_rank+1, maxes, pair_reduce(default_value, 0), 1, worker_size, Func1<int, pair_reduce(sizes), reduction, pair_type, rank);
+//     if(worker_rank == size.second) {
+//         remove_max_internal();
+//     }
+//     return size.first;
+// }
+
 template<class T>
 void parallel_priority_queue<T>::remove_max() {
-    auto reduction = [](pair_reduce_all a, pair_reduce_all b) { return (a.first >= b.first) ? a : b; };
-    pair_reduce_all size{-2, -2};
+    auto reduction = [](pair_reduce a, pair_reduce b) { return (a.first >= b.first) ? a : b; };
+    pair_reduce size{-2, -2};
     if (worker_rank >= 0)
-        size = parallel_reduce_all(worker_rank, worker_rank+1, maxes, pair_reduce_all(INT_MAX, INT_MAX), 1, worker_size, Func1<int, pair_reduce_all>(sizes), reduction, pair_type);
+        size = parallel_reduce_all(worker_rank, worker_rank+1, maxes, pair_reduce(INT_MAX, INT_MAX), 1, worker_size, Func1<int, pair_reduce>(sizes), reduction, pair_type);
     if (worker_rank == size.second) {
         remove_max_internal();
     }
