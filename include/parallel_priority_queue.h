@@ -34,13 +34,13 @@ public:
     parallel_priority_queue(T _default_value, int _num_of_quantums_proc, int _quantum_size=DEFAULT_QUANTUM_SIZE);
     void insert(T elem);
     void insert(T elem, int from_worker_rank);
+    void insert_local(T elem);
     int get_size();
     T get_max(int rank);
     // T get_and_remove_max();
     void remove_max();
 private:
-    void remove_max_internal();
-    void insert_internal(T elem);
+    void remove_max_local();
     void heapify(int index);  // переупорядочивание элементов в приоритетной очереди на одном процессе
 };
 
@@ -98,7 +98,7 @@ void parallel_priority_queue<T>::insert(T elem) {
     if (worker_rank >= 0)
         size = parallel_reduce_all(worker_rank, worker_rank+1, sizes, pair_reduce(INT_MAX, INT_MAX), 1, worker_size, Func1<int, pair_reduce>(sizes), reduction, pair_type);
     if(worker_rank == size.second)
-        insert_internal(elem);
+        insert_local(elem);
 }
 
 template<class T>
@@ -112,7 +112,7 @@ void parallel_priority_queue<T>::insert(T elem, int from_worker_rank) {
     if (worker_rank >= 0)
         elem = parallel_reduce(0, 0, sizes, 0, from_worker_rank+1, from_worker_rank+1, func, reduction2, size.second+1);
     if (worker_rank == size.second)
-        insert_internal(elem);
+        insert_local(elem);
 }
 
 template<class T>
@@ -124,16 +124,16 @@ int parallel_priority_queue<T>::get_size() {
 }
 
 template<class T>
-void parallel_priority_queue<T>::insert_internal(T elem) {
+void parallel_priority_queue<T>::insert_local(T elem) {
     int sizes_worker = sizes.get_elem(worker_rank);
     int current_index = sizes_worker;
     CHECK(sizes_worker < num_of_elems_proc, ERR_UNKNOWN);
     pqueues.set_elem(current_index + global_index_l, elem);
     int parent_index = (current_index - 1) / 2;
     while(parent_index >= 0 && current_index > 0) {
-        int parent_value = pqueues.get_elem(parent_index + global_index_l);
-        int cur_value = pqueues.get_elem(current_index + global_index_l);
-        if (cur_value > parent_value) {
+        T parent_value = pqueues.get_elem(parent_index + global_index_l);
+        T cur_value = pqueues.get_elem(current_index + global_index_l);
+        if (parent_value < cur_value) {
             pqueues.set_elem(parent_index + global_index_l, cur_value);
             pqueues.set_elem(current_index + global_index_l, parent_value);
         }
@@ -169,7 +169,7 @@ T parallel_priority_queue<T>::get_max(int rank) {
 //     if (worker_rank >= 0)
 //         size = parallel_reduce_all(worker_rank, worker_rank+1, maxes, pair_reduce(default_value, 0), 1, worker_size, Func1<int, pair_reduce(sizes), reduction, pair_type, rank);
 //     if(worker_rank == size.second) {
-//         remove_max_internal();
+//         remove_max_local();
 //     }
 //     return size.first;
 // }
@@ -181,7 +181,7 @@ void parallel_priority_queue<T>::remove_max() {
     if (worker_rank >= 0)
         size = parallel_reduce_all(worker_rank, worker_rank+1, maxes, pair_reduce(INT_MAX, INT_MAX), 1, worker_size, Func1<int, pair_reduce>(sizes), reduction, pair_type);
     if (worker_rank == size.second) {
-        remove_max_internal();
+        remove_max_local();
     }
 }
 
@@ -210,7 +210,7 @@ void parallel_priority_queue<T>::heapify(int index) {
 }
 
 template<class T>
-void parallel_priority_queue<T>::remove_max_internal() {
+void parallel_priority_queue<T>::remove_max_local() {
     int size = sizes.get_elem(worker_rank);
     if (size == 0) {
         throw -1;
