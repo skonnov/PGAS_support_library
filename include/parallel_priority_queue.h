@@ -36,6 +36,7 @@ public:
     void insert(T elem, int from_worker_rank);
     void insert_local(T elem);
     int get_size();
+    T get_max();
     T get_max(int rank);
     // T get_and_remove_max();
     void remove_max();
@@ -160,6 +161,12 @@ template<class T>
 T parallel_priority_queue<T>::get_max(int rank) {
     auto reduction = [](T a, T b){return std::max(a, b);};
     return parallel_reduce(worker_rank, worker_rank+1, maxes, default_value, 1, worker_size /*global_size*/, Func<T>(maxes), reduction, rank /*global_rank*/);
+}
+
+template<class T>
+T parallel_priority_queue<T>::get_max() {
+    auto reduction = [](T a, T b){return std::max(a, b);};
+    return parallel_reduce_all(worker_rank, worker_rank+1, maxes, default_value, 1, worker_size /*global_size*/, Func<T>(maxes), reduction);
 }
 
 // template<class T>
