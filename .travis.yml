@@ -23,3 +23,4 @@ script:
   - mpiexec -n 5 ./locks_simple_sample 50
   - mpiexec -n 5 ./parallel_reduce_sum_of_vector 50
   - mpiexec -n 5 ./sum_of_vector_struct 50
+  - mpiexec -n 5 ./dijkstra -v 500
