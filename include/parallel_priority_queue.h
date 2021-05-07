@@ -25,13 +25,15 @@ class parallel_priority_queue {
     int worker_rank, worker_size;
     parallel_vector<T> pqueues;
     parallel_vector<T> maxes;
-    parallel_vector<int> sizes;  // максимальные элементы на каждом процессе, размер приоритетной очереди на каждом процессе, вектор для храненения приоритетной очереди
+    parallel_vector<int> sizes;  // максимальные элементы на каждом процессе, размер приоритетной очереди на каждом процессе, вектор для хранения приоритетной очереди
     int num_of_quantums_proc, quantum_size, num_of_elems_proc;  // число квантов на одном процессе, размер кванта, число элементов на одном процессе
     int global_index_l;  // смещение в pqueues от начала в глобальной памяти
     T default_value;
     MPI_Datatype pair_type;
 public:
     parallel_priority_queue(T _default_value, int _num_of_quantums_proc, int _quantum_size=DEFAULT_QUANTUM_SIZE);
+    parallel_priority_queue(int count, const int* blocklens, const MPI_Aint* indices, const MPI_Datatype* types,
+                            T _default_value, int _num_of_quantums_proc, int _quantum_size=DEFAULT_QUANTUM_SIZE);
     void insert(T elem);
     void insert(T elem, int from_worker_rank);
     void insert_local(T elem);
@@ -44,6 +46,7 @@ private:
     void remove_max_local();
     void heapify(int index);  // переупорядочивание элементов в приоритетной очереди на одном процессе
 };
+
 
 template<class T>
 parallel_priority_queue<T>::parallel_priority_queue(T _default_value, int _num_of_quantums_proc, int _quantum_size) {
@@ -77,6 +80,43 @@ parallel_priority_queue<T>::parallel_priority_queue(T _default_value, int _num_o
     };
     MPI_Datatype types[] = { MPI_INT, MPI_INT };
     pair_type = create_mpi_type<pair_reduce>(2, blocklens, indices, types);
+    MPI_Barrier(MPI_COMM_WORLD);
+}
+
+template<class T>
+parallel_priority_queue<T>::parallel_priority_queue(int count, const int* blocklens, const MPI_Aint* indices, const MPI_Datatype* types,
+    T _default_value, int _num_of_quantums_proc, int _quantum_size) {
+    worker_rank = memory_manager::get_MPI_rank()-1;
+    worker_size = memory_manager::get_MPI_size()-1;
+
+    num_of_quantums_proc = _num_of_quantums_proc;
+    quantum_size = _quantum_size;
+    default_value = _default_value;
+
+    num_of_elems_proc = num_of_quantums_proc*quantum_size;
+    global_index_l = worker_rank*(num_of_elems_proc);
+
+    maxes = parallel_vector<T>(count, blocklens, indices, types, worker_size, 1);
+    sizes = parallel_vector<int>(worker_size, 1);
+
+    pqueues = parallel_vector<T>(count, blocklens, indices, types, worker_size*num_of_elems_proc, quantum_size);
+
+
+    if (worker_rank >= 0) {
+        maxes.set_elem(worker_rank, default_value);
+        sizes.set_elem(worker_rank, 0);
+        for (int i = global_index_l; i < global_index_l + num_of_elems_proc; i++)
+            pqueues.set_elem(i, default_value);
+    }
+
+    int count2 = 2;
+    int blocklens2[] = {1, 1};
+    MPI_Aint indices2[] = {
+        (MPI_Aint)offsetof(pair_reduce, first),
+        (MPI_Aint)offsetof(pair_reduce, second)
+    };
+    MPI_Datatype types2[] = { MPI_INT, MPI_INT };
+    pair_type = create_mpi_type<pair_reduce>(count2, blocklens2, indices2, types2);
     MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -159,14 +199,14 @@ public:
 
 template<class T>
 T parallel_priority_queue<T>::get_max(int rank) {
-    auto reduction = [](T a, T b){return std::max(a, b);};
-    return parallel_reduce(worker_rank, worker_rank+1, maxes, default_value, 1, worker_size /*global_size*/, Func<T>(maxes), reduction, rank /*global_rank*/);
+    auto reduction = [](T a, T b){return (a < b)?b:a;};
+    return parallel_reduce(worker_rank, worker_rank+1, maxes, default_value, 1, worker_size /*global_size*/, Func<T>(maxes), reduction, maxes.get_MPI_datatype(), rank /*global_rank*/);
 }
 
 template<class T>
 T parallel_priority_queue<T>::get_max() {
-    auto reduction = [](T a, T b){return std::max(a, b);};
-    return parallel_reduce_all(worker_rank, worker_rank+1, maxes, default_value, 1, worker_size /*global_size*/, Func<T>(maxes), reduction);
+    auto reduction = [this](T a, T b){ return (a < b)?b:a;};
+    return parallel_reduce_all(worker_rank, worker_rank+1, maxes, default_value, 1, worker_size /*global_size*/, Func<T>(maxes), reduction, maxes.get_MPI_datatype());
 }
 
 // template<class T>
@@ -182,12 +222,25 @@ T parallel_priority_queue<T>::get_max() {
 // }
 
 template<class T>
+struct pair_reduce_template {
+    T first;
+    int second;
+
+    pair_reduce_template() {}
+    pair_reduce_template(const T& a, const int& b) {
+        first = a;
+        second = b;
+    }
+};
+
+template<class T>
 void parallel_priority_queue<T>::remove_max() {
-    auto reduction = [](pair_reduce a, pair_reduce b) { return (a.first >= b.first) ? a : b; };
-    pair_reduce size{-2, -2};
+    auto function = [this](int begin, int end, pair_reduce_template<T> identity) -> pair_reduce_template<T> { return { maxes.get_elem(begin), worker_rank }; };
+    auto reduction = [](pair_reduce_template<T> a, pair_reduce_template<T> b) { return (a.first < b.first) ? b : a; };
+    pair_reduce_template<T> maxx{default_value, -2};
     if (worker_rank >= 0)
-        size = parallel_reduce_all(worker_rank, worker_rank+1, maxes, pair_reduce(INT_MAX, INT_MAX), 1, worker_size, Func1<int, pair_reduce>(sizes), reduction, pair_type);
-    if (worker_rank == size.second) {
+        maxx = parallel_reduce_all(worker_rank, worker_rank+1, maxes, pair_reduce_template<T>(default_value, INT_MAX), 1, worker_size, function, reduction);
+    if (worker_rank == maxx.second) {
         remove_max_local();
     }
 }

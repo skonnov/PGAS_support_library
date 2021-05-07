@@ -42,13 +42,13 @@ T reduce_operation(T ans, const Reduction& reduction, int process_begin, int pro
             int sender = vtmprank[tmprank + n/(2*i)];
             if(tmprank + n/(2*i) >= t)
                 continue;
-            MPI_Recv(&tmp, 1, type, sender, REDUCE_TAG, MPI_COMM_WORLD, &status);
+            MPI_Recv(&tmp, sizeof(T), MPI_BYTE, sender, REDUCE_TAG, MPI_COMM_WORLD, &status);
             tmpans = reduction(tmpans, tmp);
         }
         else
         {
             int destination = vtmprank[tmprank - n/(2*i)];
-            MPI_Send(&tmpans, 1, type, destination, REDUCE_TAG, MPI_COMM_WORLD);
+            MPI_Send(&tmpans, sizeof(T), MPI_BYTE, destination, REDUCE_TAG, MPI_COMM_WORLD);
             break;
         }
     }
