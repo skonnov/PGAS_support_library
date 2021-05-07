@@ -101,6 +101,7 @@ parallel_priority_queue<T>::parallel_priority_queue(int count, const int* blockl
 
     pqueues = parallel_vector<T>(count, blocklens, indices, types, worker_size*num_of_elems_proc, quantum_size);
 
+
     if (worker_rank >= 0) {
         maxes.set_elem(worker_rank, default_value);
         sizes.set_elem(worker_rank, 0);
@@ -198,13 +199,13 @@ public:
 
 template<class T>
 T parallel_priority_queue<T>::get_max(int rank) {
-    auto reduction = [](T a, T b){return std::max(a, b);};
+    auto reduction = [](T a, T b){return (a < b)?b:a;};
     return parallel_reduce(worker_rank, worker_rank+1, maxes, default_value, 1, worker_size /*global_size*/, Func<T>(maxes), reduction, maxes.get_MPI_datatype(), rank /*global_rank*/);
 }
 
 template<class T>
 T parallel_priority_queue<T>::get_max() {
-    auto reduction = [](T a, T b){return std::max(a, b);};
+    auto reduction = [this](T a, T b){ return (a < b)?b:a;};
     return parallel_reduce_all(worker_rank, worker_rank+1, maxes, default_value, 1, worker_size /*global_size*/, Func<T>(maxes), reduction, maxes.get_MPI_datatype());
 }
 
@@ -221,11 +222,24 @@ T parallel_priority_queue<T>::get_max() {
 // }
 
 template<class T>
+struct pair_reduce_template {
+    T first;
+    int second;
+
+    pair_reduce_template() {}
+    pair_reduce_template(const T& a, const int& b) {
+        first = a;
+        second = b;
+    }
+};
+
+template<class T>
 void parallel_priority_queue<T>::remove_max() {
-    auto reduction = [](pair_reduce a, pair_reduce b) { return (a.first >= b.first) ? a : b; };
-    pair_reduce maxx{-2, -2};
+    auto function = [this](int begin, int end, pair_reduce_template<T> identity) -> pair_reduce_template<T> { return { maxes.get_elem(begin), worker_rank }; };
+    auto reduction = [](pair_reduce_template<T> a, pair_reduce_template<T> b) { return (a.first < b.first) ? b : a; };
+    pair_reduce_template<T> maxx{default_value, -2};
     if (worker_rank >= 0)
-        maxx = parallel_reduce_all(worker_rank, worker_rank+1, maxes, pair_reduce(INT_MAX, INT_MAX), 1, worker_size, Func1<int, pair_reduce>(sizes), reduction, pair_type);
+        maxx = parallel_reduce_all(worker_rank, worker_rank+1, maxes, pair_reduce_template<T>(default_value, INT_MAX), 1, worker_size, function, reduction);
     if (worker_rank == maxx.second) {
         remove_max_local();
     }
