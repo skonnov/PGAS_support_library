@@ -6,6 +6,7 @@
 #include <ctime>
 #include <algorithm>
 #include <random>
+#include <queue>
 
 struct pair
 {
@@ -52,7 +53,7 @@ int dijkstra(const std::vector<std::vector<std::pair<int, int>>>& v, parallel_ve
 
         if (curlen == INT_MIN)
             return -1;
-        pq.remove_max(); // unite this functions?
+        pq.remove_max(); // unite get and remove max functions?
         int cur_d = d.get_elem(cur);
         if (curlen > cur_d)
             continue;
@@ -82,6 +83,29 @@ int dijkstra(const std::vector<std::vector<std::pair<int, int>>>& v, parallel_ve
         return d.get_elem(end);
     else
         return 0;
+}
+
+int dijkstra_seq(const std::vector<std::vector<std::pair<int, int>>>& v, int begin, int end) {
+    std::vector<int> d(v.size(), INT_MAX);
+    d[begin] = 0;
+
+    std::priority_queue<std::pair<int, int>> q;
+    q.push({0, begin});
+    while (!q.empty()) {
+        int cur = q.top().second, cur_d = -q.top().first;
+        q.pop();
+        if (cur_d > d[cur])
+            continue;
+        for (auto x: v[cur]) {
+            int to = x.first;
+            int len = x.second;
+            if (d[cur] + len < d[to]) {
+                d[to] = d[cur] + len;
+                q.push({-d[to], to});
+            }
+        }
+    }
+    return d[end];
 }
 
 std::vector<std::vector<std::pair<int,int>>> generate_graph(int n, int m, int max_size, int seed) {
@@ -152,12 +176,16 @@ int main(int argc, char ** argv) {
 
     std::vector<std::vector<std::pair<int,int>>> v = generate_graph(n, m, max_size, seed);
 
-    // if(rank == 1) {
-    //     print_graph(v);
-    // }
+    double t1 = MPI_Wtime();
     int ans = dijkstra(v, d, n, 0, n-1, DEFAULT_QUANTUM_SIZE);
-    if (rank == 1)
-        std::cout<<ans<<std::endl;
+    double t2 = MPI_Wtime();
+    if (rank == 1) {
+        if (ans != dijkstra_seq(v, 0, n-1)) {
+            std::cout<<"ALYARMA!"<<std::endl;
+        }
+        std::cout<<t2-t1<<std::endl;
+
+    }
 
     memory_manager::finalize();
     return 0;
