@@ -108,7 +108,7 @@ int dijkstra_seq(const std::vector<std::vector<std::pair<int, int>>>& v, int beg
     return d[end];
 }
 
-std::vector<std::vector<std::pair<int,int>>> generate_graph(int n, int m, int max_size, int seed) {
+std::vector<std::vector<std::pair<int,int>>> generate_graph(int n, int m, int min_size, int max_size, int seed) {
     std::vector<std::pair<int, int>> all;
     std::vector<std::vector<std::pair<int, int>>> v(n);
 
@@ -145,25 +145,97 @@ void print_graph(const std::vector<std::vector<std::pair<int, int>>>& v) {
     }
 }
 
-int main(int argc, char ** argv) {
-    if (argc <= 2) {
-        std::cout<<"wrong count of args!"<<std::endl;
-        return 1;
+static void show_usage() {
+    if (memory_manager::get_MPI_rank() == 1)
+        std::cerr << "Usage: mpiexec <-n num_of_processes> dijkstra.exe <-v num_of_vertices> [-e num_of_edges] [-s seed] [-min min_edge_size] [-max max_edge_size]"<<std::endl;
+}
+
+int get_args(int argc, char** argv, int& n, int&m, int& seed, int& min_size, int& max_size) {
+    for (int i = 1; i < argc; i++) {
+        if (std::string(argv[i]) == "-v") {
+            if (i+1 < argc) {
+                n = atoi(argv[++i]);
+            } else {
+                return -1;
+            }
+        }
+        if (std::string(argv[i]) == "-e") {
+            if (i+1 < argc) {
+                m = atoi(argv[++i]);
+            } else {
+                return -1;
+            }
+        }
+
+        if (std::string(argv[i]) == "-s") {
+            if (i+1 < argc) {
+                seed = atoi(argv[++i]);
+            } else {
+                return -1;
+            }
+        }
+
+        if (std::string(argv[i]) == "-min") {
+            if (i+1 < argc) {
+                min_size = atoi(argv[++i]);
+            } else {
+                return -1;
+            }
+        }
+
+        if (std::string(argv[i]) == "-max") {
+            if (i+1 < argc) {
+                max_size = atoi(argv[++i]);
+            } else {
+                return -1;
+            }
+        }
     }
+
+    if (min_size > max_size) {
+        if (memory_manager::get_MPI_rank() == 1)
+            std::cerr<<"min size of edge must be less then max size!"<<std::endl;
+        return -1;
+    }
+
+    if (n == -1) {
+        if (memory_manager::get_MPI_rank() == 1)
+            std::cerr<<"You need to define num of vertices!"<<std::endl;
+        return -1;
+    }
+
+    if (m == -1) {
+        m = n * (n-1) / 2;
+    }
+
+    if (n < 0 || m < 0) {
+        if (memory_manager::get_MPI_rank() == 1)
+            std::cerr<<"vertices and edges must be positive!"<<std::endl;
+        return -1;
+    }
+
+    if (n * (n-1) / 2 < m) {
+        if (memory_manager::get_MPI_rank() == 1)
+            std::cerr<<"num of edges must be equal or less then vertices * (vertices - 1) / 2!"<<std::endl;
+        return -1;
+    }
+
+    return 0;
+}
+
+int main(int argc, char** argv) {
     memory_manager::memory_manager_init(argc, argv);
-
-    int n, m;  // n - число вершин, m - число рёбер
-    n = atoi(argv[1]);
-    m = atoi(argv[2]);
-
-    int max_size = INT_MAX;
-    if (argc >= 4) {
-        max_size = atoi(argv[3]);
-    }
-
+    int n = -1, m = -1;  // n - число вершин, m - число рёбер
     int seed = 0;
-    if (argc == 5)
-        seed = atoi(argv[4]);
+    int min_size = 1;
+    int max_size = 50000;
+
+    int res = get_args(argc, argv, n, m, seed, min_size, max_size);
+    if (res == -1) {
+        show_usage();
+        memory_manager::finalize();
+        return 0;
+    }
 
     parallel_vector<int> d(n);
 
@@ -174,8 +246,7 @@ int main(int argc, char ** argv) {
         }
     MPI_Barrier(MPI_COMM_WORLD);
 
-    std::vector<std::vector<std::pair<int,int>>> v = generate_graph(n, m, max_size, seed);
-
+    std::vector<std::vector<std::pair<int,int>>> v = generate_graph(n, m, min_size, max_size, seed);
     double t1 = MPI_Wtime();
     int ans = dijkstra(v, d, n, 0, n-1, DEFAULT_QUANTUM_SIZE);
     double t2 = MPI_Wtime();
