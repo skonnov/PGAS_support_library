@@ -7,10 +7,6 @@
 #include "common.h"
 #include "parallel_vector.h"
 
-bool hi() {
-    return true;
-}
-
 // функция объединения данных и рассылки по всем процессам
 // аргументы: data - значение, полученное после выполнения функции parallel_reduce_all;
 // reduction – функция объединения данных с двух процессов;
@@ -39,13 +35,13 @@ T reduce_all_operation(T data, const Reduction& reduction, int process_begin, in
             MPI_Status status;
             T tmp;
             int sender = vtmprank[tmprank + n/(2*i)];
-            MPI_Recv(&tmp, 1, type, sender, REDUCE_ALL_TAG1, MPI_COMM_WORLD, &status);
+            MPI_Recv(&tmp, sizeof(T), MPI_BYTE, sender, REDUCE_ALL_TAG1, MPI_COMM_WORLD, &status);
             tmpans = reduction(tmp, tmpans);
         }
         else
         {
             int destination = vtmprank[tmprank - n/(2*i)];
-            MPI_Send(&tmpans, 1, type, destination, REDUCE_ALL_TAG1, MPI_COMM_WORLD);
+            MPI_Send(&tmpans, sizeof(T), MPI_BYTE, destination, REDUCE_ALL_TAG1, MPI_COMM_WORLD);
             break;
         }
     }
@@ -55,13 +51,13 @@ T reduce_all_operation(T data, const Reduction& reduction, int process_begin, in
             if (tmprank + i >= t)
                 break;
             int destination = vtmprank[tmprank+i];
-            MPI_Send(&ans, 1, type, destination, REDUCE_ALL_TAG2, MPI_COMM_WORLD);
+            MPI_Send(&ans, sizeof(T), MPI_BYTE, destination, REDUCE_ALL_TAG2, MPI_COMM_WORLD);
         }
         else if (tmprank < 2 * i)
         {
             int sender = vtmprank[tmprank - i];
             MPI_Status status;
-            MPI_Recv(&ans, 1, type, sender, REDUCE_ALL_TAG2, MPI_COMM_WORLD, &status);
+            MPI_Recv(&ans, sizeof(T), MPI_BYTE, sender, REDUCE_ALL_TAG2, MPI_COMM_WORLD, &status);
         }
     }
     return ans;
