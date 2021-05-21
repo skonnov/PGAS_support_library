@@ -27,7 +27,6 @@ std::ostream &operator<<(std::ostream &out, pair const &m) {
 int dijkstra(const std::vector<std::vector<std::pair<int, int>>>& v, parallel_vector<int>& d, int n, int begin, int end, int quantum_size = DEFAULT_QUANTUM_SIZE, int to_worker_rank = 0) {
     int worker_rank = memory_manager::get_MPI_rank() - 1;
     int worker_size = memory_manager::get_MPI_size() - 1;
-
     int count = 2;
     int blocklens[] = {1, 1};
     MPI_Aint indices[] = {
@@ -46,14 +45,13 @@ int dijkstra(const std::vector<std::vector<std::pair<int, int>>>& v, parallel_ve
     pq.insert({0, begin});
     d.set_elem(begin, 0);
     while (k < n) {
-        pair cur_pair = pq.get_max();
-
+        pair cur_pair = pq.get_and_remove_max();
         int cur = cur_pair.second;
         int curlen = -cur_pair.first;
 
         if (curlen == INT_MIN)
             return -1;
-        pq.remove_max(); // unite get and remove max functions?
+
         int cur_d = d.get_elem(cur);
         if (curlen > cur_d)
             continue;
