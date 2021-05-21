@@ -105,8 +105,6 @@ parallel_priority_queue<T>::parallel_priority_queue(int count, const int* blockl
     if (worker_rank >= 0) {
         maxes.set_elem(worker_rank, default_value);
         sizes.set_elem(worker_rank, 0);
-        for (int i = global_index_l; i < global_index_l + num_of_elems_proc; i++)
-            pqueues.set_elem(i, default_value);
     }
 
     int count2 = 2;
