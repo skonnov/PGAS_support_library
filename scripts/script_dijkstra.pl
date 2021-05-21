@@ -1,8 +1,8 @@
 use List::Util qw[min max];
 use POSIX;
 
-$it_min = 500;
-$it_max = 5001;
+$it_min = 2500;
+$it_max = 10001;
 $it_step = 500;
 
 $min_proc = 2, $max_proc = 32;
@@ -17,7 +17,7 @@ for ($i = $it_min; $i < $it_max; $i += $it_step) {
     for ($j = $min_proc; $j <= $max_proc; $j = $j*2) {
         $result = 250000.0;
         for ($k = 0; $k < 3; $k++) {
-            $tmp = `mpiexec -n $j ../build/Debug/dijkstra -v $v -max 150`;
+            $tmp = `mpiexec -n $j ../build/Release/dijkstra -v $v -max 150`;
             $result = min($result + 0.0, $tmp+0.0);
         }
         print "dijkstra algorithm for v = $v, $j procs is done\n";
