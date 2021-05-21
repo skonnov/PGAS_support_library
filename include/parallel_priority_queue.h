@@ -40,7 +40,7 @@ public:
     int get_size();
     T get_max();
     T get_max(int rank);
-    // T get_and_remove_max();
+    T get_and_remove_max();
     void remove_max();
 private:
     void remove_max_local();
@@ -209,17 +209,6 @@ T parallel_priority_queue<T>::get_max() {
     return parallel_reduce_all(worker_rank, worker_rank+1, maxes, default_value, 1, worker_size /*global_size*/, Func<T>(maxes), reduction, maxes.get_MPI_datatype());
 }
 
-// template<class T>
-// T parallel_priority_queue<T>::get_and_remove_max() {
-//     auto reduction = [](pair_reduce a, pair_reduce b) { return (a.first >= b.first) ? a : b; };
-//     pair_reduce size{-2, -2};
-//     if (worker_rank >= 0)
-//         size = parallel_reduce_all(worker_rank, worker_rank+1, maxes, pair_reduce(default_value, 0), 1, worker_size, Func1<int, pair_reduce(sizes), reduction, pair_type, rank);
-//     if(worker_rank == size.second) {
-//         remove_max_local();
-//     }
-//     return size.first;
-// }
 
 template<class T>
 struct pair_reduce_template {
@@ -232,6 +221,19 @@ struct pair_reduce_template {
         second = b;
     }
 };
+
+template<class T>
+T parallel_priority_queue<T>::get_and_remove_max() {
+    auto function = [this](int begin, int end, pair_reduce_template<T> identity) -> pair_reduce_template<T> { return { maxes.get_elem(begin), worker_rank }; };
+    auto reduction = [](pair_reduce_template<T> a, pair_reduce_template<T> b) { return (a.first < b.first) ? b : a; };
+    pair_reduce_template<T> maxx{default_value, -2};
+    if (worker_rank >= 0)
+        maxx = parallel_reduce_all(worker_rank, worker_rank+1, maxes, pair_reduce_template<T>(default_value, INT_MAX), 1, worker_size, function, reduction);
+    if (worker_rank == maxx.second) {
+        remove_max_local();
+    }
+    return maxx.first;
+}
 
 template<class T>
 void parallel_priority_queue<T>::remove_max() {
