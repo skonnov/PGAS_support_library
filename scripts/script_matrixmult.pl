@@ -1,10 +1,10 @@
 use List::Util qw[min max];
 use POSIX;
-@procs = (2, 5, 10);
+@procs = (2, 5, 10, 17, 37);
 
-$it_min = 100;
-$it_max = 1500;
-$it_step = 100;
+$it_min = 300;
+$it_max = 1800;
+$it_step = 300;
 
 $datetime = strftime "%Y-%m-%d-%H-%M-%S", localtime time;
 $path_matrixmult = ">> ./output_matrixmult_".$datetime.".txt";

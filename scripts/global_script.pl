@@ -23,9 +23,9 @@ chdir('../scripts') or die "$!";
 print "Library has been built successfully!\n";
 print "Run samples...\n";
 
-$it_sov = 1000000;
-$it_mv = 1000;
-$it_mm = 100;
+$it_sov = 5000000;
+$it_mv = 1500;
+$it_mm = 300;
 $it_d = 500;
 $it_sov_step = 1000000, $it_mv_step = 1000, $it_mm_step = 100, $it_d_step = 500;
 $it_sov_max = 150000000, $it_mv_max = 20000, $it_mm_max = 1800, $it_d_max = 5001;
