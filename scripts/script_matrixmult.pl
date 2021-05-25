@@ -4,7 +4,7 @@ use POSIX;
 
 $it_min = 300;
 $it_max = 1800;
-$it_step = 300;
+$it_step = 100;
 
 $datetime = strftime "%Y-%m-%d-%H-%M-%S", localtime time;
 $path_matrixmult = ">> ./output_matrixmult_".$datetime.".txt";
