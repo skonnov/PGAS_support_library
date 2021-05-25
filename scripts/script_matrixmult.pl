@@ -11,7 +11,7 @@ $path_matrixmult = ">> ./output_matrixmult_".$datetime.".txt";
 open(WF, $path_matrixmult) or die;
 
 for ($elems = $it_min; $elems <= $it_max; $elems += $it_step) {
-    for ($proc = 0; $proc < 3; $proc++) {
+    for ($proc = 0; $proc < @procs; $proc++) {
         $result = 250000.0;
         if ($elems % int(sqrt(@procs[$proc]-1)) == 0) {
             for ($k = 0; $k < 3; $k++) {
