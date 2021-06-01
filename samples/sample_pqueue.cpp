@@ -28,9 +28,9 @@ int main(int argc, char** argv) {
             ppq.remove_max();
         }
         // MPI_Barrier(MPI_COMM_WORLD);
-        if(rank != 0) {
+        if (rank != 0) {
             int maxx = ppq.get_max(1);
-            if(rank == 1 && i%10 == 0 && maxx%10 != 0) {
+            if (rank == 1 && i%10 == 0 && maxx%10 != 0) {
                 std::cout<<"ALYARMA!!!"<<std::endl;
                 CHECK(0, -5);
             }
@@ -46,12 +46,13 @@ int main(int argc, char** argv) {
         std::cout<<rank<<" "<<ppq.get_size()<<std::endl;
     }
 
+    if (size >= 4) {
 
-    if(rank == 3)
-        ppq.insert(5, 2);
-    else
-        ppq.insert(0, 2);
-
+        if(rank == 3)
+            ppq.insert(5, 2);
+        else
+            ppq.insert(0, 2);
+    }
     memory_manager::finalize();
     return 0;
 }

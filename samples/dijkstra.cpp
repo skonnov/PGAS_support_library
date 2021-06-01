@@ -145,7 +145,7 @@ void print_graph(const std::vector<std::vector<std::pair<int, int>>>& v) {
 
 static void show_usage() {
     if (memory_manager::get_MPI_rank() == 1)
-        std::cerr << "Usage: mpiexec <-n num_of_processes> dijkstra.exe <-v num_of_vertices> [-e num_of_edges] [-s seed] [-min min_edge_size] [-max max_edge_size]"<<std::endl;
+        std::cerr << "Usage: mpiexec <-n num_of_processes> dijkstra <-v num_of_vertices> [-e num_of_edges] [-s seed] [-min min_edge_size] [-max max_edge_size]"<<std::endl;
 }
 
 int get_args(int argc, char** argv, int& n, int&m, int& seed, int& min_size, int& max_size) {
