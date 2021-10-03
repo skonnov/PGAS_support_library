@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
         std::cout<<"wrong count of args!"<<std::endl;
         return 1;
     }
-    memory_manager::memory_manager_init(argc, argv);
+    memory_manager::init(argc, argv);
     int rank = memory_manager::get_MPI_rank();
     int size_workers = memory_manager::get_MPI_size()-1;
     int q = static_cast<int>(sqrt(static_cast<double>(size_workers)));

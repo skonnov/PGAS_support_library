@@ -222,7 +222,7 @@ int get_args(int argc, char** argv, int& n, int&m, int& seed, int& min_size, int
 }
 
 int main(int argc, char** argv) {
-    memory_manager::memory_manager_init(argc, argv);
+    memory_manager::init(argc, argv);
     int n = -1, m = -1;  // n - число вершин, m - число рёбер
     int seed = 0;
     int min_size = 1;

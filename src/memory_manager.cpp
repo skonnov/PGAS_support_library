@@ -16,7 +16,7 @@ int memory_manager::proc_count_ready = 0;
 MPI_File memory_manager::fh;
 MPI_Comm memory_manager::workers_comm;
 
-void memory_manager::memory_manager_init(int argc, char**argv, std::string error_helper_str) {
+void memory_manager::init(int argc, char**argv, std::string error_helper_str) {
     int provided = 0;
     MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
     if(provided != MPI_THREAD_MULTIPLE) {

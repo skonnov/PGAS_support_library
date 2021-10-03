@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
         std::cout << "Usage:\n" << error_helper_string << std::endl;
         return 1;
     }
-    memory_manager::memory_manager_init(argc, argv, error_helper_string);
+    memory_manager::init(argc, argv, error_helper_string);
 
     int count = 3;
     int blocklens[] = {1, 1, 1};

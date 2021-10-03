@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
         std::cout << "Usage:\n" << error_helper_string << std::endl;
         return 1;
     }
-    memory_manager::memory_manager_init(argc, argv, error_helper_string);
+    memory_manager::init(argc, argv, error_helper_string);
     int n = atoi(argv[1]);
     parallel_vector<int> pv(n, 1), pv2(n);
     int rank, size;
