@@ -149,6 +149,7 @@ static void show_usage() {
 }
 
 int get_args(int argc, char** argv, int& n, int&m, int& seed, int& min_size, int& max_size) {
+    n = -1, m = -1, seed = 0, min_size = 1, max_size = 50000;
     for (int i = 1; i < argc; i++) {
         if (std::string(argv[i]) == "-v") {
             if (i+1 < argc) {
@@ -223,10 +224,8 @@ int get_args(int argc, char** argv, int& n, int&m, int& seed, int& min_size, int
 
 int main(int argc, char** argv) {
     memory_manager::init(argc, argv);
-    int n = -1, m = -1;  // n - число вершин, m - число рёбер
-    int seed = 0;
-    int min_size = 1;
-    int max_size = 50000;
+    int n, m;  // n - число вершин, m - число рёбер
+    int seed, min_size, max_size;
 
     int res = get_args(argc, argv, n, m, seed, min_size, max_size);
     if (res == -1) {
