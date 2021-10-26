@@ -3,7 +3,7 @@
 #include "parallel_vector.h"
 
 
-// #define MAX_PROC_TASK 5
+// #define MAX_TASK 5
 
 int get_args(int argc, char** argv, int& n, int& div_num, int& seed) {
     n = -1, div_num = -1, seed = 0;
@@ -56,6 +56,7 @@ int get_args(int argc, char** argv, int& n, int& div_num, int& seed) {
             std::cerr<<"matrices size must be divided by the number divisions!"<<std::endl;
         return -1;
     }
+    return 0;
 }
 
 static void show_usage() {
@@ -89,10 +90,11 @@ int main(int argc, char** argv) {
     }
     parallel_vector<int> pva(n * n), pvb(n * n), pvc (n * n);
     // read pva, pvb, pvc
-    pva.change_mode(READ_ONLY);
-    pvb.change_mode(READ_ONLY);
+    pva.change_mode(0, pva.get_num_quantums(), READ_ONLY);
+    pvb.change_mode(0, pvb.get_num_quantums(), READ_ONLY);
     int part_size = n / div_num;
     std::queue<std::pair<int, int>> qu;
+    int rank = memory_manager::get_MPI_rank();
     if (rank != 0) {
         if (rank == 1) {
             for (int i = 0; i < div_num; ++i) {
@@ -100,23 +102,24 @@ int main(int argc, char** argv) {
                     qu.push({i, j});
                 }
             }
+        }
     }
     MPI_Barrier(MPI_COMM_WORLD);
 
     if (rank != 0) {
         if (rank == 1) {
             while (!qu.empty()) {
-                for (int i = 0; i < MAX_TASK && !qu.empty(); ++i) {
-                    std::pair<int, int> p = qu.front();
+                // for (int i = 0; i < MAX_TASK && !qu.empty(); ++i) {
+                    // std::pair<int, int> p = qu.front();
                     // send to other procs
                     qu.pop();
-                }
+                // }
             }
         } else {
             int end_flag = 0;
-            while(!end_flag) {
+            // while(!end_flag) {
 
-            }
+            // }
         }
     }
 
