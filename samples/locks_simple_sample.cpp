@@ -24,9 +24,9 @@ int main(int argc, char** argv) {
         for (int i = 0; i < n; i++) {
             pv.set_elem(i, 0);
         }
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (rank != 0) {
+
+        memory_manager::wait_all_workers();
+
         for(int i = 0; i < n; i++)
         {
             pv.set_lock(pv.get_quantum(i));
@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
             pv.unset_lock(pv.get_quantum(i));
         }
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+    memory_manager::wait_all();
     if(rank == 1) {
         for(int i = 0; i < n; i++)
             std::cout<<pv.get_elem(i)<<" ";

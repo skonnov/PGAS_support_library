@@ -74,6 +74,8 @@ public:
     static void print(int key, const std::string& path);
     static MPI_Datatype get_MPI_datatype(int key);
     static void finalize();  // функция, завершающая выполнение программы, останавливает вспомогательные потоки
+    static void wait_all();
+    static void wait_all_workers();
 private:
     static void print_quantum(int key, int quantum_index);
     static int get_owner(int key, int quantum_index, int requesting_process);  // получить номер кванта, хранящего квант в текущий момент времени

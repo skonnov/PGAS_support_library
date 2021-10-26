@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
                 std::cout<<"!";
             ppq.remove_max();
         }
-        // MPI_Barrier(MPI_COMM_WORLD);
+        // memory_manager::wait_all();
         if (rank != 0) {
             int maxx = ppq.get_max(1);
             if (rank == 1 && i%10 == 0 && maxx%10 != 0) {

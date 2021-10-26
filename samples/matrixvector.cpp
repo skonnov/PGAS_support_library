@@ -52,7 +52,7 @@ int main(int argc, char** argv) { // b*a
             ans.set_elem(i, tmp_ans[i-index/m]);
         }
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+    memory_manager::wait_all();
     double t3 = MPI_Wtime();
     if (rank == 1) {
         std::cout<<t3-t1<<"\n";

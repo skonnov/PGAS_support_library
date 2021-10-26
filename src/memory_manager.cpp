@@ -47,7 +47,7 @@ void memory_manager::init(int argc, char**argv, std::string error_helper_str) {
     MPI_Comm_group(MPI_COMM_WORLD, &group_world);
     MPI_Group_incl(group_world, worker_size, procs.data(), &group_workers);
     MPI_Comm_create(MPI_COMM_WORLD, group_workers, &workers_comm);
-    // создание своего типа для пересылки посылок ???
+    // TODO: создание своего типа для пересылки посылок ???
 }
 
 int memory_manager::get_MPI_rank() {
@@ -377,9 +377,18 @@ void memory_manager::print_quantum(int key, int quantum_index) {
     std::cout<<std::flush;
 }
 
- MPI_Datatype memory_manager::get_MPI_datatype(int key) {
-     return dynamic_cast<memory_line_worker*>(memory_manager::memory[key])->type;
- }
+MPI_Datatype memory_manager::get_MPI_datatype(int key) {
+    return dynamic_cast<memory_line_worker*>(memory_manager::memory[key])->type;
+}
+
+void memory_manager::wait_all() {
+    MPI_Barrier(MPI_COMM_WORLD);
+}
+
+void memory_manager::wait_all_workers() {
+    if (rank != 0)
+        MPI_Barrier(workers_comm);
+}
 
 void memory_manager::finalize() {
     if(rank != 0) {
