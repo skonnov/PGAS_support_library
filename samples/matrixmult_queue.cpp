@@ -1,4 +1,5 @@
 #include <iostream>
+#include <random>
 #include "memory_manager.h"
 #include "parallel_vector.h"
 
@@ -7,7 +8,7 @@
 
 int get_args(int argc, char** argv, int& n, int& div_num, int& seed) {
     n = -1, div_num = -1, seed = 0;
-    for (int i = 1; i < argc; i++) {
+    for (int i = 1; i < argc; ++i) {
         if (std::string(argv[i]) == "-n") {
             if (i+1 < argc) {
                 n = atoi(argv[++i]);
@@ -64,14 +65,38 @@ static void show_usage() {
         std::cerr << "Usage: mpiexec <-n matrices size> matrixmult_queue <-d num_of_divisions> [-s seed]"<<std::endl;
 }
 
+void generate_matrices(parallel_vector<int>& pva, parallel_vector<int>& pvb, parallel_vector<int>& pvc, int n, int seed, int minn = 0, int maxx = 1000) {
+    int rank = memory_manager::get_MPI_rank();
+    int size = memory_manager::get_MPI_size();
+    if (rank != 0) {
+        int worker_rank = rank - 1;
+        int worker_size = size - 1;
+        int portion = (n * n)/worker_size + (worker_rank < (n * n) % worker_size?1:0);  // количество элементов на отдельном процессе
+        int index = 0;
+        if (worker_rank < (n * n) % worker_size) {
+            index = portion * worker_rank;
+        } else {
+            index = (portion + 1) * ((n * n) % worker_size) + portion * (worker_rank - (n * n) % worker_size);
+        }
+        std::mt19937 mt(seed);
+        std::uniform_int_distribution<int> rand(1, maxx);
+        // инициализация
+        for (int i = index; i < index + portion; i++) {
+            pva.set_elem(i, rand(mt));
+            pvb.set_elem(i, rand(mt));
+            pvc.set_elem(i, 0);
+          }
+    }
+}
+
 template<class T>
 void matrix_mult(parallel_vector<T>& pv1, parallel_vector<T>& pv2, parallel_vector<T>& pv3, int i1, int j1, int i2, int j2, int i3, int j3, int n, int num_in_block) {
-    for (int i = 0; i < num_in_block; i++) {
-        for (int j = 0; j < num_in_block; j++) {
+    for (int i = 0; i < num_in_block; ++i) {
+        for (int j = 0; j < num_in_block; ++j) {
             int i3_teq = i3 + i;
             int j3_teq = j3 + j;
             int temp = 0;
-            for (int k = 0; k < num_in_block; k++) {
+            for (int k = 0; k < num_in_block; ++k) {
                 temp += pv1.get_elem((i1 + i) * n + j1 + k) * pv2.get_elem((i2 + j) * n + j2 + k);
             }
             pv3.set_lock(i3_teq * n + j3_teq);
@@ -85,7 +110,7 @@ struct task {
     int a_first, a_second, b_first, b_second;
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) { // матрица b транспонирована
     memory_manager::init(argc, argv);
     int n, div_num, seed;
     int res = get_args(argc, argv, n, div_num, seed);
@@ -106,11 +131,12 @@ int main(int argc, char** argv) {
         for (int i = 0; i < div_num; ++i) {
             for (int j = 0; j < div_num; ++j) {
                 for (int k = 0; k < div_num; ++k) {
-                    qu.push({i, j, j, k});
+                    qu.push({i, j, k, j});
                 }
             }
         }
     }
+    generate_matrices(pva, pvb, pvc, n, seed);
     memory_manager::wait_all();
 
     int count = 4;
@@ -144,13 +170,13 @@ int main(int argc, char** argv) {
             }
         } else {
             while (true) {
-                memory_manager::wait_for(1);
+                memory_manager::wait(1);
                 task t = tasks.get_elem(rank-2);
                 if (t.a_first == -1) {
                     break;
                 }
                 else {
-                    matrix_mult(&pva, &pvb, &pvc, t.a_first, t.a_second, t.b_first, t.b_second, t.a_first, t.b_second, n, part_size);
+                    matrix_mult(pva, pvb, pvc, t.a_first, t.a_second, t.b_first, t.b_second, t.a_first, t.b_first, n, part_size);
                 }
                 qu.pop();
             }
