@@ -76,6 +76,8 @@ public:
     static void finalize();  // функция, завершающая выполнение программы, останавливает вспомогательные потоки
     static void wait_all();
     static void wait_all_workers();
+    static int wait();  // перевести процесс в состояние ожидания до тех пор, пока для него не будет вызвана функция notify. Возвращает номер процесса, вызвавшего notify
+    static void notify(int to_rank);  // возобновить работу процесса rank
 private:
     static void print_quantum(int key, int quantum_index);
     static int get_owner(int key, int quantum_index, int requesting_process);  // получить номер кванта, хранящего квант в текущий момент времени

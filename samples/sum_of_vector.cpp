@@ -89,6 +89,13 @@ int main(int argc, char** argv) {
         t2 = MPI_Wtime();
         cout<<t2-t1<<" "<<sum<<" "<<rank<<"\n";
     }
+    if (rank == 1) {
+        memory_manager::wait();
+        std::cout << "AFTER WAIT!" << std::endl;
+    } else if (rank == 2) {
+        std::cout << "NOTIFY!" << std::endl;
+        memory_manager::notify(1);
+    }
     memory_manager::finalize();
     return 0;
 }
