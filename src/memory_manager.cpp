@@ -397,6 +397,12 @@ int memory_manager::wait() {
     return status.MPI_SOURCE;
 }
 
+void memory_manager::wait(int from_rank) {
+    char x;
+    MPI_Status status;
+    MPI_Recv(&x, 1, MPI_CHAR, from_rank, NOTIFY, MPI_COMM_WORLD, &status);
+}
+
 void memory_manager::notify(int to_rank) {
     char x = 42;
     MPI_Send(&x, 1, MPI_CHAR, to_rank, NOTIFY, MPI_COMM_WORLD);
