@@ -65,19 +65,25 @@ static void show_usage() {
 }
 
 template<class T>
-void matrix_mult(parallel_vector<T>* pv1, parallel_vector<T>* pv2, parallel_vector<T> * pv3, int i1, int j1, int i2, int j2, int i3, int j3, int n, int num_in_block) {
+void matrix_mult(parallel_vector<T>& pv1, parallel_vector<T>& pv2, parallel_vector<T>& pv3, int i1, int j1, int i2, int j2, int i3, int j3, int n, int num_in_block) {
     for (int i = 0; i < num_in_block; i++) {
         for (int j = 0; j < num_in_block; j++) {
             int i3_teq = i3 + i;
             int j3_teq = j3 + j;
-            int temp = pv3->get_elem(i3_teq*n+j3_teq);
+            int temp = 0;
             for (int k = 0; k < num_in_block; k++) {
-                temp += pv1->get_elem((i1+i)*n+j1+k)*pv2->get_elem((i2+j)*n+j2+k);
+                temp += pv1.get_elem((i1 + i) * n + j1 + k) * pv2.get_elem((i2 + j) * n + j2 + k);
             }
-            pv3->set_elem(i3_teq*n+j3_teq, temp);
+            pv3.set_lock(i3_teq * n + j3_teq);
+            pv3.set_elem(i3_teq * n + j3_teq, pv3.get_elem(i3_teq * n + j3_teq) + temp);
+            pv3.unset_lock(i3_teq * n + j3_teq);
         }
     }
 }
+
+struct task {
+    int a_first, a_second, b_first, b_second;
+};
 
 int main(int argc, char** argv) {
     memory_manager::init(argc, argv);
@@ -93,36 +99,69 @@ int main(int argc, char** argv) {
     pva.change_mode(0, pva.get_num_quantums(), READ_ONLY);
     pvb.change_mode(0, pvb.get_num_quantums(), READ_ONLY);
     int part_size = n / div_num;
-    std::queue<std::pair<int, int>> qu;
+    std::queue<task> qu;
     int rank = memory_manager::get_MPI_rank();
-    if (rank != 0) {
-        if (rank == 1) {
-            for (int i = 0; i < div_num; ++i) {
-                for (int j = 0; j < div_num; ++j) {
-                    qu.push({i, j});
+    int size = memory_manager::get_MPI_size();
+    if (rank == 1) {
+        for (int i = 0; i < div_num; ++i) {
+            for (int j = 0; j < div_num; ++j) {
+                for (int k = 0; k < div_num; ++k) {
+                    qu.push({i, j, j, k});
                 }
             }
         }
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+    memory_manager::wait_all();
 
+    int count = 4;
+    int blocklens[] = {1, 1, 1, 1};
+    MPI_Aint indices[] = {
+        (MPI_Aint)offsetof(task, a_first),
+        (MPI_Aint)offsetof(task, a_second),
+        (MPI_Aint)offsetof(task, b_first),
+        (MPI_Aint)offsetof(task, b_second)
+    };
+    MPI_Datatype types[] = { MPI_INT, MPI_INT, MPI_INT, MPI_INT };
+
+    parallel_vector<task> tasks(count, blocklens, indices, types, size, 1);
+    double t1 = MPI_Wtime();
     if (rank != 0) {
-        if (rank == 1) {
+        if (rank = 1) {
+            for (int i = 0; i < size - 2 && !qu.empty(); ++i) {
+                tasks.set_elem(i, qu.front());
+                qu.pop();
+                memory_manager::notify(i+2);
+            }
             while (!qu.empty()) {
-                // for (int i = 0; i < MAX_TASK && !qu.empty(); ++i) {
-                    // std::pair<int, int> p = qu.front();
-                    // send to other procs
-                    qu.pop();
-                // }
+                int to_rank = memory_manager::wait();
+                tasks.set_elem(to_rank, qu.front());
+                qu.pop();
+                memory_manager::notify(to_rank);
+            }
+            for (int i = 0; i < size - 2; ++i) {
+                tasks.set_elem(i, {-1, -1, -1, -1});
+                memory_manager::notify(i+2);
             }
         } else {
+            while (true) {
+                memory_manager::wait_for(1);
+                task t = tasks.get_elem(rank-2);
+                if (t.a_first == -1) {
+                    break;
+                }
+                else {
+                    matrix_mult(&pva, &pvb, &pvc, t.a_first, t.a_second, t.b_first, t.b_second, t.a_first, t.b_second, n, part_size);
+                }
+                qu.pop();
+            }
             int end_flag = 0;
-            // while(!end_flag) {
-
-            // }
         }
     }
-
+    memory_manager::wait_all();
+    double t2 = MPI_Wtime();
+    if (rank == 1) {
+        std::cout << t2 - t1 << std::endl;
+    }
     memory_manager::finalize();
     return 0;
 }
