@@ -81,11 +81,33 @@ void generate_matrices(parallel_vector<int>& pva, parallel_vector<int>& pvb, par
         std::mt19937 mt(seed);
         std::uniform_int_distribution<int> rand(1, maxx);
         // инициализация
-        for (int i = index; i < index + portion; i++) {
+        for (int i = index; i < index + portion; ++i) {
             pva.set_elem(i, rand(mt));
             pvb.set_elem(i, rand(mt));
             pvc.set_elem(i, 0);
-          }
+        }
+    }
+}
+
+void print_matrices(parallel_vector<int>& pva, parallel_vector<int>& pvb, parallel_vector<int>& pvc, int n) {
+    int rank = memory_manager::get_MPI_rank();
+    if (rank != 0) {
+        for (int i = 0; i < n; ++i) {
+            for (int j = 0; j < n; ++j) {
+                std::cout << pva.get_elem(n * i + j) << " ";
+            }
+            std::cout<< " | ";
+
+            for (int j = 0; j < n; ++j) {
+                std::cout << pvb.get_elem(n * i + j) << " ";
+            }
+            std::cout<< " | ";
+
+            for (int j = 0; j < n; ++j) {
+                std::cout << pvc.get_elem(n * i + j) << " ";
+            }
+            std::cout << "\n";
+        }
     }
 }
 
@@ -120,7 +142,7 @@ int main(int argc, char** argv) { // матрица b транспонирова
         return 0;
     }
     parallel_vector<int> pva(n * n), pvb(n * n), pvc (n * n);
-    // read pva, pvb, pvc
+    generate_matrices(pva, pvb, pvc, n, seed);
     pva.change_mode(0, pva.get_num_quantums(), READ_ONLY);
     pvb.change_mode(0, pvb.get_num_quantums(), READ_ONLY);
     int part_size = n / div_num;
@@ -136,9 +158,9 @@ int main(int argc, char** argv) { // матрица b транспонирова
             }
         }
     }
-    generate_matrices(pva, pvb, pvc, n, seed);
     memory_manager::wait_all();
-
+    // if (rank == 1)
+    //     print_matrices(pva, pvb, pvc, n);
     int count = 4;
     int blocklens[] = {1, 1, 1, 1};
     MPI_Aint indices[] = {
