@@ -9,8 +9,8 @@ int main(int argc, char** argv) {
     num_of_quantums_proc = atoi(argv[1]);
     quantum_size = atoi(argv[2]);
 
-    if(argc < 3) {
-        std::cout<<"need args!"<<std::endl;
+    if (argc < 3) {
+        std::cout << "need args!" << std::endl;
         return 1;
     }
 
@@ -19,19 +19,19 @@ int main(int argc, char** argv) {
     int rank = memory_manager::get_MPI_rank();
     int size = memory_manager::get_MPI_size();
 
-    int n = num_of_quantums_proc*quantum_size*(size-1);
-    for (int i = 0; i < n; i++) {
-        ppq.insert(i+1);
-        if(i%10 == 0) {
+    int n = num_of_quantums_proc * quantum_size * (size - 1);
+    for (int i = 0; i < n; ++i) {
+        ppq.insert(i + 1);
+        if (i % 10 == 0) {
             if (rank == 1)
-                std::cout<<"!";
+                std::cout << "!";
             ppq.remove_max();
         }
         // memory_manager::wait_all();
         if (rank != 0) {
             int maxx = ppq.get_max(1);
-            if (rank == 1 && i%10 == 0 && maxx%10 != 0) {
-                std::cout<<"ALYARMA!!!"<<std::endl;
+            if (rank == 1 && i % 10 == 0 && maxx % 10 != 0) {
+                std::cout << "ALYARMA!!!" << std::endl;
                 CHECK(0, -5);
             }
             if (rank == 1)
@@ -39,16 +39,15 @@ int main(int argc, char** argv) {
         }
     }
 
-    if(rank != 0) {
+    if (rank != 0) {
         int maxx = ppq.get_max(1);
         if (rank == 1)
-            std::cout<< maxx << std::endl;
-        std::cout<<rank<<" "<<ppq.get_size()<<std::endl;
+            std::cout << maxx << std::endl;
+        std::cout << rank << " " << ppq.get_size() << std::endl;
     }
 
     if (size >= 4) {
-
-        if(rank == 3)
+        if (rank == 3)
             ppq.insert(5, 2);
         else
             ppq.insert(0, 2);

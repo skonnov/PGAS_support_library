@@ -21,8 +21,8 @@ int main(int argc, char** argv) {
     int rank, size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if(rank != 0) {
-        for(int i = 0; i < n; i++) {
+    if (rank != 0) {
+        for (int i = 0; i < n; ++i) {
             pv.set_elem(i, i);
         }
         pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);
@@ -31,63 +31,63 @@ int main(int argc, char** argv) {
         double t1 = MPI_Wtime();
         if (rank == 1) {
             pv2.read("test.txt", n, 0, n);
-            for(int i = 0; i < n; i++)
-                std::cout<<pv2.get_elem(i)<<" ";
-            std::cout<<std::endl;
+            for (int i = 0; i < n; ++i)
+                std::cout << pv2.get_elem(i) << " ";
+            std::cout << std::endl;
         }
         int sum = 0;
-        for(int i = 0; i < n; i++) {
+        for (int i = 0; i < n; ++i) {
             int tmp = pv.get_elem(i);
             sum += pv.get_elem(i);
         }
         double t2 = MPI_Wtime();
         pv.print("test.txt");
-        cout<<t2-t1<<" "<<sum<<" "<<rank<<std::endl;
+        cout << t2-t1 << " " << sum << " " << rank << std::endl;
         pv.change_mode(0, pv.get_num_quantums(), READ_WRITE);
-        if(rank == 1)
-            std::cout<<"------"<<std::endl;
-        for(int i = 0; i < n; i++) {
+        if (rank == 1)
+            std::cout << "------" << std::endl;
+        for (int i = 0; i < n; ++i) {
             pv.set_elem(i, i+1);
         }
         pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);
         t1 = MPI_Wtime();
         sum = 0;
-        for(int i = 0; i < n; i++) {
+        for (int i = 0; i < n; ++i) {
             int tmp = pv.get_elem(i);
             sum += pv.get_elem(i);
         }
         t2 = MPI_Wtime();
-        cout<<t2-t1<<" "<<sum<<" "<<rank<<std::endl;
+        cout << t2-t1 << " " << sum << " " << rank << std::endl;
         pv.change_mode(0, pv.get_num_quantums(), READ_WRITE);
-        if(rank == 1)
-            std::cout<<"------"<<std::endl;
-        for(int i = 0; i < n; i++) {
+        if (rank == 1)
+            std::cout << "------" << std::endl;
+        for (int i = 0; i < n; ++i) {
             pv.set_elem(i, i);
         }
         pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);
         t1 = MPI_Wtime();
         sum = 0;
-        for(int i = 0; i < n; i++) {
+        for (int i = 0; i < n; ++i) {
             int tmp = pv.get_elem(i);
             sum += pv.get_elem(i);
         }
         t2 = MPI_Wtime();
-        cout<<t2-t1<<" "<<sum<<" "<<rank<<std::endl;
+        cout << t2-t1 << " " << sum << " " << rank << std::endl;
         pv.change_mode(0, pv.get_num_quantums(), READ_WRITE);
-        if(rank == 1)
-            std::cout<<"------"<<std::endl;
-        for(int i = 0; i < n; i++) {
+        if (rank == 1)
+            std::cout << "------" << std::endl;
+        for (int i = 0; i < n; ++i) {
             pv.set_elem(i, i+1);
         }
         pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);
         t1 = MPI_Wtime();
         sum = 0;
-        for(int i = 0; i < n; i++) {
+        for (int i = 0; i < n; ++i) {
             int tmp = pv.get_elem(i);
             sum += pv.get_elem(i);
         }
         t2 = MPI_Wtime();
-        cout<<t2-t1<<" "<<sum<<" "<<rank<<"\n";
+        cout << t2-t1 << " " << sum << " " << rank << "\n";
     }
     if (rank == 1) {
         memory_manager::wait();

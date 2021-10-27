@@ -1,12 +1,12 @@
 #include <iostream>
-#include "parallel_vector.h"
-#include "memory_manager.h"
-#include "parallel_priority_queue.h"
 #include <climits>
 #include <ctime>
 #include <algorithm>
 #include <random>
 #include <queue>
+#include "parallel_vector.h"
+#include "memory_manager.h"
+#include "parallel_priority_queue.h"
 
 struct pair
 {
@@ -20,8 +20,9 @@ struct pair
     }
 };
 
+
 std::ostream &operator<<(std::ostream &out, pair const &m) {
-    return out << "("<<m.first<<" "<<m.second<<")";
+    return out << "(" << m.first << " " << m.second << ")";
 }
 
 int dijkstra(const std::vector<std::vector<std::pair<int, int>>>& v, parallel_vector<int>& d, int n, int begin, int end, int quantum_size = DEFAULT_QUANTUM_SIZE, int to_worker_rank = 0) {
@@ -34,7 +35,6 @@ int dijkstra(const std::vector<std::vector<std::pair<int, int>>>& v, parallel_ve
         (MPI_Aint)offsetof(pair, second)
     };
     MPI_Datatype types[] = { MPI_INT, MPI_INT };
-
 
     parallel_priority_queue<pair> pq(count, blocklens, indices, types,
                                      {INT_MIN, INT_MIN}, int(v.size() * v.size() + quantum_size - 1) / quantum_size, quantum_size); // num_of_quantums_proc - ?
@@ -55,7 +55,7 @@ int dijkstra(const std::vector<std::vector<std::pair<int, int>>>& v, parallel_ve
         int cur_d = d.get_elem(cur);
         if (curlen > cur_d)
             continue;
-        k++;
+        ++k;
 
         int portion_begin = 0, portion_end = 0;
         int cur_size = static_cast<int>(v[cur].size());
@@ -68,7 +68,7 @@ int dijkstra(const std::vector<std::vector<std::pair<int, int>>>& v, parallel_ve
             portion_end = portion_begin + (cur_size / worker_size);
         }
 
-        for (int i = portion_begin; i < portion_end; i++) {
+        for (int i = portion_begin; i < portion_end; ++i) {
             int to = v[cur][i].first, len = v[cur][i].second;
             int to_d = d.get_elem(to);
             if (cur_d + len < to_d) {
@@ -110,8 +110,8 @@ std::vector<std::vector<std::pair<int,int>>> generate_graph(int n, int m, int mi
     std::vector<std::pair<int, int>> all;
     std::vector<std::vector<std::pair<int, int>>> v(n);
 
-    for(int i = 0; i < n; i++)
-        for (int j = i+1; j < n; j++)
+    for (int i = 0; i < n; ++i)
+        for (int j = i+1; j < n; ++j)
             all.push_back({i, j});
 
     int rank = memory_manager::get_MPI_rank();
@@ -119,22 +119,22 @@ std::vector<std::vector<std::pair<int,int>>> generate_graph(int n, int m, int mi
 
     std::mt19937 mt(seed);
     std::uniform_int_distribution<int> rand(1, max_size);
-    for (int i = 0; i < m; i++) {
+    for (int i = 0; i < m; ++i) {
         int size = rand(mt);
         v[all[i].first].push_back({ all[i].second, size });
         v[all[i].second].push_back({ all[i].first, size });
     }
 
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < n; ++i) {
         std::sort(v[i].begin(), v[i].end());
     }
     return v;
 }
 
 void print_graph(const std::vector<std::vector<std::pair<int, int>>>& v) {
-    for (int i = 0; i < v.size(); i++) {
+    for (int i = 0; i < v.size(); ++i) {
         std::cout<<i<<": ";
-        for (int j = 0; j < v[i].size(); j++) {
+        for (int j = 0; j < v[i].size(); ++j) {
             std::cout<<"("<<v[i][j].first<<", "<<v[i][j].second<<")";
             if (j < v[i].size() - 1)
                 std::cout<<", ";
@@ -150,7 +150,7 @@ static void show_usage() {
 
 int get_args(int argc, char** argv, int& n, int&m, int& seed, int& min_size, int& max_size) {
     n = -1, m = -1, seed = 0, min_size = 1, max_size = 50000;
-    for (int i = 1; i < argc; i++) {
+    for (int i = 1; i < argc; ++i) {
         if (std::string(argv[i]) == "-v") {
             if (i+1 < argc) {
                 n = atoi(argv[++i]);
@@ -238,17 +238,17 @@ int main(int argc, char** argv) {
 
     int rank = memory_manager::get_MPI_rank();
     if (rank == 1)
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < n; ++i) {
             d.set_elem(i, INT_MAX);
         }
     MPI_Barrier(MPI_COMM_WORLD);
 
     std::vector<std::vector<std::pair<int,int>>> v = generate_graph(n, m, min_size, max_size, seed);
     double t1 = MPI_Wtime();
-    int ans = dijkstra(v, d, n, 0, n-1, DEFAULT_QUANTUM_SIZE);
+    int ans = dijkstra(v, d, n, 0, n - 1, DEFAULT_QUANTUM_SIZE);
     double t2 = MPI_Wtime();
     if (rank == 1) {
-        if (ans != dijkstra_seq(v, 0, n-1)) {
+        if (ans != dijkstra_seq(v, 0, n - 1)) {
             std::cout<<"ALYARMA!"<<std::endl;
         }
         std::cout<<t2-t1<<std::endl;
