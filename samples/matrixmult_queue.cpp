@@ -143,8 +143,6 @@ int main(int argc, char** argv) { // матрица b транспонирова
     }
     parallel_vector<int> pva(n * n), pvb(n * n), pvc (n * n);
     generate_matrices(pva, pvb, pvc, n, seed);
-    pva.change_mode(0, pva.get_num_quantums(), READ_ONLY);
-    pvb.change_mode(0, pvb.get_num_quantums(), READ_ONLY);
     int part_size = n / div_num;
     std::queue<task> qu;
     int rank = memory_manager::get_MPI_rank();
@@ -159,8 +157,12 @@ int main(int argc, char** argv) { // матрица b транспонирова
         }
     }
     memory_manager::wait_all();
-    // if (rank == 1)
-    //     print_matrices(pva, pvb, pvc, n);
+    if (rank != 0) {
+        pva.change_mode(0, pva.get_num_quantums(), READ_ONLY);
+        pvb.change_mode(0, pvb.get_num_quantums(), READ_ONLY);
+    }
+    if (rank == 1)
+        print_matrices(pva, pvb, pvc, n);
     int count = 4;
     int blocklens[] = {1, 1, 1, 1};
     MPI_Aint indices[] = {
@@ -175,6 +177,7 @@ int main(int argc, char** argv) { // матрица b транспонирова
     double t1 = MPI_Wtime();
     if (rank != 0) {
         if (rank = 1) {
+            std::cout<< rank << " " << size << "?" << qu.size()<<"\n";
             for (int i = 0; i < size - 2 && !qu.empty(); ++i) {
                 tasks.set_elem(i, qu.front());
                 qu.pop();
@@ -194,15 +197,19 @@ int main(int argc, char** argv) { // матрица b транспонирова
             while (true) {
                 memory_manager::wait(1);
                 task t = tasks.get_elem(rank-2);
+                std::cout << "rank: " << rank << " task: (" << t.a_first << " " << t.a_second << ") (" << t.b_first << " " << t.b_second << std::endl;
                 if (t.a_first == -1) {
                     break;
                 }
                 else {
-                    matrix_mult(pva, pvb, pvc, t.a_first, t.a_second, t.b_first, t.b_second, t.a_first, t.b_first, n, part_size);
+                    int a_first = t.a_first * part_size;
+                    int a_second = t.a_second * part_size;
+                    int b_first = t.b_first * part_size;
+                    int b_second = t.b_second * part_size;
+                    matrix_mult(pva, pvb, pvc, a_first, a_second, b_first, b_second, a_first, b_first, n, part_size);
                 }
                 qu.pop();
             }
-            int end_flag = 0;
         }
     }
     memory_manager::wait_all();
