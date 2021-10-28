@@ -161,8 +161,8 @@ int main(int argc, char** argv) { // матрица b транспонирова
         pva.change_mode(0, pva.get_num_quantums(), READ_ONLY);
         pvb.change_mode(0, pvb.get_num_quantums(), READ_ONLY);
     }
-    if (rank == 1)
-        print_matrices(pva, pvb, pvc, n);
+    // if (rank == 1)
+    //     print_matrices(pva, pvb, pvc, n);
     int count = 4;
     int blocklens[] = {1, 1, 1, 1};
     MPI_Aint indices[] = {
@@ -182,31 +182,32 @@ int main(int argc, char** argv) { // матрица b транспонирова
                 tasks.set_elem(i, qu.front());
                 ++count_working;
                 qu.pop();
-                memory_manager::notify(i+2);
+                memory_manager::notify(i + 2);
             }
 
             while (!qu.empty()) {
                 int to_rank = memory_manager::wait();
-                tasks.set_elem(to_rank, qu.front());
+                tasks.set_elem(to_rank - 2, qu.front());
                 qu.pop();
                 memory_manager::notify(to_rank);
             }
+
             while (count_working) {
                 memory_manager::wait();
                 --count_working;
             }
+
             for (int i = 0; i < size - 2; ++i) {
                 tasks.set_elem(i, {-1, -1, -1, -1});
-                memory_manager::notify(i+2);
+                memory_manager::notify(i + 2);
             }
         } else {
             while (true) {
                 memory_manager::wait(1);
-                task t = tasks.get_elem(rank-2);
+                task t = tasks.get_elem(rank - 2);
                 if (t.a_first == -1) {
                     break;
-                }
-                else {
+                } else {
                     int a_first = t.a_first * part_size;
                     int a_second = t.a_second * part_size;
                     int b_first = t.b_first * part_size;
@@ -220,8 +221,8 @@ int main(int argc, char** argv) { // матрица b транспонирова
     memory_manager::wait_all();
     double t2 = MPI_Wtime();
     if (rank == 1) {
-        std::cout << "----------------------------------" << std::endl;
-        print_matrices(pva, pvb, pvc, n);
+        // std::cout << "----------------------------------" << std::endl;
+        // print_matrices(pva, pvb, pvc, n);
         std::cout << t2 - t1 << std::endl;
     }
     memory_manager::finalize();
