@@ -121,9 +121,9 @@ void matrix_mult(parallel_vector<T>& pv1, parallel_vector<T>& pv2, parallel_vect
             for (int k = 0; k < num_in_block; ++k) {
                 temp += pv1.get_elem((i1 + i) * n + j1 + k) * pv2.get_elem((i2 + j) * n + j2 + k);
             }
-            pv3.set_lock(i3_teq * n + j3_teq);
+            pv3.set_lock(pv3.get_quantum(i3_teq * n + j3_teq));
             pv3.set_elem(i3_teq * n + j3_teq, pv3.get_elem(i3_teq * n + j3_teq) + temp);
-            pv3.unset_lock(i3_teq * n + j3_teq);
+            pv3.unset_lock(pv3.get_quantum(i3_teq * n + j3_teq));
         }
     }
 }
@@ -176,18 +176,24 @@ int main(int argc, char** argv) { // матрица b транспонирова
     parallel_vector<task> tasks(count, blocklens, indices, types, size, 1);
     double t1 = MPI_Wtime();
     if (rank != 0) {
-        if (rank = 1) {
-            std::cout<< rank << " " << size << "?" << qu.size()<<"\n";
+        if (rank == 1) {
+            int count_working = 0;
             for (int i = 0; i < size - 2 && !qu.empty(); ++i) {
                 tasks.set_elem(i, qu.front());
+                ++count_working;
                 qu.pop();
                 memory_manager::notify(i+2);
             }
+
             while (!qu.empty()) {
                 int to_rank = memory_manager::wait();
                 tasks.set_elem(to_rank, qu.front());
                 qu.pop();
                 memory_manager::notify(to_rank);
+            }
+            while (count_working) {
+                memory_manager::wait();
+                --count_working;
             }
             for (int i = 0; i < size - 2; ++i) {
                 tasks.set_elem(i, {-1, -1, -1, -1});
@@ -197,7 +203,6 @@ int main(int argc, char** argv) { // матрица b транспонирова
             while (true) {
                 memory_manager::wait(1);
                 task t = tasks.get_elem(rank-2);
-                std::cout << "rank: " << rank << " task: (" << t.a_first << " " << t.a_second << ") (" << t.b_first << " " << t.b_second << std::endl;
                 if (t.a_first == -1) {
                     break;
                 }
@@ -208,13 +213,15 @@ int main(int argc, char** argv) { // матрица b транспонирова
                     int b_second = t.b_second * part_size;
                     matrix_mult(pva, pvb, pvc, a_first, a_second, b_first, b_second, a_first, b_first, n, part_size);
                 }
-                qu.pop();
+                memory_manager::notify(1);
             }
         }
     }
     memory_manager::wait_all();
     double t2 = MPI_Wtime();
     if (rank == 1) {
+        std::cout << "----------------------------------" << std::endl;
+        print_matrices(pva, pvb, pvc, n);
         std::cout << t2 - t1 << std::endl;
     }
     memory_manager::finalize();
