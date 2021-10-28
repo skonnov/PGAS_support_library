@@ -1,6 +1,8 @@
 #ifndef __COMMON_H__
 #define __COMMON_H__
 
+#include <string>
+
 #define DEFAULT_QUANTUM_SIZE 500
 
 enum mods {  // используется для изменения режима работы с памятью
@@ -42,12 +44,26 @@ enum error_codes {
     ERR_WRONG_RANK    = -4
 };
 
-#define CHECK(expression, error_code)                                                                                    \
-    if(!(expression)) {                                                                                                  \
-        int rank;                                                                                                        \
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);                                                                            \
-        std::cout<<"Check error on process w/ MPI_rank #"<<rank<<", file: "<<__FILE__<<", line: "<<__LINE__<<std::endl;  \
-        MPI_Abort(MPI_COMM_WORLD, error_code);                                                                           \
+static std::string get_error_code(int error_code) {
+    std::string out;
+    switch(error_code) {
+    case ERR_UNKNOWN: out = "ERR_UKNOWN"; break;
+    case ERR_OUT_OF_BOUNDS: out = "ERR_OUT_OF_BOUNDS"; break;
+    case ERR_NULLPTR: out = "ERR_NULLPTR"; break;
+    case ERR_WRONG_RANK: out = "ERR_WRONG_RANK"; break;
+    default:;
+    }
+    out += "(" + std::to_string(error_code) + ")";
+    return out;
+}
+
+#define CHECK(expression, error_code)                                                                                \
+    if(!(expression)) {                                                                                              \
+        int rank;                                                                                                    \
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);                                                                        \
+        std::cout << "Check failed on process w/ MPI_rank #" << rank << ", file: "                                   \
+             << __FILE__ << ", line: " << __LINE__ <<  " with error "  << get_error_code(error_code) << std::endl; \
+        MPI_Abort(MPI_COMM_WORLD, error_code);                                                                       \
     }
 
 #endif  // __COMMON_H__
