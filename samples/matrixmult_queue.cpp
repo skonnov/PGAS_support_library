@@ -1,8 +1,8 @@
 #include <iostream>
 #include <random>
+#include <cstddef>
 #include "memory_manager.h"
 #include "parallel_vector.h"
-
 
 // #define MAX_TASK 5
 
@@ -131,6 +131,7 @@ void matrix_mult(parallel_vector<T>& pv1, parallel_vector<T>& pv2, parallel_vect
 struct task {
     int a_first, a_second, b_first, b_second;
 };
+
 
 int main(int argc, char** argv) { // матрица b транспонирована
     memory_manager::init(argc, argv);
