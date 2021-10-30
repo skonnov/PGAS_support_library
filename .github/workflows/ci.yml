@@ -27,3 +27,5 @@ jobs:
         run: mpiexec --oversubscribe -n 5 ./sum_of_vector_struct 50
       - working-directory: build/release
         run: mpiexec --oversubscribe -n 5 ./dijkstra -v 500
+      - working-directory: build/release
+        run: mpiexec --oversubscribe -n 5 ./matrixmult_queue -n 100 -d 4
