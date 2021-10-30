@@ -78,7 +78,7 @@ void generate_matrices(parallel_vector<int>& pva, parallel_vector<int>& pvb, par
         } else {
             index = (portion + 1) * ((n * n) % worker_size) + portion * (worker_rank - (n * n) % worker_size);
         }
-        std::mt19937 mt(seed);
+        std::mt19937 mt(seed + rank);
         std::uniform_int_distribution<int> rand(1, maxx);
         // инициализация
         for (int i = index; i < index + portion; ++i) {
