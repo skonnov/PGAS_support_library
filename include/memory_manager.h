@@ -98,7 +98,7 @@ int memory_manager::create_object(int number_of_elements, int quantum_size) {
         line_master->owners.resize(num_of_quantums);
         line_master->wait_locks.resize(num_of_quantums);
         line_master->wait_quantums.resize(num_of_quantums);
-        for (int i = 0; i < int(line_master->quantums_for_lock.size()); i++) {
+        for (int i = 0; i < int(line_master->quantums_for_lock.size()); ++i) {
             line_master->owners[i] = std::deque<int>();
         }
     } else {
@@ -107,7 +107,7 @@ int memory_manager::create_object(int number_of_elements, int quantum_size) {
         line_worker->mutexes.resize(num_of_quantums);
         line_worker->quantums.resize(num_of_quantums, nullptr);
         line_worker->allocator.set_quantum_size(quantum_size, sizeof(T));
-        for (int i = 0; i < num_of_quantums; i++) {
+        for (int i = 0; i < num_of_quantums; ++i) {
             line_worker->mutexes[i] = new std::mutex();
         }
         line_worker->type = get_mpi_type<T>();
@@ -120,7 +120,7 @@ int memory_manager::create_object(int number_of_elements, int quantum_size) {
     line->logical_size = number_of_elements;
     memory.emplace_back(line);
     MPI_Barrier(MPI_COMM_WORLD);
-    return int(memory.size())-1;
+    return int(memory.size()) - 1;
 }
 
 template <class T>
@@ -142,7 +142,7 @@ T memory_manager::get_data(int key, int index_of_element) {
         memory->mutexes[quantum_index]->lock();
     if (!memory->is_mode_changed[quantum_index]) {  // не было изменения режима? (данные актуальны?)
         if (quantum != nullptr) {  // на данном процессе есть квант?
-            T elem = (reinterpret_cast<T*>(quantum))[index_of_element%memory->quantum_size];
+            T elem = (reinterpret_cast<T*>(quantum))[index_of_element % memory->quantum_size];
             if (memory->mode[quantum_index] == READ_WRITE)
                 memory->mutexes[quantum_index]->unlock();
             return elem;  // элемент возвращается без обращения к мастеру
@@ -150,7 +150,7 @@ T memory_manager::get_data(int key, int index_of_element) {
         if (memory->mode[quantum_index] == READ_WRITE)
             memory->mutexes[quantum_index]->unlock();
     } else {
-        if(memory->mode[quantum_index] == READ_WRITE)
+        if (memory->mode[quantum_index] == READ_WRITE)
             memory->mutexes[quantum_index]->unlock();
     }
     int request[4] = {GET_INFO, key, quantum_index, -1};  // обращение к мастеру с целью получить квант
@@ -162,7 +162,7 @@ T memory_manager::get_data(int key, int index_of_element) {
     if (memory->mode[quantum_index] == READ_ONLY && to_rank == rank) {  // если read_only_mode и данные уже у процесса,
                                                  // ответ мастеру о том, что данные готовы, отправлять не нужно
         CHECK(quantum != nullptr, ERR_NULLPTR);
-        return (reinterpret_cast<T*>(quantum))[index_of_element%memory->quantum_size];
+        return (reinterpret_cast<T*>(quantum))[index_of_element % memory->quantum_size];
     }
     if (to_rank != rank) {  // если данные не у текущего процесса, инициируется передача данных от указанного мастером процесса
         if (quantum == nullptr) {
@@ -174,7 +174,7 @@ T memory_manager::get_data(int key, int index_of_element) {
     }
     request[0] = SET_INFO;
     CHECK(quantum != nullptr, ERR_NULLPTR);
-    T elem = (reinterpret_cast<T*>(quantum))[index_of_element%memory->quantum_size];
+    T elem = (reinterpret_cast<T*>(quantum))[index_of_element % memory->quantum_size];
     MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // уведомление мастера о том, что данные готовы для передачи другим процессам
     return elem;
 }
@@ -184,7 +184,7 @@ void memory_manager::set_data(int key, int index_of_element, T value) {
     CHECK(key >= 0 && key < (int)memory_manager::memory.size(), ERR_OUT_OF_BOUNDS);
     auto* memory = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
     int quantum_index = get_quantum_index(key, index_of_element);
-    if(memory->mode[quantum_index] == READ_ONLY) {
+    if (memory->mode[quantum_index] == READ_ONLY) {
         throw -1;  // запись в READ_ONLY режиме запрещена
     }
     CHECK(index_of_element >= 0 && index_of_element < (int)memory->logical_size, ERR_OUT_OF_BOUNDS);
@@ -194,13 +194,13 @@ void memory_manager::set_data(int key, int index_of_element, T value) {
     memory->mutexes[quantum_index]->lock();
     if (!memory->is_mode_changed[quantum_index]) {
         if (quantum != nullptr) {
-            (reinterpret_cast<T*>(quantum))[index_of_element%memory->quantum_size] = value;
+            (reinterpret_cast<T*>(quantum))[index_of_element % memory->quantum_size] = value;
             memory->mutexes[quantum_index]->unlock();
             return;
         }
         memory->mutexes[quantum_index]->unlock();
     } else {
-        if(memory->mode[quantum_index] == READ_WRITE)
+        if (memory->mode[quantum_index] == READ_WRITE)
             memory->mutexes[quantum_index]->unlock();
     }
     int request[4] = {GET_INFO, key, quantum_index, -1};
@@ -209,7 +209,7 @@ void memory_manager::set_data(int key, int index_of_element, T value) {
     MPI_Status status;
     MPI_Recv(&to_rank, 1, MPI_INT, 0, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);  // получение ответа от мастера
     memory->is_mode_changed[quantum_index] = false;
-    if(quantum == nullptr) {
+    if (quantum == nullptr) {
         quantum = memory->allocator.alloc();
     }
     if (to_rank != rank) {  // если данные не у текущего процесса, инициируется передача данных от указанного мастером процесса
@@ -217,7 +217,7 @@ void memory_manager::set_data(int key, int index_of_element, T value) {
         MPI_Recv(quantum, memory->quantum_size, memory->type, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
     }
     request[0] = SET_INFO;
-    (reinterpret_cast<T*>(quantum))[index_of_element%memory->quantum_size] = value;
+    (reinterpret_cast<T*>(quantum))[index_of_element % memory->quantum_size] = value;
     MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // уведомление мастера о том, что данные готовы для передачи другим процессам
 }
 
@@ -226,15 +226,15 @@ void memory_manager::read(int key, const std::string& path, int number_of_elemen
     auto* memory = memory_manager::memory[key];
     int num_of_quantums = (number_of_elements + memory->quantum_size - 1) / memory->quantum_size;
     int offset = 0;
-    for(int w_rank = 0; w_rank < worker_size; w_rank++) {
-        int quantum_portion = num_of_quantums / worker_size + (w_rank < num_of_quantums%worker_size?1:0);
-        if(quantum_portion == 0)
+    for (int w_rank = 0; w_rank < worker_size; ++w_rank) {
+        int quantum_portion = num_of_quantums / worker_size + (w_rank < num_of_quantums % worker_size?1:0);
+        if (quantum_portion == 0)
             break;
-        if(worker_rank == w_rank) {
+        if (worker_rank == w_rank) {
             std::ifstream fs(path, std::ios::in | std::ios::binary);
-            fs.seekg(offset*sizeof(int));
+            fs.seekg(offset * sizeof(int));
             T data;
-            for(int i = 0; i < std::min(quantum_portion * memory->quantum_size, number_of_elements); i++) {
+            for (int i = 0; i < std::min(quantum_portion * memory->quantum_size, number_of_elements); ++i) {
                 int logical_index = offset + i;
                 fs.read((char*)&data, sizeof(data));
                 memory_manager::set_data<T>(key, logical_index, data);
@@ -248,9 +248,9 @@ void memory_manager::read(int key, const std::string& path, int number_of_elemen
 template <class T>
 void memory_manager::read(int key, const std::string& path, int number_of_elements, int offset, int num_of_elem_proc) {
     std::ifstream fs(path, std::ios::in | std::ios::binary);
-    fs.seekg(offset*sizeof(int));
+    fs.seekg(offset * sizeof(int));
     T data;
-    for(int i = 0; i < std::min(num_of_elem_proc, number_of_elements); i++) {
+    for (int i = 0; i < std::min(num_of_elem_proc, number_of_elements); ++i) {
         int logical_index = offset + i;
         fs.read((char*)&data, sizeof(data));
         memory_manager::set_data<T>(key, logical_index, data);

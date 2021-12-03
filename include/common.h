@@ -62,7 +62,7 @@ static std::string get_error_code(int error_code) {
         int rank;                                                                                                    \
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);                                                                        \
         std::cout << "Check failed on process w/ MPI_rank #" << rank << ", file: "                                   \
-             << __FILE__ << ", line: " << __LINE__ <<  " with error "  << get_error_code(error_code) << std::endl; \
+             << __FILE__ << ", line: " << __LINE__ <<  " with error "  << get_error_code(error_code) << std::endl;   \
         MPI_Abort(MPI_COMM_WORLD, error_code);                                                                       \
     }
 
