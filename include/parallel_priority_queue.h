@@ -50,8 +50,8 @@ private:
 
 template<class T>
 parallel_priority_queue<T>::parallel_priority_queue(T _default_value, int _num_of_quantums_proc, int _quantum_size) {
-    worker_rank = memory_manager::get_MPI_rank()-1;
-    worker_size = memory_manager::get_MPI_size()-1;
+    worker_rank = memory_manager::get_MPI_rank() - 1;
+    worker_size = memory_manager::get_MPI_size() - 1;
 
     num_of_quantums_proc = _num_of_quantums_proc;
     quantum_size = _quantum_size;
@@ -84,8 +84,8 @@ parallel_priority_queue<T>::parallel_priority_queue(T _default_value, int _num_o
 template<class T>
 parallel_priority_queue<T>::parallel_priority_queue(int _count, const int* _blocklens, const MPI_Aint* _indices, const MPI_Datatype* _types,
     T _default_value, int _num_of_quantums_proc, int _quantum_size) {
-    worker_rank = memory_manager::get_MPI_rank()-1;
-    worker_size = memory_manager::get_MPI_size()-1;
+    worker_rank = memory_manager::get_MPI_rank() - 1;
+    worker_size = memory_manager::get_MPI_size() - 1;
 
     num_of_quantums_proc = _num_of_quantums_proc;
     quantum_size = _quantum_size;
@@ -123,7 +123,7 @@ public:
         a = &pv;
     }
     T2 operator()(int l, int r, T2 identity) const {
-        return { a->get_elem(l), memory_manager::get_MPI_rank()-1 };
+        return { a->get_elem(l), memory_manager::get_MPI_rank() - 1 };
     }
 };
 
@@ -133,7 +133,7 @@ void parallel_priority_queue<T>::insert(T elem) {
     pair_reduce size{-2, -2};
     if (worker_rank >= 0)
         size = parallel_reduce_all(worker_rank, worker_rank + 1, sizes, pair_reduce(INT_MAX, INT_MAX), 1, worker_size, Func1<int, pair_reduce>(sizes), reduction, pair_type);
-    if(worker_rank == size.second)
+    if (worker_rank == size.second)
         insert_local(elem);
 }
 
@@ -236,7 +236,7 @@ void parallel_priority_queue<T>::remove_max() {
     auto reduction = [](pair_reduce_template<T> a, pair_reduce_template<T> b) { return (a.first < b.first) ? b : a; };
     pair_reduce_template<T> maxx{default_value, -2};
     if (worker_rank >= 0)
-        maxx = parallel_reduce_all(worker_rank, worker_rank+1, maxes, pair_reduce_template<T>(default_value, INT_MAX), 1, worker_size, function, reduction);
+        maxx = parallel_reduce_all(worker_rank, worker_rank + 1, maxes, pair_reduce_template<T>(default_value, INT_MAX), 1, worker_size, function, reduction);
     if (worker_rank == maxx.second) {
         remove_max_local();
     }
@@ -249,7 +249,7 @@ void parallel_priority_queue<T>::heapify(int index) {
     if (left < size) {
         T parent_value = pqueues.get_elem(index + global_index_l);
         T left_value = pqueues.get_elem(left + global_index_l);
-        if(parent_value < left_value) {
+        if (parent_value < left_value) {
             pqueues.set_elem(index + global_index_l, left_value);
             pqueues.set_elem(left + global_index_l, parent_value);
             heapify(left);

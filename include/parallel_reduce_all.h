@@ -19,38 +19,38 @@ T reduce_all_operation(T data, const Reduction& reduction, int process_begin, in
     T tmpans = data;
     int tmprank = 0;
     int t = 0;
-    std::vector<int>vtmprank(size+100);
-    for(int i = process_begin; i <= process_end; i++) {
+    std::vector<int>vtmprank(size + 100);
+    for (int i = process_begin; i <= process_end; ++i) {
         vtmprank[t++] = i;
-        if(rank == i)
-            tmprank = t-1;
+        if (rank == i)
+            tmprank = t - 1;
     }  // создание временной нумерации (для удобства обращения к процессам при дальнейшей работе функции reduce_all_operation)
     int n = 1;
-    while(n < t)
+    while (n < t)
         n *= 2;
-    for(int i = 1; i < n; i = i * 2) {
-        if(tmprank * 2 * i < n) {
-            if(tmprank + n / (2 * i) >= t)
+    for (int i = 1; i < n; i = i * 2) {
+        if (tmprank * 2 * i < n) {
+            if (tmprank + n / (2 * i) >= t)
                 continue;
             MPI_Status status;
             T tmp;
-            int sender = vtmprank[tmprank + n/(2*i)];
+            int sender = vtmprank[tmprank + n / (2 * i)];
             MPI_Recv(&tmp, sizeof(T), MPI_BYTE, sender, REDUCE_ALL_TAG1, MPI_COMM_WORLD, &status);
             tmpans = reduction(tmp, tmpans);
         }
         else
         {
-            int destination = vtmprank[tmprank - n/(2*i)];
+            int destination = vtmprank[tmprank - n / (2 * i)];
             MPI_Send(&tmpans, sizeof(T), MPI_BYTE, destination, REDUCE_ALL_TAG1, MPI_COMM_WORLD);
             break;
         }
     }
     T ans = tmpans;
-    for(int i = 1; i < n; i = i * 2) {
-        if(tmprank < i) {
+    for (int i = 1; i < n; i = i * 2) {
+        if (tmprank < i) {
             if (tmprank + i >= t)
                 break;
-            int destination = vtmprank[tmprank+i];
+            int destination = vtmprank[tmprank + i];
             MPI_Send(&ans, sizeof(T), MPI_BYTE, destination, REDUCE_ALL_TAG2, MPI_COMM_WORLD);
         }
         else if (tmprank < 2 * i)

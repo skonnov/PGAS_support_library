@@ -45,14 +45,14 @@ parallel_vector<T>::parallel_vector(int count, const int* blocklens, const MPI_A
 
 template<class T>
 T parallel_vector<T>::get_elem(const int& index) const {
-    if(index < 0 || index >= size_vector)
+    if (index < 0 || index >= size_vector)
         throw -1;
     return memory_manager::get_data<T>(key, index);
 }
 
 template<class T>
 void parallel_vector<T>::set_elem(const int& index, const T& value) {
-    if(index < 0 || index >= size_vector)
+    if (index < 0 || index >= size_vector)
         throw -1;
     memory_manager::set_data<T>(key, index, value);
 }

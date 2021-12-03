@@ -24,8 +24,7 @@ MPI_Datatype create_mpi_type(int count, const int* blocklens, const MPI_Aint* in
 }
 
 template <class T>
-MPI_Datatype get_mpi_type() noexcept
-{
+MPI_Datatype get_mpi_type() noexcept {
     MPI_Datatype mpi_type = MPI_DATATYPE_NULL;
 
     if (std::is_same<T, char>::value)
