@@ -16,6 +16,7 @@
 #include "detail.h"
 #include "memory_allocator.h"
 #include "queue_quantums.h"
+#include "memory_cache.h"
 
 void worker_helper_thread();
 void master_helper_thread();
@@ -59,6 +60,7 @@ struct memory_line_worker
     memory_allocator allocator;
     MPI_Datatype type;
     int size_of;
+    memory_cache cache;
 };
 
 struct memory_line_master
@@ -83,8 +85,9 @@ public:
     static int get_MPI_size();
     template <class T> static T get_data(int key, int index_of_element);  // получить элемент по индексу с любого процесса
     template <class T> static void set_data(int key, int index_of_element, T value);  // сохранить значение элемента по индексу с любого процесса
-    template <class T> static int create_object(int number_of_elements, int quantum_size, int count, const int* blocklens, const MPI_Aint* indices, const MPI_Datatype* types);
-    template <class T> static int create_object(int number_of_elements, int quantum_size = DEFAULT_QUANTUM_SIZE);  // создать новый memory_line и занести его в memory
+    template <class T> static int create_object(int count, const int* blocklens, const MPI_Aint* indices, const MPI_Datatype* types, int number_of_elements,
+                                                int quantum_size = DEFAULT_QUANTUM_SIZE, int cache_size = DEFAULT_CACHE_SIZE);
+    template <class T> static int create_object(int number_of_elements, int quantum_size = DEFAULT_QUANTUM_SIZE, int cache_size = DEFAULT_CACHE_SIZE);  // создать новый memory_line и занести его в memory
     static int get_quantum_index(int key, int index);  // получить номер кванта по индексу
     static int get_quantum_size(int key);  // получить размер кванта
     static void set_lock(int key, int quantum_index);  // заблокировать квант
@@ -108,7 +111,7 @@ private:
 };
 
 template <class T>
-int memory_manager::create_object(int number_of_elements, int quantum_size) {
+int memory_manager::create_object(int number_of_elements, int quantum_size, int cache_size) {
     memory_line_common* line;
     int num_of_quantums = (number_of_elements + quantum_size - 1) / quantum_size;
     if (rank == 0) {
@@ -122,6 +125,7 @@ int memory_manager::create_object(int number_of_elements, int quantum_size) {
         auto line_worker = dynamic_cast<memory_line_worker*>(line);
         line_worker->quantums.resize(num_of_quantums);
         line_worker->allocator.set_quantum_size(quantum_size, sizeof(T));
+        line_worker->cache = memory_cache(cache_size, num_of_quantums);
         line_worker->type = get_mpi_type<T>();
         line_worker->size_of = sizeof(T);
     }
@@ -133,8 +137,8 @@ int memory_manager::create_object(int number_of_elements, int quantum_size) {
 }
 
 template <class T>
-int memory_manager::create_object(int number_of_elements, int quantum_size, int count, const int* blocklens, const MPI_Aint* indices, const MPI_Datatype* types) {
-    int key = memory_manager::create_object<T>(number_of_elements, quantum_size);
+int memory_manager::create_object(int count, const int* blocklens, const MPI_Aint* indices, const MPI_Datatype* types, int number_of_elements, int quantum_size, int cache_size) {
+    int key = memory_manager::create_object<T>(number_of_elements, quantum_size, cache_size);
     if (rank) {
         dynamic_cast<memory_line_worker*>(memory[key])->type = create_mpi_type<T>(count, blocklens, indices, types);
     }
