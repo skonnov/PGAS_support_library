@@ -35,6 +35,7 @@ memory_cache& memory_cache::operator=(memory_cache&& cache) {
         // cache.memory = std::vector<char*>();
 
     }
+    return *this;
 }
 
 std::pair<char*, int> memory_cache::add(char* quantum, int quantum_index) {
