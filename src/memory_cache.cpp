@@ -1,10 +1,40 @@
 #include "memory_cache.h"
 
-memory_cache::memory_cache(int size_quantum, int size_of, int cache_size, int number_of_quantums) {
+memory_cache::memory_cache() {
     current_id = 0;
-    quantum_size = size_quantum * size_of;
+}
+
+memory_cache::memory_cache(int cache_size, int number_of_quantums) {
+    current_id = 0;
     cache_indexes.resize(cache_size);
     memory.resize(number_of_quantums);
+}
+
+memory_cache& memory_cache::operator=(const memory_cache& cache) {
+    if (this != &cache) {
+        current_id = cache.current_id;
+        cache_indexes.resize(cache.cache_indexes.size());
+        memory.resize(cache.memory.size());
+        for (int i = 0; i < static_cast<int>(cache_indexes.size()); ++i) {
+            cache_indexes[i] = cache.cache_indexes[i];
+        }
+        for (int i = 0; i < static_cast<int>(memory.size()); ++i) {
+            memory[i] = cache.memory[i];
+        }
+    }
+    return *this;
+}
+
+memory_cache& memory_cache::operator=(memory_cache&& cache) {
+    if (this != &cache) {
+        current_id = cache.current_id;
+        memory = cache.memory;
+        cache_indexes = cache.cache_indexes;
+
+        // cache.cache_indexes = std::vector<int>();
+        // cache.memory = std::vector<char*>();
+
+    }
 }
 
 std::pair<char*, int> memory_cache::add(char* quantum, int quantum_index) {
