@@ -147,12 +147,9 @@ T memory_manager::get_data(int key, int index_of_element) {
                 memory->mutexes[quantum_index]->unlock();
             return elem;  // элемент возвращается без обращения к мастеру
         }
-        if (memory->mode[quantum_index] == READ_WRITE)
-            memory->mutexes[quantum_index]->unlock();
-    } else {
-        if (memory->mode[quantum_index] == READ_WRITE)
-            memory->mutexes[quantum_index]->unlock();
     }
+    if (memory->mode[quantum_index] == READ_WRITE)
+        memory->mutexes[quantum_index]->unlock();
     int request[4] = {GET_INFO, key, quantum_index, -1};  // обращение к мастеру с целью получить квант
     MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
     int to_rank = -2;
@@ -184,9 +181,7 @@ void memory_manager::set_data(int key, int index_of_element, T value) {
     CHECK(key >= 0 && key < (int)memory_manager::memory.size(), ERR_OUT_OF_BOUNDS);
     auto* memory = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
     int quantum_index = get_quantum_index(key, index_of_element);
-    if (memory->mode[quantum_index] == READ_ONLY) {
-        throw -1;  // запись в READ_ONLY режиме запрещена
-    }
+    CHECK(memory->mode[quantum_index] == READ_WRITE, ERR_ILLEGAL_WRITE);  // запись в READ_ONLY режиме запрещена
     CHECK(index_of_element >= 0 && index_of_element < (int)memory->logical_size, ERR_OUT_OF_BOUNDS);
     CHECK(quantum_index >= 0 && quantum_index < (int)memory->quantums.size(), ERR_OUT_OF_BOUNDS);
     auto& quantum = memory->quantums[quantum_index];
@@ -198,11 +193,8 @@ void memory_manager::set_data(int key, int index_of_element, T value) {
             memory->mutexes[quantum_index]->unlock();
             return;
         }
-        memory->mutexes[quantum_index]->unlock();
-    } else {
-        if (memory->mode[quantum_index] == READ_WRITE)
-            memory->mutexes[quantum_index]->unlock();
     }
+    memory->mutexes[quantum_index]->unlock();
     int request[4] = {GET_INFO, key, quantum_index, -1};
     MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // обращение к мастеру с целью получить квант
     int to_rank = -2;

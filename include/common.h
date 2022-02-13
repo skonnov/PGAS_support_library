@@ -41,7 +41,8 @@ enum error_codes {
     ERR_UNKNOWN       = -1,
     ERR_OUT_OF_BOUNDS = -2,
     ERR_NULLPTR       = -3,
-    ERR_WRONG_RANK    = -4
+    ERR_WRONG_RANK    = -4,
+    ERR_ILLEGAL_WRITE = -5
 };
 
 static std::string get_error_code(int error_code) {
@@ -51,6 +52,7 @@ static std::string get_error_code(int error_code) {
     case ERR_OUT_OF_BOUNDS: out = "ERR_OUT_OF_BOUNDS"; break;
     case ERR_NULLPTR: out = "ERR_NULLPTR"; break;
     case ERR_WRONG_RANK: out = "ERR_WRONG_RANK"; break;
+    case ERR_ILLEGAL_WRITE: out = "ERR_ILLEGAL_WRITE"; break;
     default:;
     }
     out += "(" + std::to_string(error_code) + ")";
