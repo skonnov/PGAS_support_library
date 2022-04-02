@@ -167,8 +167,7 @@ void master_helper_thread() {
                     CHECK(quantum_index < (int)memory->quantum_ready.size(), ERR_OUT_OF_BOUNDS);
                     CHECK(quantum_index < (int)memory->owners.size(), ERR_OUT_OF_BOUNDS);
                     if (memory->is_mode_changed[quantum_index]) {  // был переход между режимами?
-                        if (memory->owners[quantum_index].empty())
-                            throw -1;
+                        CHECK(!memory->owners[quantum_index].empty(), ERR_READ_UNINITIALIZED_DATA);  // квант не был инициализирован
                         CHECK(memory->quantum_ready[quantum_index] == true, ERR_UNKNOWN);
                         CHECK(memory->owners[quantum_index].size() == 1, ERR_UNKNOWN);
                         memory->is_mode_changed[quantum_index] = false;
@@ -178,9 +177,7 @@ void master_helper_thread() {
                             break;
                         }
                     }
-                    if (memory->owners[quantum_index].empty()) {  // квант не был инициализирован
-                            throw -1;
-                    }
+                    CHECK(!memory->owners[quantum_index].empty(), ERR_READ_UNINITIALIZED_DATA);  // квант не был инициализирован
                     int to_rank = memory_manager::get_owner(key, quantum_index, status.MPI_SOURCE);  // получение ранга наиболее предпочтительного процесса
                     CHECK(to_rank > 0 && to_rank < size, ERR_WRONG_RANK);
                     int to_request[4] = {GET_DATA_R, key, quantum_index, status.MPI_SOURCE};
