@@ -70,4 +70,13 @@ static std::string get_error_code(int error_code) {
         MPI_Abort(MPI_COMM_WORLD, error_code);                                                                       \
     }
 
+#define ABORT(error_code)                                                                                            \
+    if(true) {                                                                                                       \
+        int rank;                                                                                                    \
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);                                                                        \
+        std::cout << "Abort was called on process w/ MPI_rank #" << rank << ", file: "                               \
+             << __FILE__ << ", line: " << __LINE__ <<  " with error "  << get_error_code(error_code) << std::endl;   \
+        MPI_Abort(MPI_COMM_WORLD, error_code);                                                                       \
+    }
+
 #endif  // __COMMON_H__
