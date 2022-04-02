@@ -353,9 +353,8 @@ void memory_manager::change_mode(int key, int quantum_index_l, int quantum_index
 }
 
 void memory_manager::print(int key, const std::string& path) {
-    int err = MPI_File_open(workers_comm, path.data(), MPI_MODE_WRONLY | MPI_MODE_CREATE | MPI_MODE_APPEND, MPI_INFO_NULL, &fh);
-    if (err)
-        throw -1;
+    int err = MPI_File_open(workers_comm, path.data(), MPI_MODE_WRONLY | MPI_MODE_CREATE | MPI_MODE_APPEND, MPI_INFO_NULL, &fh);\
+    CHECK(!err, ERR_FILE_OPEN);
     int request[4] = {PRINT, key, -1, -1};
     MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
     int is_ready;
@@ -365,8 +364,7 @@ void memory_manager::print(int key, const std::string& path) {
 }
 
 void memory_manager::print_quantum(int key, int quantum_index) {
-    if (memory_manager::rank < 1 || memory_manager::rank >= size)
-        throw -1;
+    CHECK(memory_manager::rank >= 1 && memory_manager::rank < size, ERR_WRONG_RANK);
     auto* memory = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
     CHECK(memory->quantums[quantum_index] != nullptr, ERR_NULLPTR);
     MPI_Status status;
@@ -451,8 +449,7 @@ void memory_manager::finalize() {
 
 int memory_manager::get_owner(int key, int quantum_index, int requesting_process) {
     auto* memory = dynamic_cast<memory_line_master*>(memory_manager::memory[key]);
-    if (memory->owners[quantum_index].empty())
-        throw -1;
+    CHECK(!memory->owners[quantum_index].empty(), ERR_READ_UNINITIALIZED_DATA);
     for (auto rank: memory->owners[quantum_index])
         if (rank == requesting_process)
             return requesting_process;
