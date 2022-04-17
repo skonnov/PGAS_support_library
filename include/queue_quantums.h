@@ -3,10 +3,14 @@
 
 #include <vector>
 #include <queue>
+#include <iostream>
+#include "common.h"
+#include "mpi.h"
 
 class queue_quantums
 {
     std::vector<std::queue<int>> v_queues;  // вектор очередей, хранящих номера процессов, которые ждут освобождения квантов
+    int rank;
 public:
     queue_quantums(int num_quantums = 0);
     void push(int quantum_number, int process);

@@ -38,21 +38,25 @@ enum operations {  // используется вспомогательными 
 };
 
 enum error_codes {
-    ERR_UNKNOWN       = -1,
-    ERR_OUT_OF_BOUNDS = -2,
-    ERR_NULLPTR       = -3,
-    ERR_WRONG_RANK    = -4,
-    ERR_ILLEGAL_WRITE = -5
+    ERR_UNKNOWN                 = -1,
+    ERR_OUT_OF_BOUNDS           = -2,
+    ERR_NULLPTR                 = -3,
+    ERR_WRONG_RANK              = -4,
+    ERR_ILLEGAL_WRITE           = -5,
+    ERR_READ_UNINITIALIZED_DATA = -6,
+    ERR_FILE_OPEN               = -7
 };
 
 static std::string get_error_code(int error_code) {
     std::string out;
     switch(error_code) {
-    case ERR_UNKNOWN: out = "ERR_UKNOWN"; break;
-    case ERR_OUT_OF_BOUNDS: out = "ERR_OUT_OF_BOUNDS"; break;
-    case ERR_NULLPTR: out = "ERR_NULLPTR"; break;
-    case ERR_WRONG_RANK: out = "ERR_WRONG_RANK"; break;
-    case ERR_ILLEGAL_WRITE: out = "ERR_ILLEGAL_WRITE"; break;
+    case ERR_UNKNOWN:                 out = "ERR_UKNOWN"; break;
+    case ERR_OUT_OF_BOUNDS:           out = "ERR_OUT_OF_BOUNDS"; break;
+    case ERR_NULLPTR:                 out = "ERR_NULLPTR"; break;
+    case ERR_WRONG_RANK:              out = "ERR_WRONG_RANK"; break;
+    case ERR_ILLEGAL_WRITE:           out = "ERR_ILLEGAL_WRITE"; break;
+    case ERR_READ_UNINITIALIZED_DATA: out = "ERR_READ_UNINITIALIZED_DATA"; break;
+    case ERR_FILE_OPEN:               out = "ERR_FILE_OPEN"; break;
     default:;
     }
     out += "(" + std::to_string(error_code) + ")";
@@ -64,6 +68,15 @@ static std::string get_error_code(int error_code) {
         int rank;                                                                                                    \
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);                                                                        \
         std::cout << "Check failed on process w/ MPI_rank #" << rank << ", file: "                                   \
+             << __FILE__ << ", line: " << __LINE__ <<  " with error "  << get_error_code(error_code) << std::endl;   \
+        MPI_Abort(MPI_COMM_WORLD, error_code);                                                                       \
+    }
+
+#define ABORT(error_code)                                                                                            \
+    if(true) {                                                                                                       \
+        int rank;                                                                                                    \
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);                                                                        \
+        std::cout << "Abort was called on process w/ MPI_rank #" << rank << ", file: "                               \
              << __FILE__ << ", line: " << __LINE__ <<  " with error "  << get_error_code(error_code) << std::endl;   \
         MPI_Abort(MPI_COMM_WORLD, error_code);                                                                       \
     }

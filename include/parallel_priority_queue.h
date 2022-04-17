@@ -269,9 +269,7 @@ void parallel_priority_queue<T>::heapify(int index) {
 template<class T>
 void parallel_priority_queue<T>::remove_max_local() {
     int size = sizes.get_elem(worker_rank);
-    if (size == 0) {
-        throw -1;
-    }
+    CHECK(size, ERR_UNKNOWN);
     pqueues.set_elem(global_index_l, pqueues.get_elem(global_index_l + size - 1));
     sizes.set_elem(worker_rank, size - 1);
     heapify(0);
