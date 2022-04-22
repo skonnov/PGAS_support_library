@@ -175,6 +175,7 @@ void master_helper_thread() {
                         memory->quantums[quantum_index].is_mode_changed = false;
                         int to_rank = memory->quantums[quantum_index].owners.front();
                         if (to_rank == status.MPI_SOURCE) {  // после перехода оказалось, что квант находится на процессе, который отправил запрос?
+                            // do smth with cache?
                             MPI_Send(&to_rank, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
                             break;
                         }
@@ -182,6 +183,12 @@ void master_helper_thread() {
                     CHECK(!memory->quantums[quantum_index].owners.empty(), ERR_READ_UNINITIALIZED_DATA);  // квант не был инициализирован
                     int to_rank = memory_manager::get_owner(key, quantum_index, status.MPI_SOURCE);  // получение ранга наиболее предпочтительного процесса
                     CHECK(to_rank > 0 && to_rank < size, ERR_WRONG_RANK);
+
+                    // работа с кешем
+                    int removing_quantum_index = request[3];
+                    if (removing_quantum_index >= 0 && removing_quantum_index < (int)memory->quantums.size());
+                        memory_manager::remove_owner(key, removing_quantum_index, status.MPI_SOURCE);
+
                     int to_request[4] = {GET_DATA_R, key, quantum_index, status.MPI_SOURCE};
                     MPI_Send(&to_rank, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);  // отправление информации о том, с каким процессом
                                                                                                                      // нужно взаимодействовать для получения кванта
@@ -481,4 +488,16 @@ int memory_manager::get_owner(int key, int quantum_index, int requesting_process
     memory->quantums[quantum_index].owners.pop_front();
     memory->quantums[quantum_index].owners.push_back(to_rank);
     return to_rank;
+}
+
+void memory_manager::remove_owner(int key, int removing_quantum_index, int process) {
+    auto* memory = dynamic_cast<memory_line_master*>(memory_manager::memory[key]);
+    CHECK(!memory->quantums[removing_quantum_index].owners.empty(), ERR_UNKNOWN);
+    for (auto rank = memory->quantums[removing_quantum_index].owners.begin();
+                        rank  < memory->quantums[removing_quantum_index].owners.end(); ++rank) {
+        if (*rank == process) {
+            memory->quantums[removing_quantum_index].owners.erase(rank);
+            break;
+        }
+    }
 }
