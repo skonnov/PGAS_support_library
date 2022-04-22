@@ -40,6 +40,11 @@ struct quantum_master
     bool quantum_ready = false;  // готов ли квант для передачи
     int quantum_lock_number = -1;  // для хранения номера процесса, заблокировавшего квант через set_lock
     std::deque<int> owners;  // для read_only mode, номера процессов, хранящих у себя квант
+    std::vector<int> requests; // хранит число текущих запросов по данному кванту для каждого процесса
+
+    quantum_master(int number_of_procs): quantum_common() {
+        requests.resize(number_of_procs, 0);
+    }
 };
 
 struct memory_line_common {
@@ -109,7 +114,7 @@ int memory_manager::create_object(int number_of_elements, int quantum_size) {
     if (rank == 0) {
         line = new memory_line_master;
         auto line_master = dynamic_cast<memory_line_master*>(line);
-        line_master->quantums.resize(num_of_quantums);
+        line_master->quantums.resize(num_of_quantums, quantum_master(size));
         line_master->wait_locks.resize(num_of_quantums);
         line_master->wait_quantums.resize(num_of_quantums);
     } else {
@@ -176,6 +181,7 @@ T memory_manager::get_data(int key, int index_of_element) {
         MPI_Recv(quantum, memory->quantum_size, memory->type, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
     }
     request[0] = SET_INFO;
+    request[3] = (to_rank != rank) ? to_rank : -1;
     CHECK(quantum != nullptr, ERR_NULLPTR);
     T elem = (reinterpret_cast<T*>(quantum))[index_of_element % memory->quantum_size];
     MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // уведомление мастера о том, что данные готовы для передачи другим процессам
@@ -214,6 +220,7 @@ void memory_manager::set_data(int key, int index_of_element, T value) {
         MPI_Recv(quantum, memory->quantum_size, memory->type, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
     }
     request[0] = SET_INFO;
+    request[3] = (to_rank != rank) ? to_rank : -1;
     (reinterpret_cast<T*>(quantum))[index_of_element % memory->quantum_size] = value;
     MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // уведомление мастера о том, что данные готовы для передачи другим процессам
 }

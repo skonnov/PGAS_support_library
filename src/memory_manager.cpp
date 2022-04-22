@@ -124,8 +124,15 @@ void master_helper_thread() {
     while (true) {
         MPI_Recv(&request, 4, MPI_INT, MPI_ANY_SOURCE, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD, &status);
         if (request[0] == -1 && request[1] == -1 && request[2] == -1) {  // окончание работы вспомогательного потока
-            for (auto line: memory_manager::memory)
-                delete line;
+            for (auto _line: memory_manager::memory) {
+                memory_line_master* line = dynamic_cast<memory_line_master*>(_line);
+                for (auto quantum: line->quantums) {
+                    for (int i = 0; i < size - 1; ++i) {
+                        CHECK(quantum.requests[i] == 0, ERR_UNKNOWN);
+                    }
+                }
+                delete _line;
+            }
             break;
         }
         int key = request[1], quantum_index = request[2];
@@ -179,6 +186,8 @@ void master_helper_thread() {
                     MPI_Send(&to_rank, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);  // отправление информации о том, с каким процессом
                                                                                                                      // нужно взаимодействовать для получения кванта
                     if (to_rank != status.MPI_SOURCE) {
+                        CHECK(to_rank < size, ERR_OUT_OF_BOUNDS);
+                        ++memory->quantums[quantum_index].requests[to_rank - 1];
                         MPI_Send(to_request, 4, MPI_INT, to_rank, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);  // отправление запроса вспомогательному потоку
                                                                                                          // процесса-рабочего о переслыке данных
                     }
@@ -193,6 +202,8 @@ void master_helper_thread() {
                         if (to_rank == -1 || to_rank == status.MPI_SOURCE) {  // данные у процесса, отправившего запрос?
                             MPI_Send(&status.MPI_SOURCE, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
                         } else {
+                            CHECK(to_rank < size, ERR_OUT_OF_BOUNDS);
+                            ++memory->quantums[quantum_index].requests[to_rank - 1];
                             int to_request[4] = {GET_DATA_RW, key, quantum_index, status.MPI_SOURCE};
                             MPI_Send(&to_rank, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);  // отправление информации о том, с каким процессом
                                                                                                                              // нужно взаимодействовать для получения кванта
@@ -218,6 +229,9 @@ void master_helper_thread() {
                         memory->quantums[quantum_index].quantum_ready = false;
                         memory->quantums[quantum_index].owners.pop_front();
                         memory->quantums[quantum_index].owners.push_back(status.MPI_SOURCE);
+
+                        CHECK(to_rank < size, ERR_OUT_OF_BOUNDS);
+                        ++memory->quantums[quantum_index].requests[to_rank - 1];
                         MPI_Send(&to_rank, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);  // отправление информации о том, с каким процессом
                                                                                                                          // нужно взаимодействовать для получения кванта
                         MPI_Send(to_request, 4, MPI_INT, to_rank, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);  // отправление запроса вспомогательному потоку
@@ -228,6 +242,15 @@ void master_helper_thread() {
                 }
                 break;
             case SET_INFO:  // данные готовы для пересылки
+            {
+                int worker_rank_sender = request[3] - 1;
+                // уменьшить счётчик для кванта и процесса, посылавшего квант на процесс status.MPI_SOURCE
+                if (worker_rank_sender >= 0) {
+                    CHECK(worker_rank_sender < size - 1, ERR_OUT_OF_BOUNDS);
+                    --memory->quantums[quantum_index].requests[worker_rank_sender];
+                    CHECK(memory->quantums[quantum_index].requests[worker_rank_sender] >= 0, ERR_UNKNOWN);
+                }
+
                 if (memory->quantums[quantum_index].mode == READ_ONLY) {
                     memory->quantums[quantum_index].owners.push_back(status.MPI_SOURCE); // процесс помещается в вектор процессов,
                                                                                  // которые могут пересылать данный квант другим процессам
@@ -245,6 +268,9 @@ void master_helper_thread() {
                         int to_request[4] = {GET_DATA_RW, key, quantum_index, source_rank};
                         CHECK(source_rank != to_rank, ERR_WRONG_RANK);
                         CHECK(to_rank > 0 && to_rank < size, ERR_WRONG_RANK);
+
+                        CHECK(to_rank < size, ERR_OUT_OF_BOUNDS);
+                        ++memory->quantums[quantum_index].requests[to_rank - 1];
                         MPI_Send(&to_rank, 1, MPI_INT, source_rank, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);  // отправление информации о том, с каким процессом
                                                                                                                    // нужно взаимодействовать для получения кванта
                         MPI_Send(to_request, 4, MPI_INT, to_rank, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);  // отправление запроса вспомогательному потоку
@@ -252,6 +278,7 @@ void master_helper_thread() {
                     }
                 }
                 break;
+            }
             case CHANGE_MODE:  // изменить режим работы с памятью
             {
                 int quantum_l = request[2], quantum_r = request[3];
