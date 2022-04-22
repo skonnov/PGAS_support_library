@@ -105,7 +105,8 @@ public:
     static void notify(int to_rank);  // возобновить работу процесса rank
 private:
     static void print_quantum(int key, int quantum_index);
-    static int get_owner(int key, int quantum_index, int requesting_process);  // получить номер кванта, хранящего квант в текущий момент времени
+    static int get_owner(int key, int quantum_index, int requesting_process);  // получить номер процесса, хранящего квант в текущий момент времени
+    static void remove_owner(int key, int removing_quantum_index, int process);  // удалить процесс из структуры данных с номерами процессов, хранящих данный квант
     friend void worker_helper_thread();  // функция, выполняемая вспомогательными потоками процессов-рабочих
     friend void master_helper_thread();  // функция, выполняемая вспомогательным потоком процесса-мастера
 };
@@ -165,12 +166,28 @@ T memory_manager::get_data(int key, int index_of_element) {
     }
     if (memory->quantums[quantum_index].mode == READ_WRITE)
         memory->quantums[quantum_index].mutex->unlock();
-    int request[4] = {GET_INFO, key, quantum_index, -1};  // обращение к мастеру с целью получить квант
+
+    // работа с кешем
+    int removing_quantum_index = memory->cache.add(quantum_index);
+
+    int request[4] = {GET_INFO, key, quantum_index, removing_quantum_index};  // обращение к мастеру с целью получить квант
     MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
     int to_rank = -2;
     MPI_Status status;
     MPI_Recv(&to_rank, 1, MPI_INT, 0, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD, &status);  // получение ответа от мастера
     memory->quantums[quantum_index].is_mode_changed = false; // ???
+
+    
+    if (removing_quantum_index >= 0 && removing_quantum_index < (int)memory->quantums.size()) {
+        // add some mutex logic???
+        // if (/*can't delete removing_quantum_index*/) {
+        //     memory->cache.add_to_exclude_items(removing_quantum_index);
+        // } else {
+        //     memory->allocator.free(reinterpret_cast<char**>(&(memory->quantums[removing_quantum_index].quantum)));
+        // }
+
+    }
+
     if (memory->quantums[quantum_index].mode == READ_ONLY && to_rank == rank) {  // если read_only_mode и данные уже у процесса,
                                                  // ответ мастеру о том, что данные готовы, отправлять не нужно
         CHECK(quantum != nullptr, ERR_NULLPTR);
