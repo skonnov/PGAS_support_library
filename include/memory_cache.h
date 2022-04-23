@@ -1,8 +1,11 @@
 #ifndef __MEMORY_CACHE__
 #define __MEMORY_CACHE__
 
-#include "memory_allocator.h"
+#include <mpi.h>
+#include <vector>
 #include <utility>
+#include <iostream>
+#include "common.h"
 
 class memory_cache {
 public:
@@ -17,11 +20,13 @@ public:
     void add_to_excluded(int quantum_index);
     bool is_excluded(int quantum_index);
     void clear_cache();
+    void delete_elem(int quantum_index);
 private:
     std::vector<bool> excluded {};
     std::vector<bool> contain_flags {};
     std::vector<int> cache_indexes {};
     int current_id;
+    int rank, size;
 };
 
 #endif
