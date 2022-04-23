@@ -35,7 +35,8 @@ enum operations {  // используется вспомогательными 
     LOCK,
     UNLOCK,
     CHANGE_MODE,
-    PRINT
+    PRINT,
+    DELETE
 };
 
 enum error_codes {
