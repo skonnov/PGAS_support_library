@@ -1,7 +1,10 @@
 #include "memory_cache.h"
+#include "common.h"
 
 memory_cache::memory_cache() {
     current_id = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
 }
 
 memory_cache::memory_cache(int cache_size, int number_of_quantums) {
@@ -51,14 +54,17 @@ int memory_cache::add(int quantum_index) {
 }
 
 bool memory_cache::is_contain(int quantum_index) {
+    CHECK(quantum_index >= 0 && quantum_index < (int)contain_flags.size(), ERR_OUT_OF_BOUNDS);
     return contain_flags[quantum_index];
 }
 
 void memory_cache::add_to_excluded(int quantum_index) {
+    CHECK(quantum_index >= 0 && quantum_index < (int)excluded.size(), ERR_OUT_OF_BOUNDS);
     excluded[quantum_index] = true;
 }
 
 bool memory_cache::is_excluded(int quantum_index) {
+    CHECK(quantum_index >= 0 && quantum_index < (int)excluded.size(), ERR_OUT_OF_BOUNDS);
     return excluded[quantum_index];
 }
 
@@ -67,4 +73,13 @@ void memory_cache::clear_cache() {
     cache_indexes = std::vector<int>(cache_indexes.size(), -1);
     excluded = std::vector<bool>(excluded.size(), -1);
     contain_flags = std::vector<bool>(excluded.size(), -1);
+}
+
+void memory_cache::delete_elem(int quantum_index) {
+    CHECK(quantum_index >= 0 && quantum_index < (int)excluded.size(), ERR_OUT_OF_BOUNDS);
+    CHECK(quantum_index >= 0 && quantum_index < (int)contain_flags.size(), ERR_OUT_OF_BOUNDS);
+    excluded[quantum_index] = false;
+    contain_flags[quantum_index] = false;
+    // TODO: delete from cache_indexes!!!
+
 }
