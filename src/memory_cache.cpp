@@ -7,10 +7,11 @@ memory_cache::memory_cache() {
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 }
 
-memory_cache::memory_cache(int cache_size, int number_of_quantums) {
+memory_cache::memory_cache(int cache_size, int number_of_quantums):
+                                        cache_indexes(cache_size, -1),
+                                        contain_flags(number_of_quantums, false),
+                                        excluded(number_of_quantums, false) {
     current_id = 0;
-    cache_indexes.resize(cache_size, -1);
-    contain_flags.resize(number_of_quantums);
 }
 
 memory_cache& memory_cache::operator=(const memory_cache& cache) {
@@ -24,6 +25,10 @@ memory_cache& memory_cache::operator=(const memory_cache& cache) {
         for (int i = 0; i < static_cast<int>(contain_flags.size()); ++i) {
             contain_flags[i] = cache.contain_flags[i];
         }
+        excluded.resize(cache.excluded.size());
+        for (int i = 0; i < static_cast<int>(contain_flags.size()); ++i) {
+            excluded[i] = cache.excluded[i];
+        }
     }
     return *this;
 }
@@ -33,22 +38,27 @@ memory_cache& memory_cache::operator=(memory_cache&& cache) {
         current_id = cache.current_id;
         cache_indexes = std::move(cache.cache_indexes);
         contain_flags = std::move(cache.contain_flags);
+        excluded = std::move(cache.excluded);
     }
     return *this;
 }
 
 int memory_cache::add(int quantum_index) {
-    int return_index = -1;
-
     if (is_contain(quantum_index)) {
-        return return_index;
+        return -1;
     }
 
-    if (cache_indexes[current_id] >= 0) {
-        return_index = cache_indexes[current_id];
+    int return_index = -1;
+    if (cache_indexes[current_id] >= 0 && is_contain(cache_indexes[current_id])) {
+        if (!excluded[cache_indexes[current_id]]) {
+            return_index = cache_indexes[current_id];
+            contain_flags[cache_indexes[current_id]] = false;
+        }
     }
 
     cache_indexes[current_id] = quantum_index;
+    contain_flags[quantum_index] = true;
+
     current_id = (current_id == static_cast<int>(cache_indexes.size()) - 1) ? 0 : current_id + 1;
     return return_index;
 }
