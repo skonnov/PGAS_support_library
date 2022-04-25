@@ -88,7 +88,8 @@ void worker_helper_thread() {
         if (request[0] != PRINT) {
             CHECK(quantum_index >= 0 && quantum_index < (int)memory->quantums.size(), ERR_OUT_OF_BOUNDS);
             CHECK(memory->quantums[quantum_index].quantum != nullptr, ERR_NULLPTR);
-            CHECK(to_rank > 0 && to_rank < size, ERR_WRONG_RANK);
+            if (request[0] != DELETE)
+                CHECK(to_rank > 0 && to_rank < size, ERR_WRONG_RANK);
         }
         // запросы на GET_DATA_R и GET_DATA_RW принимаются только от мастера
         switch(request[0]) {
@@ -110,6 +111,15 @@ void worker_helper_thread() {
                     memory_manager::print_quantum(key, i);
                 int ready = 1;
                 MPI_Send(&ready, 1, MPI_INT, 0, GET_PERMISSION_TO_CONTINUE, MPI_COMM_WORLD);
+                break;
+            }
+            case DELETE:
+            {
+                memory->quantums[quantum_index].mutex->lock();
+                int removing_quantum_index = request[2];
+                memory->allocator.free(reinterpret_cast<char**>(&(memory->quantums[removing_quantum_index].quantum)));
+                memory->quantums[quantum_index].mutex->unlock();
+                break;
             }
         }
     }
@@ -181,13 +191,9 @@ void master_helper_thread() {
                         }
                     }
                     CHECK(!memory->quantums[quantum_index].owners.empty(), ERR_READ_UNINITIALIZED_DATA);  // квант не был инициализирован
+
                     int to_rank = memory_manager::get_owner(key, quantum_index, status.MPI_SOURCE);  // получение ранга наиболее предпочтительного процесса
                     CHECK(to_rank > 0 && to_rank < size, ERR_WRONG_RANK);
-
-                    // работа с кешем
-                    int removing_quantum_index = request[3];
-                    if (removing_quantum_index >= 0 && removing_quantum_index < (int)memory->quantums.size());
-                        memory_manager::remove_owner(key, removing_quantum_index, status.MPI_SOURCE);
 
                     int to_request[4] = {GET_DATA_R, key, quantum_index, status.MPI_SOURCE};
                     MPI_Send(&to_rank, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);  // отправление информации о том, с каким процессом
@@ -198,6 +204,19 @@ void master_helper_thread() {
                         MPI_Send(to_request, 4, MPI_INT, to_rank, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);  // отправление запроса вспомогательному потоку
                                                                                                          // процесса-рабочего о переслыке данных
                     }
+
+                    // работа с кешем
+                    int removing_quantum_index = request[3];
+                    if (removing_quantum_index >= 0) {
+                        memory_manager::remove_owner(key, removing_quantum_index, status.MPI_SOURCE);
+                        if (memory->quantums[removing_quantum_index].requests[status.MPI_SOURCE] == 0) {
+                            int request_to_delete[] = {DELETE, key, removing_quantum_index, -1};
+                            MPI_Send(request_to_delete, 4, MPI_INT, status.MPI_SOURCE, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
+                        } else {
+                            memory->quantums[removing_quantum_index].want_to_delete[status.MPI_SOURCE] = true;
+                        }
+                    }
+
                 } else {  // READ_WRITE mode
                     if (memory->quantums[quantum_index].is_mode_changed) {  // был переход между режимами?
                         int to_rank = memory_manager::get_owner(key, quantum_index, status.MPI_SOURCE);  // получение ранга наиболее предпочтительного процесса
@@ -251,11 +270,18 @@ void master_helper_thread() {
             case SET_INFO:  // данные готовы для пересылки
             {
                 int worker_rank_sender = request[3] - 1;
-                // уменьшить счётчик для кванта и процесса, посылавшего квант на процесс status.MPI_SOURCE
                 if (worker_rank_sender >= 0) {
                     CHECK(worker_rank_sender < size - 1, ERR_OUT_OF_BOUNDS);
+                    // уменьшить счётчик для кванта и процесса, посылавшего квант на процесс status.MPI_SOURCE
                     --memory->quantums[quantum_index].requests[worker_rank_sender];
                     CHECK(memory->quantums[quantum_index].requests[worker_rank_sender] >= 0, ERR_UNKNOWN);
+                    if (memory->quantums[quantum_index].requests[worker_rank_sender] == 0 &&
+                                memory->quantums[quantum_index].want_to_delete[worker_rank_sender]) {
+
+                        memory->quantums[quantum_index].want_to_delete[worker_rank_sender] = false;
+                        int request_to_delete[] = {DELETE, key, quantum_index, 0};
+                        MPI_Send(request_to_delete, 4, MPI_INT, worker_rank_sender, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
+                    }
                 }
 
                 if (memory->quantums[quantum_index].mode == READ_ONLY) {
@@ -378,6 +404,20 @@ void memory_manager::change_mode(int key, int quantum_index_l, int quantum_index
     MPI_Recv(&is_ready, 1, MPI_INT, 0, GET_PERMISSION_FOR_CHANGE_MODE, MPI_COMM_WORLD, &status);  // после получения ответа данный процесс может продолжить выполнение
     auto* memory = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
     for (int i = quantum_index_l; i < quantum_index_r; ++i) {
+
+        // работа с кешем
+        memory->quantums[i].mutex->lock();
+        if (mode == READ_ONLY) {
+            if (memory->quantums[i].quantum != nullptr) {
+                memory->cache.add_to_excluded(i);
+            }
+        } else {  // READ_WRITE
+            if (memory->quantums[i].quantum != nullptr &&
+                    (memory->cache.is_contain(i) || memory->cache.is_excluded(i))) {
+                memory->cache.delete_elem(i);
+            }
+        }
+        memory->quantums[i].mutex->unlock();
         memory->quantums[i].is_mode_changed = true;
         memory->quantums[i].mode = mode;
     }
