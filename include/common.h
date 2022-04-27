@@ -28,15 +28,15 @@ enum tags {  // используется для корректного расп�
 };
 
 enum operations {  // используется вспомогательными потоками для определения типа запрашиваемой операции
-    GET_DATA_RW,
-    GET_DATA_R,
-    SET_INFO,
-    GET_INFO,
-    LOCK,
-    UNLOCK,
-    CHANGE_MODE,
-    PRINT,
-    DELETE
+    GET_DATA_RW = 0,
+    GET_DATA_R  = 1,
+    SET_INFO    = 2,
+    GET_INFO    = 3,
+    LOCK        = 4,
+    UNLOCK      = 5,
+    CHANGE_MODE = 6,
+    PRINT       = 7,
+    DELETE      = 8
 };
 
 enum error_codes {
