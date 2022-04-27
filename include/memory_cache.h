@@ -4,8 +4,25 @@
 #include <mpi.h>
 #include <vector>
 #include <utility>
+#include <queue>
 #include <iostream>
 #include "common.h"
+
+struct cache_node {
+    int value;
+    cache_node* next, *prev;
+};
+
+class cache_list {
+    cache_node* begin = nullptr, *end = nullptr;
+    int size = 0;
+public:
+    void push_back(cache_node* node);
+    cache_node* pop_front();
+    cache_node* pop_back();
+    void delete_node(cache_node* node);
+    bool empty();
+};
 
 class memory_cache {
 public:
@@ -19,13 +36,12 @@ public:
     bool is_contain(int quantum_index);
     void add_to_excluded(int quantum_index);
     bool is_excluded(int quantum_index);
-    void clear_cache();
     void delete_elem(int quantum_index);
 private:
     std::vector<bool> excluded {};
-    std::vector<bool> contain_flags {};
-    std::vector<int> cache_indexes {};
-    int current_id;
+    std::vector<cache_node*> contain_flags {};
+    std::vector<cache_node> cache_memory {};
+    cache_list free_cache_nodes {}, cache_indexes {};
     int rank, size;
 };
 
