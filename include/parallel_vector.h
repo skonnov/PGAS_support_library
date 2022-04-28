@@ -33,7 +33,7 @@ public:
 
 template<class T>
 parallel_vector<T>::parallel_vector(const int& number_of_elems, const int& quantum_size, const int& cache_size) {
-    key = memory_manager::create_object<T>(number_of_elems, quantum_size);
+    key = memory_manager::create_object<T>(number_of_elems, quantum_size, cache_size);
     size_vector = number_of_elems;
 }
 template<class T>
