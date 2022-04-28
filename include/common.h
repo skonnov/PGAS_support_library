@@ -4,7 +4,7 @@
 #include <string>
 
 #define DEFAULT_QUANTUM_SIZE 500
-#define DEFAULT_CACHE_SIZE 100
+#define DEFAULT_CACHE_SIZE 1000
 
 enum mods {  // используется для изменения режима работы с памятью
     READ_ONLY,
