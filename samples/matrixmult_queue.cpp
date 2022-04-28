@@ -48,7 +48,7 @@ int get_args(int argc, char** argv, int& n, int& div_num, int& seed, int& cache_
         return -1;
     }
 
-    if (n < 0) {
+    if (n <= 0) {
         if (memory_manager::get_MPI_rank() == 1)
             std::cerr<<"matrices size must be positive!"<<std::endl;
         return -1;
@@ -157,7 +157,7 @@ int main(int argc, char** argv) { // матрица b транспонирова
         memory_manager::finalize();
         return 0;
     }
-    parallel_vector<int> pva(n * n), pvb(n * n), pvc (n * n);
+    parallel_vector<int> pva(n * n, DEFAULT_QUANTUM_SIZE, cache_size), pvb(n * n, DEFAULT_QUANTUM_SIZE, cache_size), pvc (n * n, DEFAULT_QUANTUM_SIZE, cache_size);
     generate_matrices(pva, pvb, pvc, n, seed);
     int part_size = n / div_num;
     std::queue<task> qu;

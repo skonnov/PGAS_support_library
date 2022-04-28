@@ -25,7 +25,8 @@ std::ostream &operator<<(std::ostream &out, pair const &m) {
     return out << "(" << m.first << " " << m.second << ")";
 }
 
-int dijkstra(const std::vector<std::vector<std::pair<int, int>>>& v, parallel_vector<int>& d, int n, int begin, int end, int quantum_size = DEFAULT_QUANTUM_SIZE, int to_worker_rank = 0) {
+int dijkstra(const std::vector<std::vector<std::pair<int, int>>>& v, parallel_vector<int>& d, int n, int begin, int end,
+                int quantum_size = DEFAULT_QUANTUM_SIZE, int cache_size = DEFAULT_CACHE_SIZE, int to_worker_rank = 0) {
     int worker_rank = memory_manager::get_MPI_rank() - 1;
     int worker_size = memory_manager::get_MPI_size() - 1;
     int count = 2;
@@ -37,7 +38,7 @@ int dijkstra(const std::vector<std::vector<std::pair<int, int>>>& v, parallel_ve
     MPI_Datatype types[] = { MPI_INT, MPI_INT };
 
     parallel_priority_queue<pair> pq(count, blocklens, indices, types,
-                                     {INT_MIN, INT_MIN}, int(v.size() * v.size() + quantum_size - 1) / quantum_size, quantum_size); // num_of_quantums_proc - ?
+                                     {INT_MIN, INT_MIN}, int(v.size() * v.size() + quantum_size - 1) / quantum_size, quantum_size, cache_size); // num_of_quantums_proc - ?
     if (worker_rank < 0)
         return 0;
     int k = 0;
@@ -215,7 +216,7 @@ int get_args(int argc, char** argv, int& n, int&m, int& seed, int& min_size, int
         m = n * (n - 1) / 2;
     }
 
-    if (n < 0 || m < 0) {
+    if (n <= 0 || m <= 0) {
         if (memory_manager::get_MPI_rank() == 1)
             std::cerr << "vertices and edges must be positive!" << std::endl;
         return -1;
@@ -259,7 +260,7 @@ int main(int argc, char** argv) {
 
     std::vector<std::vector<std::pair<int,int>>> v = generate_graph(n, m, min_size, max_size, seed);
     double t1 = MPI_Wtime();
-    int ans = dijkstra(v, d, n, 0, n - 1, DEFAULT_QUANTUM_SIZE);
+    int ans = dijkstra(v, d, n, 0, n - 1, DEFAULT_QUANTUM_SIZE, cache_size);
     double t2 = MPI_Wtime();
     if (rank == 1) {
         if (ans != dijkstra_seq(v, 0, n - 1)) {
