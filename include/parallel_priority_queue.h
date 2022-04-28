@@ -27,13 +27,14 @@ class parallel_priority_queue {
     parallel_vector<T> maxes;
     parallel_vector<int> sizes;  // максимальные элементы на каждом процессе, размер приоритетной очереди на каждом процессе, вектор для хранения приоритетной очереди
     int num_of_quantums_proc, quantum_size, num_of_elems_proc;  // число квантов на одном процессе, размер кванта, число элементов на одном процессе
+    int cache_size;
     int global_index_l;  // смещение в pqueues от начала в глобальной памяти
     T default_value;
     MPI_Datatype pair_type;
 public:
-    parallel_priority_queue(T _default_value, int _num_of_quantums_proc, int _quantum_size=DEFAULT_QUANTUM_SIZE);
+    parallel_priority_queue(T _default_value, int _num_of_quantums_proc, int _quantum_size = DEFAULT_QUANTUM_SIZE, int _cache_size = DEFAULT_CACHE_SIZE);
     parallel_priority_queue(int count, const int* blocklens, const MPI_Aint* indices, const MPI_Datatype* types,
-                            T _default_value, int _num_of_quantums_proc, int _quantum_size=DEFAULT_QUANTUM_SIZE);
+                            T _default_value, int _num_of_quantums_proc, int _quantum_size = DEFAULT_QUANTUM_SIZE, int _cache_size = DEFAULT_CACHE_SIZE);
     void insert(T elem);
     void insert(T elem, int from_worker_rank);
     void insert_local(T elem);
@@ -49,13 +50,14 @@ private:
 
 
 template<class T>
-parallel_priority_queue<T>::parallel_priority_queue(T _default_value, int _num_of_quantums_proc, int _quantum_size) {
+parallel_priority_queue<T>::parallel_priority_queue(T _default_value, int _num_of_quantums_proc, int _quantum_size, int _cache_size) {
     worker_rank = memory_manager::get_MPI_rank() - 1;
     worker_size = memory_manager::get_MPI_size() - 1;
 
     num_of_quantums_proc = _num_of_quantums_proc;
     quantum_size = _quantum_size;
     default_value = _default_value;
+    cache_size = _cache_size;
 
     num_of_elems_proc = num_of_quantums_proc * quantum_size;
     global_index_l = worker_rank * num_of_elems_proc;
@@ -63,7 +65,7 @@ parallel_priority_queue<T>::parallel_priority_queue(T _default_value, int _num_o
     maxes = parallel_vector<T>(worker_size, 1);
     sizes = parallel_vector<int>(worker_size, 1);
 
-    pqueues = parallel_vector<T>(worker_size * num_of_elems_proc, quantum_size);
+    pqueues = parallel_vector<T>(worker_size * num_of_elems_proc, quantum_size, cache_size);
 
     if (worker_rank >= 0) {
         maxes.set_elem(worker_rank, default_value);
@@ -83,13 +85,14 @@ parallel_priority_queue<T>::parallel_priority_queue(T _default_value, int _num_o
 
 template<class T>
 parallel_priority_queue<T>::parallel_priority_queue(int _count, const int* _blocklens, const MPI_Aint* _indices, const MPI_Datatype* _types,
-    T _default_value, int _num_of_quantums_proc, int _quantum_size) {
+    T _default_value, int _num_of_quantums_proc, int _quantum_size, int _cache_size) {
     worker_rank = memory_manager::get_MPI_rank() - 1;
     worker_size = memory_manager::get_MPI_size() - 1;
 
     num_of_quantums_proc = _num_of_quantums_proc;
     quantum_size = _quantum_size;
     default_value = _default_value;
+    cache_size = _cache_size;
 
     num_of_elems_proc = num_of_quantums_proc * quantum_size;
     global_index_l = worker_rank * num_of_elems_proc;
@@ -97,7 +100,7 @@ parallel_priority_queue<T>::parallel_priority_queue(int _count, const int* _bloc
     maxes = parallel_vector<T>(_count, _blocklens, _indices, _types, worker_size, 1);
     sizes = parallel_vector<int>(worker_size, 1);
 
-    pqueues = parallel_vector<T>(_count, _blocklens, _indices, _types, worker_size*num_of_elems_proc, quantum_size);
+    pqueues = parallel_vector<T>(_count, _blocklens, _indices, _types, worker_size*num_of_elems_proc, quantum_size, cache_size);
 
     if (worker_rank >= 0) {
         maxes.set_elem(worker_rank, default_value);
