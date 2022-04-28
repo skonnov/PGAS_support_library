@@ -56,7 +56,7 @@ while ($it_sov < $it_sov_max || $it_mv < $it_mv_max || $it_mm < $it_mm_max || $i
             $result = 250000.0;
             if ($it_mm % int(sqrt(@procs_mm[$proc]-1)) == 0) {
                 for ($k = 0; $k < 3; $k++) {
-                    $tmp = `mpiexec -n @procs_mm[$proc] ../build/Release/matrixmult $it_mm`;
+                    $tmp = `mpiexec -n @procs_mm[$proc] ../build/Release/matrixmult -size $it_mm`;
                     $result = min($result + 0.0, $tmp+0.0);
                 }
                 print WF3 @procs_mm[$proc], ": ", $result, " ";

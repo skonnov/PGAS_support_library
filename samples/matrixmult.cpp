@@ -45,30 +45,82 @@ void print(parallel_vector<T>& pv1, parallel_vector<T>& pv2, parallel_vector<T>&
     std::cout << std::endl;
 }
 
-int main(int argc, char** argv) {
-    if (argc <= 1) {
-        std::cout<<"wrong count of args!"<<std::endl;
-        return 1;
+int get_args(int argc, char** argv, int& n, int& cache_size, int q, int size_workers) {
+    n = -1, cache_size = DEFAULT_CACHE_SIZE;
+    for (int i = 1; i < argc; ++i) {
+        if (std::string(argv[i]) == "-size") {
+            if (i + 1 < argc) {
+                n = atoi(argv[++i]);
+            } else {
+                return -1;
+            }
+        }
+
+        if (std::string(argv[i]) == "-cache_size" || std::string(argv[i]) == "-cs") {
+            if (i + 1 < argc) {
+                cache_size = atoi(argv[++i]);
+            } else {
+                return -1;
+            }
+        }
     }
+
+    if (n == -1) {
+        if (memory_manager::get_MPI_rank() == 1)
+            std::cerr<<"You need to define matrixes size!"<<std::endl;
+        return -1;
+    }
+
+    if (n <= 0) {
+        if (memory_manager::get_MPI_rank() == 1)
+            std::cerr<<"matrices size must be positive!"<<std::endl;
+        return -1;
+    }
+
+    if (cache_size <= 0) {
+        if (memory_manager::get_MPI_rank() == 1)
+            std::cerr << "cache_size must be positive number!" << std::endl;
+        return -1;
+    }
+
+    if (q*q != size_workers) {
+        if (memory_manager::get_MPI_rank() == 1)
+            std::cerr << "count of processes must be n = q * q + 1, q - integer!" << std::endl;
+        return -1;
+    }
+
+    if (n % q) {
+        if (memory_manager::get_MPI_rank() == 1)
+            std::cout << "The size n of the matrix n*n must be must be divisible by the sqrt of the num of processes!" << std::endl;
+        return -1;
+    }
+
+    return 0;
+}
+
+static void show_usage() {
+    if (memory_manager::get_MPI_rank() == 1)
+        std::cerr << "Usage: mpiexec <-n matrices size> matrixmult <-size size_of_matrix> [-cache_size|-cs cache_size]"<<std::endl;
+}
+
+int main(int argc, char** argv) {
     memory_manager::init(argc, argv);
     int rank = memory_manager::get_MPI_rank();
     int size_workers = memory_manager::get_MPI_size()-1;
     int q = static_cast<int>(sqrt(static_cast<double>(size_workers)));
-    if (q*q != size_workers) {
-        if (rank == 0)
-            std::cout<<"count of processes must be q*q+1, q - integer!"<<std::endl;
+
+    int n = 0, cache_size = DEFAULT_CACHE_SIZE;
+
+    int res = get_args(argc, argv, n, cache_size, q, size_workers);
+    if (res == -1) {
+        show_usage();
         memory_manager::finalize();
-        return 2;
+        return 0;
     }
-    int n = atoi(argv[1]);
+
     int num_in_block = n / q;
-    if (n % q) {
-        if (rank == 0)
-            std::cout<<"The size n of the matrix n*n must be must be divisible by the sqrt of the num of processes!"<<std::endl;
-        memory_manager::finalize();
-        return 3;
-    }
-    parallel_vector<int> pv1(n * n), pv2(n * n), pv3(n * n);
+
+    parallel_vector<int> pv1(n * n, DEFAULT_QUANTUM_SIZE, cache_size), pv2(n * n, DEFAULT_QUANTUM_SIZE, cache_size), pv3(n * n, DEFAULT_QUANTUM_SIZE, cache_size);
     std::pair<int, int> grid_ind = get_grid_rank(rank, q);
     MPI_Barrier(MPI_COMM_WORLD);
     double t1 = MPI_Wtime();
