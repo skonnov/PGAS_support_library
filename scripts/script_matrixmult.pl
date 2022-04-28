@@ -14,8 +14,9 @@ for ($elems = $it_min; $elems <= $it_max; $elems += $it_step) {
     for ($proc = 0; $proc < @procs; $proc++) {
         $result = 250000.0;
         if ($elems % int(sqrt(@procs[$proc]-1)) == 0) {
+            print "mpiexec -n @procs[$proc] ../build/Release/matrixmult -size $elems";
             for ($k = 0; $k < 3; $k++) {
-                $tmp = `mpiexec -n @procs[$proc] ../build/Release/matrixmult $elems`;
+                $tmp = `mpiexec -n @procs[$proc] ../build/Release/matrixmult -size $elems`;
                 $result = min($result + 0.0, $tmp+0.0);
             }
             print WF $result;
