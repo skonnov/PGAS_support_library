@@ -15,10 +15,10 @@ for ($elems = $it_min; $elems <= $it_max; $elems += $it_step) {
     for ($proc = 0; $proc < @procs; $proc++) {
         for ($div = 0; $div < @divs; $div++) {
             $result = 250000.0;
-            print "mpiexec -n @procs[$proc] ../build/Release/matrixmult_queue -n $elems -d @divs[$div]\n";
+            print "mpiexec -n @procs[$proc] ../build/Release/matrixmult_queue -size $elems -d @divs[$div]\n";
             if ($elems % @divs[$div] == 0) {
                 for ($k = 0; $k < 1; $k++) {
-                    $tmp = `mpiexec -n @procs[$proc] ../build/Release/matrixmult_queue -n $elems -d @divs[$div]`;
+                    $tmp = `mpiexec -n @procs[$proc] ../build/Release/matrixmult_queue -size $elems -d @divs[$div]`;
                     $result = min($result + 0.0, $tmp+0.0);
                 }
             }

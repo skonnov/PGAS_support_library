@@ -6,11 +6,11 @@
 
 // #define MAX_TASK 5
 
-int get_args(int argc, char** argv, int& n, int& div_num, int& seed) {
-    n = -1, div_num = -1, seed = 0;
+int get_args(int argc, char** argv, int& n, int& div_num, int& seed, int& cache_size) {
+    n = -1, div_num = -1, seed = 0, cache_size = DEFAULT_CACHE_SIZE;
     for (int i = 1; i < argc; ++i) {
-        if (std::string(argv[i]) == "-n") {
-            if (i+1 < argc) {
+        if (std::string(argv[i]) == "-size") {
+            if (i + 1 < argc) {
                 n = atoi(argv[++i]);
             } else {
                 return -1;
@@ -18,7 +18,7 @@ int get_args(int argc, char** argv, int& n, int& div_num, int& seed) {
         }
 
         if (std::string(argv[i]) == "-d") {
-            if (i+1 < argc) {
+            if (i + 1 < argc) {
                 div_num = atoi(argv[++i]);
             } else {
                 return -1;
@@ -26,8 +26,16 @@ int get_args(int argc, char** argv, int& n, int& div_num, int& seed) {
         }
 
         if (std::string(argv[i]) == "-s") {
-            if (i+1 < argc) {
+            if (i + 1 < argc) {
                 seed = atoi(argv[++i]);
+            } else {
+                return -1;
+            }
+        }
+
+        if (std::string(argv[i]) == "-cache_size" || std::string(argv[i]) == "-cs") {
+            if (i + 1 < argc) {
+                cache_size = atoi(argv[++i]);
             } else {
                 return -1;
             }
@@ -57,12 +65,19 @@ int get_args(int argc, char** argv, int& n, int& div_num, int& seed) {
             std::cerr<<"matrices size must be divided by the number divisions!"<<std::endl;
         return -1;
     }
+
+    if (cache_size <= 0) {
+        if (memory_manager::get_MPI_rank() == 1)
+            std::cerr << "cache_size must be positive number!" << std::endl;
+        return -1;
+    }
+
     return 0;
 }
 
 static void show_usage() {
     if (memory_manager::get_MPI_rank() == 1)
-        std::cerr << "Usage: mpiexec <-n matrices size> matrixmult_queue <-d num_of_divisions> [-s seed]"<<std::endl;
+        std::cerr << "Usage: mpiexec <-n matrices size> matrixmult_queue <-size matrices size> <-d num_of_divisions> [-s seed] [-cache_size|-cs cache_size]"<<std::endl;
 }
 
 void generate_matrices(parallel_vector<int>& pva, parallel_vector<int>& pvb, parallel_vector<int>& pvc, int n, int seed, int minn = 0, int maxx = 1000) {
@@ -135,8 +150,8 @@ struct task {
 
 int main(int argc, char** argv) { // матрица b транспонирована
     memory_manager::init(argc, argv);
-    int n, div_num, seed;
-    int res = get_args(argc, argv, n, div_num, seed);
+    int n, div_num, seed, cache_size = DEFAULT_CACHE_SIZE;
+    int res = get_args(argc, argv, n, div_num, seed, cache_size);
     if (res == -1) {
         show_usage();
         memory_manager::finalize();
