@@ -19,6 +19,7 @@ void cache_list::push_back(cache_node* node) {
     }
     ++size;
 }
+
 cache_node* cache_list::pop_front() {
     CHECK(begin != nullptr, ERR_NULLPTR);
     cache_node* return_value = begin;
@@ -63,15 +64,9 @@ void cache_list::delete_node(cache_node* node) {
         pop_back();
     } else {
         if (node->prev) {
-            // if (node->prev == begin) {  // ????? разберись с указателями!
-            //     begin->next = node->next;
-            // }
             node->prev->next = node->next;
         }
         if (node->next) {
-            // if (node->next == end) {
-            //     end->prev = node->prev;
-            // }
             node->next->prev = node->prev;
         }
     }
@@ -132,7 +127,9 @@ memory_cache& memory_cache::operator=(memory_cache&& cache) {
 int memory_cache::add(int quantum_index) {
     CHECK(quantum_index >= 0 && quantum_index < (int)contain_flags.size(), ERR_OUT_OF_BOUNDS);
     if (is_contain(quantum_index)) {
-        // TODO: add some logic with reorganising nodes to making Least recently used (LRU) cache
+        // Least recently used (LRU) cache logic
+        cache_indexes.delete_node(contain_flags[quantum_index]);
+        cache_indexes.push_back(contain_flags[quantum_index]);
         return -1;
     }
 
