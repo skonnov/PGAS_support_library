@@ -18,7 +18,7 @@ jobs:
       - working-directory: build/release
         run: mpiexec --oversubscribe -n 4 ./matrixvector 50 50
       - working-directory: build/release
-        run: mpiexec --oversubscribe -n 5 ./matrixmult 2
+        run: mpiexec --oversubscribe -n 5 ./matrixmult -size 2
       - working-directory: build/release
         run: mpiexec --oversubscribe -n 5 ./locks_simple_sample 50
       - working-directory: build/release
@@ -28,4 +28,4 @@ jobs:
       - working-directory: build/release
         run: mpiexec --oversubscribe -n 5 ./dijkstra -v 500
       - working-directory: build/release
-        run: mpiexec --oversubscribe -n 5 ./matrixmult_queue -n 100 -d 4
+        run: mpiexec --oversubscribe -n 5 ./matrixmult_queue -size 100 -d 4
