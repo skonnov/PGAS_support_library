@@ -6,6 +6,7 @@
 #include <utility>
 #include <queue>
 #include <iostream>
+#include <fstream>
 #include "common.h"
 
 struct cache_node {
@@ -37,12 +38,17 @@ public:
     void add_to_excluded(int quantum_index);
     bool is_excluded(int quantum_index);
     void delete_elem(int quantum_index);
+    ~memory_cache();
 private:
     std::vector<bool> excluded {};
     std::vector<cache_node*> contain_flags {};
     std::vector<cache_node> cache_memory {};
     cache_list free_cache_nodes {}, cache_indexes {};
     int rank, size;
+#if (ENABLE_STATISTICS_COLLECTION)
+    int cache_miss_cnt = 0;
+    std::ofstream statistic_file_stream;
+#endif
 };
 
 #endif

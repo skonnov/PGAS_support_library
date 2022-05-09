@@ -2,9 +2,17 @@
 #define __COMMON_H__
 
 #include <string>
+#include <fstream>
+#include <iostream>
 
 #define DEFAULT_QUANTUM_SIZE 500
 #define DEFAULT_CACHE_SIZE 500
+
+#define ENABLE_STATISTICS_COLLECTION true
+
+#if (ENABLE_STATISTICS_COLLECTION)
+    #define STATISTICS_OUTPUT_DIRECTORY std::string("/mnt/d/Works/PGAS_support_library/build_linux/")
+#endif
 
 enum mods {  // используется для изменения режима работы с памятью
     READ_ONLY,
@@ -66,7 +74,7 @@ static std::string get_error_code(int error_code) {
 }
 
 #define CHECK(expression, error_code)                                                                                \
-    if(!(expression)) {                                                                                              \
+    if (!(expression)) {                                                                                              \
         int rank;                                                                                                    \
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);                                                                        \
         std::cout << "Check failed on process w/ MPI_rank #" << rank << ", file: "                                   \
@@ -75,12 +83,22 @@ static std::string get_error_code(int error_code) {
     }
 
 #define ABORT(error_code)                                                                                            \
-    if(true) {                                                                                                       \
+    if (true) {                                                                                                       \
         int rank;                                                                                                    \
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);                                                                        \
         std::cout << "Abort was called on process w/ MPI_rank #" << rank << ", file: "                               \
              << __FILE__ << ", line: " << __LINE__ <<  " with error "  << get_error_code(error_code) << std::endl;   \
         MPI_Abort(MPI_COMM_WORLD, error_code);                                                                       \
     }
+
+// #define PRINT_TO_FILE(path, filename, info)                                                    \
+//     if (true) {                                                                                \
+//         int rank;                                                                              \
+//         MPI_Comm_rank(MPI_COMM_WORLD, &rank);                                                  \
+//         file.open(path + filename + "_"  + std::to_string(rank) + ".txt", std::ios_base::app); \
+//         file << info;                                                                          \
+//         file.close();                                                                          \
+//     }
+
 
 #endif  // __COMMON_H__
