@@ -72,7 +72,7 @@ while ($it_sov < $it_sov_max || $it_mv < $it_mv_max || $it_mm < $it_mm_max || $i
     }
     if ($it_mm < $it_mm_max) {
         open(WF3, $path_matrixmult) or die;
-        for ($proc = 0; $proc < @procs; $proc++) {
+        for ($proc = 0; $proc < @procs_mm; $proc++) {
             $result = 250000.0;
             if ($it_mm % int(sqrt(@procs_mm[$proc]-1)) == 0) {
                 for ($k = 0; $k < 3; $k++) {
