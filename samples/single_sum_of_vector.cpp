@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
     double t1 = MPI_Wtime();
     int sum = 0;
     for (int i = 0; i < n; ++i)
-        sum+=v[i];
+        sum += v[i];
     double t2 = MPI_Wtime();
     cout << t2-t1;
     MPI_Finalize();

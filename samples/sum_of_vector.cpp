@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
         if (rank == 1)
             std::cout << "------" << std::endl;
         for (int i = 0; i < n; ++i) {
-            pv.set_elem(i, i+1);
+            pv.set_elem(i, i + 1);
         }
         pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);
         t1 = MPI_Wtime();
@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
         if (rank == 1)
             std::cout << "------" << std::endl;
         for (int i = 0; i < n; ++i) {
-            pv.set_elem(i, i+1);
+            pv.set_elem(i, i + 1);
         }
         pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);
         t1 = MPI_Wtime();

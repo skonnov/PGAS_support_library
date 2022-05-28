@@ -7,7 +7,7 @@ for($i = 100000000; $i <= 200000000; $i+=10000000) {
     $result = 250000.0;
     for($k = 0; $k < 5; $k++) {
         $tmp = `mpiexec -n 1 ../build/Release/single_sum_of_vector $i`;
-        $result = min($result + 0.0, $tmp+0.0);
+        $result = min($result + 0.0, $tmp + 0.0);
     }
     print WF2 $result;
     print WF2 " ";

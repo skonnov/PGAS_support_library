@@ -18,7 +18,7 @@ for ($i = $it_min; $i < $it_max; $i += $it_step) {
         $result = 250000.0;
         for ($k = 0; $k < 3; $k++) {
             $tmp = `mpiexec -n $j ../build/Release/dijkstra -v $v -max 150`;
-            $result = min($result + 0.0, $tmp+0.0);
+            $result = min($result + 0.0, $tmp + 0.0);
         }
         print "dijkstra algorithm for v = $v, $j procs is done\n";
         print WF $result, " ";

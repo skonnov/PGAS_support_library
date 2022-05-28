@@ -30,7 +30,7 @@ T reduction(T a, T b)
 }
 
 int main(int argc, char ** argv) {
-    std::string error_helper_string = "mpiexec -n <numproc> "+std::string(argv[0])+" <length>";
+    std::string error_helper_string = "mpiexec -n <numproc> " + std::string(argv[0]) + " <length>";
     if (argc <= 1) {
         std::cout << "Error: you need to pass length of vector!" << std::endl;
         std::cout << "Usage:\n" << error_helper_string << std::endl;
@@ -47,7 +47,7 @@ int main(int argc, char ** argv) {
         int worker_rank = rank - 1;
         int worker_size = size - 1;
         // разделение элементов вектора по процессам
-        int portion = n/worker_size + (worker_rank < n % worker_size ? 1 : 0);
+        int portion = n / worker_size + (worker_rank < n % worker_size ? 1 : 0);
         int index = 0;
         if (worker_rank < n % worker_size) {
             index = portion * worker_rank;
@@ -58,8 +58,8 @@ int main(int argc, char ** argv) {
             pv.set_elem(i, i + 0.5);
         }
         pv.change_mode(0, pv.get_num_quantums(), READ_ONLY);// так как далее вектор изменяться не будет, режим изменяется на READ_ONLY
-        double ans = parallel_reduce(index, index+portion, pv, 0., 1, size-1, Func<double>(pv), reduction<double>, 1);
-        // double ans2 = parallel_reduce_all(index, index+portion, pv, 0., 1, size-1, Func<double>(pv), reduction<double>);
+        double ans = parallel_reduce(index, index + portion, pv, 0., 1, size-1, Func<double>(pv), reduction<double>, 1);
+        // double ans2 = parallel_reduce_all(index, index + portion, pv, 0., 1, size-1, Func<double>(pv), reduction<double>);
         // std::cout << rank << " " << ans << " " << ans2 << std::endl;
         double t2 = MPI_Wtime();
         if (rank == 1)

@@ -107,7 +107,7 @@ void parallel_vector<T>::print(const std::string& path) const {
 
 template<class T>
 void parallel_vector<T>::change_mode(int quantum_index, mods mode) {
-    memory_manager::change_mode(key, quantum_index, quantum_index+1, mode);
+    memory_manager::change_mode(key, quantum_index, quantum_index + 1, mode);
 }
 
 template<class T>

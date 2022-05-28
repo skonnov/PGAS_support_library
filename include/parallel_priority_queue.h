@@ -158,7 +158,7 @@ template<class T>
 int parallel_priority_queue<T>::get_size() {
     auto func = [this](int begin, int end, int identity) { return sizes.get_elem(begin); };
     auto reduction = [](int a, int b) { return a + b; };
-    int size = parallel_reduce_all(worker_rank, worker_rank+1, sizes, 0, 1, worker_size, func, reduction);
+    int size = parallel_reduce_all(worker_rank, worker_rank + 1, sizes, 0, 1, worker_size, func, reduction);
     return size;
 }
 
@@ -198,13 +198,13 @@ public:
 template<class T>
 T parallel_priority_queue<T>::get_max(int rank) {
     auto reduction = [](T a, T b){return (a < b) ? b : a;};
-    return parallel_reduce(worker_rank, worker_rank+1, maxes, default_value, 1, worker_size /*global_size*/, Func<T>(maxes), reduction, maxes.get_MPI_datatype(), rank /*global_rank*/);
+    return parallel_reduce(worker_rank, worker_rank + 1, maxes, default_value, 1, worker_size /*global_size*/, Func<T>(maxes), reduction, maxes.get_MPI_datatype(), rank /*global_rank*/);
 }
 
 template<class T>
 T parallel_priority_queue<T>::get_max() {
     auto reduction = [this](T a, T b){ return (a < b) ? b : a;};
-    return parallel_reduce_all(worker_rank, worker_rank+1, maxes, default_value, 1, worker_size /*global_size*/, Func<T>(maxes), reduction, maxes.get_MPI_datatype());
+    return parallel_reduce_all(worker_rank, worker_rank + 1, maxes, default_value, 1, worker_size /*global_size*/, Func<T>(maxes), reduction, maxes.get_MPI_datatype());
 }
 
 
@@ -226,7 +226,7 @@ T parallel_priority_queue<T>::get_and_remove_max() {
     auto reduction = [](pair_reduce_template<T> a, pair_reduce_template<T> b) { return (a.first < b.first) ? b : a; };
     pair_reduce_template<T> maxx{default_value, -2};
     if (worker_rank >= 0)
-        maxx = parallel_reduce_all(worker_rank, worker_rank+1, maxes, pair_reduce_template<T>(default_value, INT_MAX), 1, worker_size, function, reduction);
+        maxx = parallel_reduce_all(worker_rank, worker_rank + 1, maxes, pair_reduce_template<T>(default_value, INT_MAX), 1, worker_size, function, reduction);
     if (worker_rank == maxx.second) {
         remove_max_local();
     }

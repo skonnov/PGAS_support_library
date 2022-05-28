@@ -112,7 +112,7 @@ std::vector<std::vector<std::pair<int,int>>> generate_graph(int n, int m, int mi
     std::vector<std::vector<std::pair<int, int>>> v(n);
 
     for (int i = 0; i < n; ++i)
-        for (int j = i+1; j < n; ++j)
+        for (int j = i + 1; j < n; ++j)
             all.push_back({i, j});
 
     int rank = memory_manager::get_MPI_rank();
@@ -153,14 +153,14 @@ int get_args(int argc, char** argv, int& n, int&m, int& seed, int& min_size, int
     n = -1, m = -1, seed = 0, min_size = 1, max_size = 50000, cache_size = DEFAULT_CACHE_SIZE;
     for (int i = 1; i < argc; ++i) {
         if (std::string(argv[i]) == "-v") {
-            if (i+1 < argc) {
+            if (i + 1 < argc) {
                 n = atoi(argv[++i]);
             } else {
                 return -1;
             }
         }
         if (std::string(argv[i]) == "-e") {
-            if (i+1 < argc) {
+            if (i + 1 < argc) {
                 m = atoi(argv[++i]);
             } else {
                 return -1;
@@ -168,7 +168,7 @@ int get_args(int argc, char** argv, int& n, int&m, int& seed, int& min_size, int
         }
 
         if (std::string(argv[i]) == "-s") {
-            if (i+1 < argc) {
+            if (i + 1 < argc) {
                 seed = atoi(argv[++i]);
             } else {
                 return -1;
@@ -176,7 +176,7 @@ int get_args(int argc, char** argv, int& n, int&m, int& seed, int& min_size, int
         }
 
         if (std::string(argv[i]) == "-min") {
-            if (i+1 < argc) {
+            if (i + 1 < argc) {
                 min_size = atoi(argv[++i]);
             } else {
                 return -1;
@@ -184,7 +184,7 @@ int get_args(int argc, char** argv, int& n, int&m, int& seed, int& min_size, int
         }
 
         if (std::string(argv[i]) == "-max") {
-            if (i+1 < argc) {
+            if (i + 1 < argc) {
                 max_size = atoi(argv[++i]);
             } else {
                 return -1;

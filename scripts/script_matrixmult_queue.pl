@@ -19,7 +19,7 @@ for ($elems = $it_min; $elems <= $it_max; $elems += $it_step) {
             if ($elems % @divs[$div] == 0) {
                 for ($k = 0; $k < 1; $k++) {
                     $tmp = `mpiexec -n @procs[$proc] ../build/Release/matrixmult_queue -size $elems -d @divs[$div]`;
-                    $result = min($result + 0.0, $tmp+0.0);
+                    $result = min($result + 0.0, $tmp + 0.0);
                 }
             }
             print WF "| procs:", $procs[$proc], " div: ", $divs[$div], ": ", $result, " |";
