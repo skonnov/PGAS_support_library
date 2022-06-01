@@ -77,6 +77,12 @@ void worker_helper_thread() {
         if (request[0] == -1 && request[1] == -1 && request[2] == -1 && request[3] == -1) {  // окончание работы вспомогательного потока
             // освобождение памяти
             for (int key = 0; key < int(memory_manager::memory.size()); ++key) {
+#if (ENABLE_STATISTICS_COLLECTION)
+    #if (ENABLE_STATISTICS_CACHE_MISSES_CNT)
+                auto* memory = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
+                memory->cache.get_cache_miss_cnt_statistics(key, memory->quantums.size() * memory->quantum_size);
+    #endif
+#endif
                 auto* memory_line = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
                 delete memory_line;
             }
@@ -209,6 +215,7 @@ void master_helper_thread() {
                     int removing_quantum_index = request[3];
                     if (removing_quantum_index >= 0) {
                         memory_manager::remove_owner(key, removing_quantum_index, status.MPI_SOURCE);
+                        // нет необработанных запросов на передачу данного кванта с данного процесса?
                         if (memory->quantums[removing_quantum_index].requests[status.MPI_SOURCE] == 0) {
                             int request_to_delete[] = {DELETE, key, removing_quantum_index, -1};
                             MPI_Send(request_to_delete, 4, MPI_INT, status.MPI_SOURCE, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
@@ -275,6 +282,7 @@ void master_helper_thread() {
                     // уменьшить счётчик для кванта и процесса, посылавшего квант на процесс status.MPI_SOURCE
                     --memory->quantums[quantum_index].requests[worker_rank_sender];
                     CHECK(memory->quantums[quantum_index].requests[worker_rank_sender] >= 0, ERR_UNKNOWN);
+                    // для данного процесса и кванта незаконченных запросов не осталось?
                     if (memory->quantums[quantum_index].requests[worker_rank_sender] == 0 &&
                                 memory->quantums[quantum_index].want_to_delete[worker_rank_sender]) {
 
