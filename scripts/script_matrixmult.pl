@@ -19,11 +19,16 @@ for ($cache_it = 0; $cache_it < @cache_size; $cache_it++) {
             $result = 250000.0;
             if ($elems % int(sqrt(@procs[$proc]-1)) == 0) {
                 print "mpiexec -n @procs[$proc] ../build/Release/matrixmult -size $elems -cs @cache_size[$cache_it]\n";
+                $i = 0;
                 for ($k = 0; $k < 3; $k++) {
                     $tmp = `mpiexec -n @procs[$proc] --oversubscribe ../build/Release/matrixmult -size $elems -cs @cache_size[$cache_it]`;
+                    if ($tmp < $result) {
+                        $result = $tmp;
+                        $i = $k;
+                    }
                     $result = min($result + 0.0, $tmp + 0.0);
                 }
-                print WF @procs[$proc], ": ", $result, " ";
+                print WF @procs[$proc], ": ", $result, " minindex ", $i, " ";
                 print "done matrix mult for @procs[$proc] procs, $elems elems and cache_size = ",@cache_size[$cache_it],"\n";
             }
         }
