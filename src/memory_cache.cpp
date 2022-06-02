@@ -162,6 +162,11 @@ int memory_cache::add(int quantum_index) {
         cache_indexes.push_back(contain_flags[quantum_index]);
         return -1;
     }
+    // элемент находится в списке исключённых элементов?
+    if (is_excluded(quantum_index)) {
+        return -1;
+    }
+
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_CACHE_MISSES_CNT)
     ++cache_miss_cnt;
@@ -172,10 +177,6 @@ int memory_cache::add(int quantum_index) {
     // PRINT_TO_FILE(statistic_output_directory, "memory_cache", info);
   #endif
 #endif
-    // элемент находится в списке исключённых элементов?
-    if (is_excluded(quantum_index)) {
-        return -1;
-    }
 
     // список свободных элементов не пуст?
     if (!free_cache_nodes.empty()) {
@@ -186,6 +187,12 @@ int memory_cache::add(int quantum_index) {
         contain_flags[quantum_index] = node;
         return -1;
     }
+
+#if (ENABLE_STATISTICS_COLLECTION)
+  #if (ENABLE_STATISTICS_CACHE_MISSES_CNT)
+    ++cache_miss_cnt_no_free;
+  #endif
+#endif
 
     // вытеснение кванта из кеша текущим квантом
     cache_node* node = cache_indexes.pop_front();
@@ -239,10 +246,6 @@ void memory_cache::get_cache_miss_cnt_statistics(int key, int number_of_elements
     MPI_Gather(&cache_miss_cnt, 1, MPI_INT, cache_miss_cnts.data(), 1, MPI_INT, 0, workers_comm);
     if (rank == 1) {
         cache_miss_cnt_file_stream.open("cache_miss_cnt.txt", std::ios_base::app);
-        std::cout << "????\n";
-        if (!cache_miss_cnt_file_stream.is_open()) {
-            std::cout << "WTF??\n";
-        }
         cache_miss_cnt_file_stream << "------------------------------\n";
         cache_miss_cnt_file_stream << "cache_size: " << cache_memory.size() << "; number_of_elements: " << number_of_elements << "; number_of_processes: " << size << "; key: " << key <<";\n";
         int cnt = 0;
@@ -251,7 +254,7 @@ void memory_cache::get_cache_miss_cnt_statistics(int key, int number_of_elements
             cnt += cache_miss_cnts[i];
         }
         cache_miss_cnt_file_stream << "\n";
-        cache_miss_cnt_file_stream << "total cache misses: " << cnt << "\n";
+        cache_miss_cnt_file_stream << "total cache misses: " << cnt <<"; total сache evictions: " << cache_miss_cnt_no_free << "\n";
         cache_miss_cnt_file_stream << "------------------------------\n";
         cache_miss_cnt_file_stream.close();
     }

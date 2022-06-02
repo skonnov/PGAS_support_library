@@ -47,7 +47,7 @@ private:
     int rank, size;
     MPI_Comm workers_comm;
 #if (ENABLE_STATISTICS_COLLECTION)
-    int cache_miss_cnt = 0;
+    int cache_miss_cnt = 0, cache_miss_cnt_no_free = 0;
     std::ofstream statistic_file_stream, cache_miss_cnt_file_stream;
 #endif
 };
