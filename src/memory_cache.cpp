@@ -243,18 +243,25 @@ void memory_cache::get_cache_miss_cnt_statistics(int key, int number_of_elements
   #endif
   #if (ENABLE_STATISTICS_CACHE_MISSES_CNT)
     std::vector<int> cache_miss_cnts(size-1);
+    std::vector<int> cache_miss_cnts_no_free(size-1);
     MPI_Gather(&cache_miss_cnt, 1, MPI_INT, cache_miss_cnts.data(), 1, MPI_INT, 0, workers_comm);
+    MPI_Gather(&cache_miss_cnt_no_free, 1, MPI_INT, cache_miss_cnts_no_free.data(), 1, MPI_INT, 0, workers_comm);
     if (rank == 1) {
         cache_miss_cnt_file_stream.open("cache_miss_cnt.txt", std::ios_base::app);
         cache_miss_cnt_file_stream << "------------------------------\n";
         cache_miss_cnt_file_stream << "cache_size: " << cache_memory.size() << "; number_of_elements: " << number_of_elements << "; number_of_processes: " << size << "; key: " << key <<";\n";
-        int cnt = 0;
+        int cnt = 0, cnt_evictions = 0;
         for (int i = 0; i < (int)cache_miss_cnts.size(); ++i) {
             cache_miss_cnt_file_stream << "rank " << i + 1 << ": "<< cache_miss_cnts[i] << "; ";
             cnt += cache_miss_cnts[i];
         }
         cache_miss_cnt_file_stream << "\n";
-        cache_miss_cnt_file_stream << "total cache misses: " << cnt <<"; total сache evictions: " << cache_miss_cnt_no_free << "\n";
+        for (int i = 0; i < (int)cache_miss_cnts_no_free.size(); ++i) {
+            cache_miss_cnt_file_stream << "rank " << i + 1 << ": "<< cache_miss_cnts_no_free[i] << "; ";
+            cnt_evictions += cache_miss_cnts_no_free[i];
+        }
+        cache_miss_cnt_file_stream << "\n";
+        cache_miss_cnt_file_stream << "total cache misses: " << cnt <<"; total сache evictions: " << cnt_evictions << "\n";
         cache_miss_cnt_file_stream << "------------------------------\n";
         cache_miss_cnt_file_stream.close();
     }
