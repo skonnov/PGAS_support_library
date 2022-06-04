@@ -21,7 +21,8 @@ for ($cache_it = 0; $cache_it < @cache_size; $cache_it++) {
                 print "mpiexec -n @procs[$proc] ../build/Release/matrixmult -size $elems -cs @cache_size[$cache_it]\n";
                 $i = 0;
                 for ($k = 0; $k < 3; $k++) {
-                    $tmp = `mpiexec -n @procs[$proc] --oversubscribe ../build/Release/matrixmult -size $elems -cs @cache_size[$cache_it]`;
+                    $tmp = `mpiexec -n @procs[$proc] ../build/Release/matrixmult -size $elems -cs @cache_size[$cache_it]`;
+                    # $tmp = `mpiexec -n @procs[$proc] --oversubscribe ../build/Release/matrixmult -size $elems -cs @cache_size[$cache_it]`;
                     if ($tmp < $result) {
                         $result = $tmp;
                         $i = $k;
