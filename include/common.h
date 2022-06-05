@@ -12,9 +12,15 @@
     #define ENABLE_STATISTICS_COLLECTION true
 #endif
 
-#define ENABLE_STATISTICS_EVERY_CACHE_MISSES false
-#define ENABLE_STATISTICS_CACHE_MISSES_CNT true
+#ifdef ENABLE_STATISTICS_COLLECTION
+    #ifndef ENABLE_STATISTICS_EVERY_CACHE_MISSES
+        #define ENABLE_STATISTICS_EVERY_CACHE_MISSES false
+    #endif
 
+    #ifndef ENABLE_STATISTICS_CACHE_MISSES_CNT
+        #define ENABLE_STATISTICS_CACHE_MISSES_CNT true
+    #endif
+#endif
 
 #if (ENABLE_STATISTICS_COLLECTION)
     #define STATISTICS_OUTPUT_DIRECTORY std::string("/mnt/d/Works/PGAS_support_library/build_linux/")
@@ -80,7 +86,7 @@ static std::string get_error_code(int error_code) {
 }
 
 #define CHECK(expression, error_code)                                                                                \
-    if (!(expression)) {                                                                                              \
+    if (!(expression)) {                                                                                             \
         int rank;                                                                                                    \
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);                                                                        \
         std::cout << "Check failed on process w/ MPI_rank #" << rank << ", file: "                                   \
@@ -89,7 +95,7 @@ static std::string get_error_code(int error_code) {
     }
 
 #define ABORT(error_code)                                                                                            \
-    if (true) {                                                                                                       \
+    if (true) {                                                                                                      \
         int rank;                                                                                                    \
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);                                                                        \
         std::cout << "Abort was called on process w/ MPI_rank #" << rank << ", file: "                               \
