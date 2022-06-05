@@ -244,8 +244,10 @@ void memory_cache::get_cache_miss_cnt_statistics(int key, int number_of_elements
   #if (ENABLE_STATISTICS_CACHE_MISSES_CNT)
     std::vector<int> cache_miss_cnts(size-1);
     std::vector<int> cache_miss_cnts_no_free(size-1);
+    // сбор данных об общем числе кеш-промахов и вытеснений из кеша на 1 процессе
     MPI_Gather(&cache_miss_cnt, 1, MPI_INT, cache_miss_cnts.data(), 1, MPI_INT, 0, workers_comm);
     MPI_Gather(&cache_miss_cnt_no_free, 1, MPI_INT, cache_miss_cnts_no_free.data(), 1, MPI_INT, 0, workers_comm);
+    // запись в файл
     if (rank == 1) {
         cache_miss_cnt_file_stream.open("cache_miss_cnt.txt", std::ios_base::app);
         cache_miss_cnt_file_stream << "------------------------------\n";
@@ -267,5 +269,4 @@ void memory_cache::get_cache_miss_cnt_statistics(int key, int number_of_elements
     }
   #endif
 #endif
-
 }
