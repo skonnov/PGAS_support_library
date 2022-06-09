@@ -23,7 +23,7 @@ T reduce_operation(T ans, const Reduction& reduction, int process_begin, int pro
     T tmpans = ans;
     int tmprank = 0;
     int t = 1;
-    std::vector<int>vtmprank(size+100);
+    std::vector<int> vtmprank(size + 100);
     vtmprank[0] = process;
     for (int i = process_begin; i <= process_end; ++i) {
         if (i == process)

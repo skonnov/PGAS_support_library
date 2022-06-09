@@ -26,7 +26,7 @@ while ($it_sov < $it_sov_max || $it_mv < $it_mv_max || $it_mm < $it_mm_max || $i
             $result = 250000.0;
             for ($k = 0; $k < 3; $k++) {
                 $tmp = `mpiexec -n $j ../build/Release/parallel_reduce_sum_of_vector $it_sov`;
-                $result = min($result + 0.0, $tmp+0.0);
+                $result = min($result + 0.0, $tmp + 0.0);
             }
             print WF $j, ": ", $result, " ";
         }
@@ -41,7 +41,7 @@ while ($it_sov < $it_sov_max || $it_mv < $it_mv_max || $it_mm < $it_mm_max || $i
             $result = 250000.0;
             for ($k = 0; $k < 3; $k++) {
                 $tmp = `mpiexec -n $j ../build/Release/matrixvector $it_mv $it_mv`;
-                $result = min($result + 0.0, $tmp+0.0);
+                $result = min($result + 0.0, $tmp + 0.0);
             }
             print WF2 $j, ": ", $result, " ";
         }
@@ -56,8 +56,8 @@ while ($it_sov < $it_sov_max || $it_mv < $it_mv_max || $it_mm < $it_mm_max || $i
             $result = 250000.0;
             if ($it_mm % int(sqrt(@procs_mm[$proc]-1)) == 0) {
                 for ($k = 0; $k < 3; $k++) {
-                    $tmp = `mpiexec -n @procs_mm[$proc] ../build/Release/matrixmult $it_mm`;
-                    $result = min($result + 0.0, $tmp+0.0);
+                    $tmp = `mpiexec -n @procs_mm[$proc] ../build/Release/matrixmult -size $it_mm`;
+                    $result = min($result + 0.0, $tmp + 0.0);
                 }
                 print WF3 @procs_mm[$proc], ": ", $result, " ";
                 print "done matrix mult for @procs_mm[$proc] procs and $it_mm elems\n";
@@ -73,7 +73,7 @@ while ($it_sov < $it_sov_max || $it_mv < $it_mv_max || $it_mm < $it_mm_max || $i
             $result = 250000.0;
             for ($k = 0; $k < 3; $k++) {
                 $tmp = `mpiexec -n $j ../build/Release/dijkstra -v $it_d -max 150`;
-                $result = min($result + 0.0, $tmp+0.0);
+                $result = min($result + 0.0, $tmp + 0.0);
             }
             print "dijkstra algorithm for v = $it_d, $j procs is done\n";
             print WF4 $result, " ";

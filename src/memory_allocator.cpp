@@ -18,7 +18,7 @@ void memory_allocator::free(char** quantum) {
 void memory_allocator::resize_internal() {
     memory.emplace_back(new char[st * quantum_size]);
     for (int i = 0; i < st; ++i) {
-        free_quantums.push(memory.back()+i*quantum_size);
+        free_quantums.push(memory.back() + i * quantum_size);
     }
     st *= 2;
 }

@@ -25,7 +25,8 @@ std::ostream &operator<<(std::ostream &out, pair const &m) {
     return out << "(" << m.first << " " << m.second << ")";
 }
 
-int dijkstra(const std::vector<std::vector<std::pair<int, int>>>& v, parallel_vector<int>& d, int n, int begin, int end, int quantum_size = DEFAULT_QUANTUM_SIZE, int to_worker_rank = 0) {
+int dijkstra(const std::vector<std::vector<std::pair<int, int>>>& v, parallel_vector<int>& d, int n, int begin, int end,
+                int quantum_size = DEFAULT_QUANTUM_SIZE, int cache_size = DEFAULT_CACHE_SIZE, int to_worker_rank = 0) {
     int worker_rank = memory_manager::get_MPI_rank() - 1;
     int worker_size = memory_manager::get_MPI_size() - 1;
     int count = 2;
@@ -37,7 +38,7 @@ int dijkstra(const std::vector<std::vector<std::pair<int, int>>>& v, parallel_ve
     MPI_Datatype types[] = { MPI_INT, MPI_INT };
 
     parallel_priority_queue<pair> pq(count, blocklens, indices, types,
-                                     {INT_MIN, INT_MIN}, int(v.size() * v.size() + quantum_size - 1) / quantum_size, quantum_size); // num_of_quantums_proc - ?
+                                     {INT_MIN, INT_MIN}, int(v.size() * v.size() + quantum_size - 1) / quantum_size, quantum_size, cache_size); // num_of_quantums_proc - ?
     if (worker_rank < 0)
         return 0;
     int k = 0;
@@ -111,7 +112,7 @@ std::vector<std::vector<std::pair<int,int>>> generate_graph(int n, int m, int mi
     std::vector<std::vector<std::pair<int, int>>> v(n);
 
     for (int i = 0; i < n; ++i)
-        for (int j = i+1; j < n; ++j)
+        for (int j = i + 1; j < n; ++j)
             all.push_back({i, j});
 
     int rank = memory_manager::get_MPI_rank();
@@ -145,21 +146,21 @@ void print_graph(const std::vector<std::vector<std::pair<int, int>>>& v) {
 
 static void show_usage() {
     if (memory_manager::get_MPI_rank() == 1)
-        std::cerr << "Usage: mpiexec <-n num_of_processes> dijkstra <-v num_of_vertices> [-e num_of_edges] [-s seed] [-min min_edge_size] [-max max_edge_size]"<<std::endl;
+        std::cerr << "Usage: mpiexec <-n num_of_processes> dijkstra <-v num_of_vertices> [-e num_of_edges] [-s seed] [-min min_edge_size] [-max max_edge_size] [-cache_size|-cs cache_size]"<<std::endl;
 }
 
-int get_args(int argc, char** argv, int& n, int&m, int& seed, int& min_size, int& max_size) {
-    n = -1, m = -1, seed = 0, min_size = 1, max_size = 50000;
+int get_args(int argc, char** argv, int& n, int&m, int& seed, int& min_size, int& max_size, int& cache_size) {
+    n = -1, m = -1, seed = 0, min_size = 1, max_size = 50000, cache_size = DEFAULT_CACHE_SIZE;
     for (int i = 1; i < argc; ++i) {
         if (std::string(argv[i]) == "-v") {
-            if (i+1 < argc) {
+            if (i + 1 < argc) {
                 n = atoi(argv[++i]);
             } else {
                 return -1;
             }
         }
         if (std::string(argv[i]) == "-e") {
-            if (i+1 < argc) {
+            if (i + 1 < argc) {
                 m = atoi(argv[++i]);
             } else {
                 return -1;
@@ -167,7 +168,7 @@ int get_args(int argc, char** argv, int& n, int&m, int& seed, int& min_size, int
         }
 
         if (std::string(argv[i]) == "-s") {
-            if (i+1 < argc) {
+            if (i + 1 < argc) {
                 seed = atoi(argv[++i]);
             } else {
                 return -1;
@@ -175,7 +176,7 @@ int get_args(int argc, char** argv, int& n, int&m, int& seed, int& min_size, int
         }
 
         if (std::string(argv[i]) == "-min") {
-            if (i+1 < argc) {
+            if (i + 1 < argc) {
                 min_size = atoi(argv[++i]);
             } else {
                 return -1;
@@ -183,8 +184,16 @@ int get_args(int argc, char** argv, int& n, int&m, int& seed, int& min_size, int
         }
 
         if (std::string(argv[i]) == "-max") {
-            if (i+1 < argc) {
+            if (i + 1 < argc) {
                 max_size = atoi(argv[++i]);
+            } else {
+                return -1;
+            }
+        }
+
+        if (std::string(argv[i]) == "-cache_size" || std::string(argv[i]) == "-cs") {
+            if (i + 1 < argc) {
+                cache_size = atoi(argv[++i]);
             } else {
                 return -1;
             }
@@ -193,29 +202,35 @@ int get_args(int argc, char** argv, int& n, int&m, int& seed, int& min_size, int
 
     if (min_size > max_size) {
         if (memory_manager::get_MPI_rank() == 1)
-            std::cerr<<"min size of edge must be less then max size!"<<std::endl;
+            std::cerr << "min size of edge must be less then max size!" << std::endl;
         return -1;
     }
 
     if (n == -1) {
         if (memory_manager::get_MPI_rank() == 1)
-            std::cerr<<"You need to define num of vertices!"<<std::endl;
+            std::cerr << "You need to define num of vertices!" << std::endl;
         return -1;
     }
 
     if (m == -1) {
-        m = n * (n-1) / 2;
+        m = n * (n - 1) / 2;
     }
 
-    if (n < 0 || m < 0) {
+    if (n <= 0 || m <= 0) {
         if (memory_manager::get_MPI_rank() == 1)
-            std::cerr<<"vertices and edges must be positive!"<<std::endl;
+            std::cerr << "vertices and edges must be positive!" << std::endl;
         return -1;
     }
 
-    if (n * (n-1) / 2 < m) {
+    if (n * (n - 1) / 2 < m) {
         if (memory_manager::get_MPI_rank() == 1)
-            std::cerr<<"num of edges must be equal or less then vertices * (vertices - 1) / 2!"<<std::endl;
+            std::cerr << "num of edges must be equal or less then vertices * (vertices - 1) / 2!" << std::endl;
+        return -1;
+    }
+
+    if (cache_size <= 0) {
+        if (memory_manager::get_MPI_rank() == 1)
+            std::cerr << "cache_size must be positive number!" << std::endl;
         return -1;
     }
 
@@ -225,9 +240,9 @@ int get_args(int argc, char** argv, int& n, int&m, int& seed, int& min_size, int
 int main(int argc, char** argv) {
     memory_manager::init(argc, argv);
     int n, m;  // n - число вершин, m - число рёбер
-    int seed, min_size, max_size;
+    int seed, min_size, max_size, cache_size = DEFAULT_CACHE_SIZE;
 
-    int res = get_args(argc, argv, n, m, seed, min_size, max_size);
+    int res = get_args(argc, argv, n, m, seed, min_size, max_size, cache_size);
     if (res == -1) {
         show_usage();
         memory_manager::finalize();
@@ -245,7 +260,7 @@ int main(int argc, char** argv) {
 
     std::vector<std::vector<std::pair<int,int>>> v = generate_graph(n, m, min_size, max_size, seed);
     double t1 = MPI_Wtime();
-    int ans = dijkstra(v, d, n, 0, n - 1, DEFAULT_QUANTUM_SIZE);
+    int ans = dijkstra(v, d, n, 0, n - 1, DEFAULT_QUANTUM_SIZE, cache_size);
     double t2 = MPI_Wtime();
     if (rank == 1) {
         if (ans != dijkstra_seq(v, 0, n - 1)) {

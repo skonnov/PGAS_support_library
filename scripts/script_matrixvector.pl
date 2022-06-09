@@ -9,7 +9,7 @@ for($i = 10000; $i <= 25000; $i+=1000) {
             $result = 250000.0;
             for($k = 0; $k < 5; $k++) {
                 $tmp = `mpiexec -n $j ../build/Release/matrixvector $i $l`;
-                $result = min($result + 0.0, $tmp+0.0);
+                $result = min($result + 0.0, $tmp + 0.0);
             }
             print WF2 $result;
             print WF2 " ";

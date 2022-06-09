@@ -10,15 +10,15 @@ jobs:
       - run: brew install open-mpi;
       - run: mkdir build
       - working-directory: build
-        run: cmake ..
+        run: cmake -DCMAKE_BUILD_TYPE=Release ..
       - working-directory: build
-        run: cmake --build . --config release -- -j4
+        run: cmake --build . -- -j4
       - working-directory: build/release
         run: mpiexec --oversubscribe -n 4 ./sum_of_vector 50
       - working-directory: build/release
         run: mpiexec --oversubscribe -n 4 ./matrixvector 50 50
       - working-directory: build/release
-        run: mpiexec --oversubscribe -n 5 ./matrixmult 2
+        run: mpiexec --oversubscribe -n 5 ./matrixmult -size 2
       - working-directory: build/release
         run: mpiexec --oversubscribe -n 5 ./locks_simple_sample 50
       - working-directory: build/release
@@ -28,4 +28,34 @@ jobs:
       - working-directory: build/release
         run: mpiexec --oversubscribe -n 5 ./dijkstra -v 500
       - working-directory: build/release
-        run: mpiexec --oversubscribe -n 5 ./matrixmult_queue -n 100 -d 4
+        run: mpiexec --oversubscribe -n 5 ./matrixmult_queue -size 100 -d 4
+
+  ubuntu-gcc-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: test -n $CC && unset CC
+      - run: test -n $CXX && unset CXX
+      - run: sudo apt-get install mpich libmpich-dev
+      - run: sudo apt-get install libpthread-stubs0-dev
+      - run: mkdir build
+      - working-directory: build
+        run: cmake -DCMAKE_BUILD_TYPE=Release ..
+      - working-directory: build
+        run: cmake --build . -- -j4
+      - working-directory: build/Release
+        run: mpiexec -n 4 ./sum_of_vector 50
+      - working-directory: build/Release
+        run: mpiexec -n 4 ./matrixvector 50 50
+      - working-directory: build/Release
+        run: mpiexec -n 5 ./matrixmult -size 2
+      - working-directory: build/Release
+        run: mpiexec -n 5 ./locks_simple_sample 50
+      - working-directory: build/Release
+        run: mpiexec -n 5 ./parallel_reduce_sum_of_vector 50
+      - working-directory: build/Release
+        run: mpiexec -n 5 ./sum_of_vector_struct 50
+      - working-directory: build/Release
+        run: mpiexec -n 5 ./dijkstra -v 500
+      - working-directory: build/Release
+        run: mpiexec -n 5 ./matrixmult_queue -size 100 -d 4
