@@ -221,23 +221,29 @@ if __name__ == "__main__":
     data_cache_evictions = {cache_size:pd.DataFrame(cache_evictions[cache_size], index=number_of_elements) for cache_size in cache_evictions}
 
 
-    fig, axes = plt.subplots(len(times), 2, figsize=(12, 12))
-    fig.tight_layout(pad=5.0)
-    for i, cache_size in enumerate(data_times):
-        acceleration = sns.heatmap(ax=axes[i, 0], data=data_times[cache_size], cmap='coolwarm', vmin = 0., vmax = 7.0)
-        acceleration.set_title("размер кеша = " + str(cache_size), fontsize=14)
-        acceleration.set_xlabel("число процессов",fontsize=14)
-        acceleration.set_ylabel("число элементов",fontsize=14)
+    fig, axes = plt.subplots(len(times) + 1, 2, figsize=(12, 12), gridspec_kw={"height_ratios":[0.02,1,1,1,1]})
+    fig.tight_layout(pad=3.0, h_pad=3.0, w_pad=1.0)
 
-        cache_evictions = sns.heatmap(ax=axes[i, 1], data=data_cache_evictions[cache_size], cmap='coolwarm')
+    axes[0, 0].axis("off")
+    axes[0, 1].axis("off")
+    axes[0, 0].set_title("Ускорение", fontsize=14)
+    axes[0, 1].set_title("Число вытеснений из кеша", fontsize=14)
+
+    for i, cache_size in enumerate(data_times):
+        acceleration = sns.heatmap(ax=axes[i+1, 0], data=data_times[cache_size], cmap='coolwarm', vmin = 0., vmax = 7.0, cbar_kws={'label': 'ускорение, раз'})
+        acceleration.set_title("размер кеша = " + str(cache_size), fontsize=14)
+        acceleration.set_xlabel("число процессов",fontsize=12)
+        acceleration.set_ylabel("число элементов",fontsize=12)
+
+        cache_evictions = sns.heatmap(ax=axes[i+1, 1], data=data_cache_evictions[cache_size], cmap='coolwarm', cbar_kws={'label': 'к-во вытеснений из кеша'})
         cache_evictions.set_title("размер кеша = " + str(cache_size), fontsize=14)
-        cache_evictions.set_xlabel("число процессов",fontsize=14)
-        cache_evictions.set_ylabel("число элементов",fontsize=14)
+        cache_evictions.set_xlabel("число процессов",fontsize=12)
+        cache_evictions.set_ylabel("число элементов",fontsize=12)
 
     fig, axes = plt.subplots(len(times) // 2, 2, figsize=(15, 10))
     fig.tight_layout(pad=5.0)
     for i, cache_size in enumerate(data_times):
-        lines = data_times[cache_size].transpose().plot.line(ax=axes[i // 2, i % 2])
+        lines = data_times[cache_size].transpose().plot.line(ax=axes[i // 2, i % 2], marker='o')
         lines.set_title("размер кеша = " + str(cache_size), fontsize=14)
         lines.set_xticks([2, 5, 10, 17], fontsize=10)
         lines.set_yticks(np.arange(0, 7, step=0.5),fontsize=10)
