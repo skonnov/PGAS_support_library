@@ -110,6 +110,11 @@ private:
     static void remove_owner(int key, int removing_quantum_index, int process);  // удалить процесс из структуры данных с номерами процессов, хранящих данный квант
     friend void worker_helper_thread();  // функция, выполняемая вспомогательными потоками процессов-рабочих
     friend void master_helper_thread();  // функция, выполняемая вспомогательным потоком процесса-мастера
+#if (ENABLE_STATISTICS_COLLECTION)
+    #if (ENABLE_STATISTICS_QUANTUMS_SCHEDULE)
+        std::ofstream quantums_schedule_file_stream;
+    #endif
+#endif
 };
 
 template <class T>
