@@ -137,6 +137,12 @@ void master_helper_thread() {
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+#if (ENABLE_STATISTICS_COLLECTION)
+  #if (ENABLE_STATISTICS_QUANTUMS_SCHEDULE)
+    memory_manager::quantums_schedule_file_stream.open(STATISTICS_OUTPUT_DIRECTORY + "quantums_schedule_raw" + ".txt");
+  #endif
+#endif
     while (true) {
         MPI_Recv(&request, 4, MPI_INT, MPI_ANY_SOURCE, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD, &status);
         if (request[0] == -1 && request[1] == -1 && request[2] == -1) {  // окончание работы вспомогательного потока
@@ -318,6 +324,12 @@ void master_helper_thread() {
                                                                                                          // процесса-рабочего о переслыке данных
                     }
                 }
+#if (ENABLE_STATISTICS_COLLECTION)
+  #if (ENABLE_STATISTICS_QUANTUMS_SCHEDULE)
+                std::string info = std::to_string(key) + " " + std::to_string(quantum_index) + " " + std::to_string(status.MPI_SOURCE);
+                memory_manager::quantums_schedule_file_stream << info << "\n";
+  #endif
+#endif
                 break;
             }
             case CHANGE_MODE:  // изменить режим работы с памятью
@@ -339,6 +351,12 @@ void master_helper_thread() {
                             memory->quantums[i].mode = READ_ONLY;
                         }
                     }
+#if (ENABLE_STATISTICS_COLLECTION)
+  #if (ENABLE_STATISTICS_QUANTUMS_SCHEDULE)
+                std::string info = "CHANGE_MODE " + std::to_string(key) + " (" + std::to_string(quantum_l) + " " + std::to_string(quantum_r);
+                memory_manager::quantums_schedule_file_stream << info << "\n";
+  #endif
+#endif
                 }
                 break;
             }
@@ -388,6 +406,13 @@ void master_helper_thread() {
             }
         }
     }
+#if (ENABLE_STATISTICS_COLLECTION)
+  #if (ENABLE_STATISTICS_QUANTUMS_SCHEDULE)
+    if (memory_manager::quantums_schedule_file_stream.is_open()) {
+        memory_manager::quantums_schedule_file_stream.close();
+    }
+  #endif
+#endif
 }
 
 void memory_manager::set_lock(int key, int quantum_index) {
