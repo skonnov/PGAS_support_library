@@ -82,11 +82,6 @@ class memory_manager {
     static MPI_Comm workers_comm;
 
 public:
-#if (ENABLE_STATISTICS_COLLECTION)
-    #if (ENABLE_STATISTICS_QUANTUMS_SCHEDULE)
-    static std::ofstream quantums_schedule_file_stream;
-    #endif
-#endif
     static void init(int argc, char** argv, std::string error_helper = "");  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
     static int get_MPI_rank();
     static int get_MPI_size();

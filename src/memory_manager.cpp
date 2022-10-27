@@ -140,7 +140,8 @@ void master_helper_thread() {
 
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_QUANTUMS_SCHEDULE)
-    memory_manager::quantums_schedule_file_stream.open(STATISTICS_OUTPUT_DIRECTORY + "quantums_schedule_raw" + ".txt");
+    std::ofstream quantums_schedule_file_stream;
+    quantums_schedule_file_stream.open(STATISTICS_OUTPUT_DIRECTORY + "quantums_schedule_raw" + ".txt");
   #endif
 #endif
     while (true) {
@@ -327,7 +328,7 @@ void master_helper_thread() {
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_QUANTUMS_SCHEDULE)
                 std::string info = std::to_string(key) + " " + std::to_string(quantum_index) + " " + std::to_string(status.MPI_SOURCE);
-                memory_manager::quantums_schedule_file_stream << info << "\n";
+                quantums_schedule_file_stream << info << "\n";
   #endif
 #endif
                 break;
@@ -353,8 +354,8 @@ void master_helper_thread() {
                     }
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_QUANTUMS_SCHEDULE)
-                std::string info = "CHANGE_MODE " + std::to_string(key) + " (" + std::to_string(quantum_l) + " " + std::to_string(quantum_r);
-                memory_manager::quantums_schedule_file_stream << info << "\n";
+                std::string info = "CHANGE_MODE " + std::to_string(key) + " (" + std::to_string(quantum_l) + " " + std::to_string(quantum_r) + ")";
+                quantums_schedule_file_stream << info << "\n";
   #endif
 #endif
                 }
@@ -408,8 +409,8 @@ void master_helper_thread() {
     }
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_QUANTUMS_SCHEDULE)
-    if (memory_manager::quantums_schedule_file_stream.is_open()) {
-        memory_manager::quantums_schedule_file_stream.close();
+    if (quantums_schedule_file_stream.is_open()) {
+        quantums_schedule_file_stream.close();
     }
   #endif
 #endif
