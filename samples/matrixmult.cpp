@@ -100,7 +100,7 @@ int get_args(int argc, char** argv, int& n, int& cache_size, int q, int size_wor
 
 static void show_usage() {
     if (memory_manager::get_MPI_rank() == 1)
-        std::cerr << "Usage: mpiexec <-n matrices size> matrixmult <-size size_of_matrix> [-cache_size|-cs cache_size]"<<std::endl;
+        std::cerr << "Usage: mpiexec <-n number of processes> matrixmult <-size size_of_matrix> [-cache_size|-cs cache_size]"<<std::endl;
 }
 
 int main(int argc, char** argv) {
