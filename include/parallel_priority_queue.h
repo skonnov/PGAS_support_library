@@ -166,7 +166,7 @@ template<class T>
 void parallel_priority_queue<T>::insert_local(T elem) {
     int sizes_worker = sizes.get_elem(worker_rank);
     int current_index = sizes_worker;
-    CHECK(sizes_worker < num_of_elems_proc, ERR_UNKNOWN);
+    CHECK(sizes_worker < num_of_elems_proc, STATUS_ERR_UNKNOWN);
     pqueues.set_elem(current_index + global_index_l, elem);
     int parent_index = (current_index - 1) / 2;
     while (parent_index >= 0 && current_index > 0) {
@@ -272,7 +272,7 @@ void parallel_priority_queue<T>::heapify(int index) {
 template<class T>
 void parallel_priority_queue<T>::remove_max_local() {
     int size = sizes.get_elem(worker_rank);
-    CHECK(size, ERR_UNKNOWN);
+    CHECK(size, STATUS_ERR_UNKNOWN);
     pqueues.set_elem(global_index_l, pqueues.get_elem(global_index_l + size - 1));
     sizes.set_elem(worker_rank, size - 1);
     heapify(0);

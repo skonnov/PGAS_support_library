@@ -90,12 +90,12 @@ void worker_helper_thread() {
         }
         int key = request[1], quantum_index = request[2], to_rank = request[3];
         auto* memory = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
-        CHECK(key >= 0 && key < (int)memory_manager::memory.size(), ERR_OUT_OF_BOUNDS);
+        CHECK(key >= 0 && key < (int)memory_manager::memory.size(), STATUS_ERR_OUT_OF_BOUNDS);
         if (request[0] != PRINT) {
-            CHECK(quantum_index >= 0 && quantum_index < (int)memory->quantums.size(), ERR_OUT_OF_BOUNDS);
-            CHECK(memory->quantums[quantum_index].quantum != nullptr, ERR_NULLPTR);
+            CHECK(quantum_index >= 0 && quantum_index < (int)memory->quantums.size(), STATUS_ERR_OUT_OF_BOUNDS);
+            CHECK(memory->quantums[quantum_index].quantum != nullptr, STATUS_ERR_NULLPTR);
             if (request[0] != DELETE)
-                CHECK(to_rank > 0 && to_rank < size, ERR_WRONG_RANK);
+                CHECK(to_rank > 0 && to_rank < size, STATUS_ERR_WRONG_RANK);
         }
         // запросы на GET_DATA_R и GET_DATA_RW принимаются только от мастера
         switch(request[0]) {
@@ -151,7 +151,7 @@ void master_helper_thread() {
                 memory_line_master* line = dynamic_cast<memory_line_master*>(_line);
                 for (auto quantum: line->quantums) {
                     for (int i = 0; i < size - 1; ++i) {
-                        CHECK(quantum.requests[i] == 0, ERR_UNKNOWN);
+                        CHECK(quantum.requests[i] == 0, STATUS_ERR_UNKNOWN);
                     }
                 }
                 delete _line;
@@ -161,9 +161,9 @@ void master_helper_thread() {
         int key = request[1], quantum_index = request[2];
         memory_line_master* memory;
         memory = dynamic_cast<memory_line_master*>(memory_manager::memory[key]);
-        CHECK(key >= 0 && key < (int)memory_manager::memory.size(), ERR_OUT_OF_BOUNDS);
+        CHECK(key >= 0 && key < (int)memory_manager::memory.size(), STATUS_ERR_OUT_OF_BOUNDS);
         if (request[0] != PRINT) {
-            CHECK(quantum_index >= 0 && quantum_index < (int)memory->quantums.size(), ERR_OUT_OF_BOUNDS);
+            CHECK(quantum_index >= 0 && quantum_index < (int)memory->quantums.size(), STATUS_ERR_OUT_OF_BOUNDS);
         }
         switch(request[0]) {
             case LOCK:  // блокировка кванта
@@ -192,9 +192,9 @@ void master_helper_thread() {
             case GET_INFO:  // получить квант
                 if (memory->quantums[quantum_index].mode == READ_ONLY) {
                     if (memory->quantums[quantum_index].is_mode_changed) {  // был переход между режимами?
-                        CHECK(!memory->quantums[quantum_index].owners.empty(), ERR_READ_UNINITIALIZED_DATA);  // квант не был инициализирован
-                        CHECK(memory->quantums[quantum_index].quantum_ready == true, ERR_UNKNOWN);
-                        CHECK(memory->quantums[quantum_index].owners.size() == 1, ERR_UNKNOWN);
+                        CHECK(!memory->quantums[quantum_index].owners.empty(), STATUS_ERR_READ_UNINITIALIZED_DATA);  // квант не был инициализирован
+                        CHECK(memory->quantums[quantum_index].quantum_ready == true, STATUS_ERR_UNKNOWN);
+                        CHECK(memory->quantums[quantum_index].owners.size() == 1, STATUS_ERR_UNKNOWN);
                         memory->quantums[quantum_index].is_mode_changed = false;
                         int to_rank = memory->quantums[quantum_index].owners.front();
                         if (to_rank == status.MPI_SOURCE) {  // после перехода оказалось, что квант находится на процессе, который отправил запрос?
@@ -203,16 +203,16 @@ void master_helper_thread() {
                             break;
                         }
                     }
-                    CHECK(!memory->quantums[quantum_index].owners.empty(), ERR_READ_UNINITIALIZED_DATA);  // квант не был инициализирован
+                    CHECK(!memory->quantums[quantum_index].owners.empty(), STATUS_ERR_READ_UNINITIALIZED_DATA);  // квант не был инициализирован
 
                     int to_rank = memory_manager::get_owner(key, quantum_index, status.MPI_SOURCE);  // получение ранга наиболее предпочтительного процесса
-                    CHECK(to_rank > 0 && to_rank < size, ERR_WRONG_RANK);
+                    CHECK(to_rank > 0 && to_rank < size, STATUS_ERR_WRONG_RANK);
 
                     int to_request[4] = {GET_DATA_R, key, quantum_index, status.MPI_SOURCE};
                     MPI_Send(&to_rank, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);  // отправление информации о том, с каким процессом
                                                                                                                      // нужно взаимодействовать для получения кванта
                     if (to_rank != status.MPI_SOURCE) {
-                        CHECK(to_rank < size, ERR_OUT_OF_BOUNDS);
+                        CHECK(to_rank < size, STATUS_ERR_OUT_OF_BOUNDS);
                         ++memory->quantums[quantum_index].requests[to_rank - 1];
                         MPI_Send(to_request, 4, MPI_INT, to_rank, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);  // отправление запроса вспомогательному потоку
                                                                                                          // процесса-рабочего о переслыке данных
@@ -242,7 +242,7 @@ void master_helper_thread() {
                         if (to_rank == -1 || to_rank == status.MPI_SOURCE) {  // данные у процесса, отправившего запрос?
                             MPI_Send(&status.MPI_SOURCE, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);
                         } else {
-                            CHECK(to_rank < size, ERR_OUT_OF_BOUNDS);
+                            CHECK(to_rank < size, STATUS_ERR_OUT_OF_BOUNDS);
                             ++memory->quantums[quantum_index].requests[to_rank - 1];
                             int to_request[4] = {GET_DATA_RW, key, quantum_index, status.MPI_SOURCE};
                             MPI_Send(&to_rank, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);  // отправление информации о том, с каким процессом
@@ -263,14 +263,14 @@ void master_helper_thread() {
                     }  // empty
 
                     if (memory->quantums[quantum_index].quantum_ready) {  // данные готовы к пересылке?
-                        CHECK(memory->quantums[quantum_index].owners.size() == 1, ERR_UNKNOWN);
+                        CHECK(memory->quantums[quantum_index].owners.size() == 1, STATUS_ERR_UNKNOWN);
                         int to_rank = memory->quantums[quantum_index].owners.front();
                         int to_request[4] = {GET_DATA_RW, key, quantum_index, status.MPI_SOURCE};
                         memory->quantums[quantum_index].quantum_ready = false;
                         memory->quantums[quantum_index].owners.pop_front();
                         memory->quantums[quantum_index].owners.push_back(status.MPI_SOURCE);
 
-                        CHECK(to_rank < size, ERR_OUT_OF_BOUNDS);
+                        CHECK(to_rank < size, STATUS_ERR_OUT_OF_BOUNDS);
                         ++memory->quantums[quantum_index].requests[to_rank - 1];
                         MPI_Send(&to_rank, 1, MPI_INT, status.MPI_SOURCE, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);  // отправление информации о том, с каким процессом
                                                                                                                          // нужно взаимодействовать для получения кванта
@@ -285,10 +285,10 @@ void master_helper_thread() {
             {
                 int worker_rank_sender = request[3] - 1;
                 if (worker_rank_sender >= 0) {
-                    CHECK(worker_rank_sender < size - 1, ERR_OUT_OF_BOUNDS);
+                    CHECK(worker_rank_sender < size - 1, STATUS_ERR_OUT_OF_BOUNDS);
                     // уменьшить счётчик для кванта и процесса, посылавшего квант на процесс status.MPI_SOURCE
                     --memory->quantums[quantum_index].requests[worker_rank_sender];
-                    CHECK(memory->quantums[quantum_index].requests[worker_rank_sender] >= 0, ERR_UNKNOWN);
+                    CHECK(memory->quantums[quantum_index].requests[worker_rank_sender] >= 0, STATUS_ERR_UNKNOWN);
                     // для данного процесса и кванта незаконченных запросов не осталось?
                     if (memory->quantums[quantum_index].requests[worker_rank_sender] == 0 &&
                                 memory->quantums[quantum_index].want_to_delete[worker_rank_sender]) {
@@ -303,21 +303,21 @@ void master_helper_thread() {
                     memory->quantums[quantum_index].owners.push_back(status.MPI_SOURCE); // процесс помещается в вектор процессов,
                                                                                  // которые могут пересылать данный квант другим процессам
                 } else {  // READ_WRITE mode
-                    CHECK(memory->quantums[quantum_index].owners.front() == status.MPI_SOURCE, ERR_UNKNOWN);
-                    CHECK(memory->quantums[quantum_index].quantum_ready == false, ERR_UNKNOWN);
+                    CHECK(memory->quantums[quantum_index].owners.front() == status.MPI_SOURCE, STATUS_ERR_UNKNOWN);
+                    CHECK(memory->quantums[quantum_index].quantum_ready == false, STATUS_ERR_UNKNOWN);
                     memory->quantums[quantum_index].quantum_ready = true;
                     if (memory->wait_quantums.is_contain(quantum_index)) {  // есть процессы, ожидающие готовности кванта?
                         int source_rank = memory->wait_quantums.pop(quantum_index);
                         int to_rank = memory->quantums[quantum_index].owners.front();
                         memory->quantums[quantum_index].quantum_ready = false;
-                        CHECK(memory->quantums[quantum_index].owners.size() == 1, ERR_UNKNOWN);
+                        CHECK(memory->quantums[quantum_index].owners.size() == 1, STATUS_ERR_UNKNOWN);
                         memory->quantums[quantum_index].owners.pop_front();
                         memory->quantums[quantum_index].owners.push_back(source_rank);
                         int to_request[4] = {GET_DATA_RW, key, quantum_index, source_rank};
-                        CHECK(source_rank != to_rank, ERR_WRONG_RANK);
-                        CHECK(to_rank > 0 && to_rank < size, ERR_WRONG_RANK);
+                        CHECK(source_rank != to_rank, STATUS_ERR_WRONG_RANK);
+                        CHECK(to_rank > 0 && to_rank < size, STATUS_ERR_WRONG_RANK);
 
-                        CHECK(to_rank < size, ERR_OUT_OF_BOUNDS);
+                        CHECK(to_rank < size, STATUS_ERR_OUT_OF_BOUNDS);
                         ++memory->quantums[quantum_index].requests[to_rank - 1];
                         MPI_Send(&to_rank, 1, MPI_INT, source_rank, GET_INFO_FROM_MASTER_HELPER, MPI_COMM_WORLD);  // отправление информации о том, с каким процессом
                                                                                                                    // нужно взаимодействовать для получения кванта
@@ -354,7 +354,7 @@ void master_helper_thread() {
                     }
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_QUANTUMS_SCHEDULE)
-                std::string info = "CHANGE_MODE " + std::to_string(key) + " (" + std::to_string(quantum_l) + " " + std::to_string(quantum_r) + ")";
+                std::string info = "CHANGE_MODE " + std::to_string(key) + std::to_string(quantum_l) + " " + std::to_string(quantum_r);
                 quantums_schedule_file_stream << info << "\n";
   #endif
 #endif
@@ -370,7 +370,7 @@ void master_helper_thread() {
                     std::set<int>s1, s2;
                     while (l_quantum_index < (int)memory->quantums.size()) {
                         if (r_quantum_index < (int)memory->quantums.size()) {
-                            CHECK(memory->quantums[r_quantum_index].quantum_ready, ERR_NULLPTR);
+                            CHECK(memory->quantums[r_quantum_index].quantum_ready, STATUS_ERR_NULLPTR);
                         }
                         if (s1.empty()) {
                             for (auto proc: memory->quantums[r_quantum_index].owners)
@@ -459,7 +459,7 @@ void memory_manager::change_mode(int key, int quantum_index_l, int quantum_index
 
 void memory_manager::print(int key, const std::string& path) {
     int err = MPI_File_open(workers_comm, path.data(), MPI_MODE_WRONLY | MPI_MODE_CREATE | MPI_MODE_APPEND, MPI_INFO_NULL, &fh);\
-    CHECK(!err, ERR_FILE_OPEN);
+    CHECK(!err, STATUS_ERR_FILE_OPEN);
     int request[4] = {PRINT, key, -1, -1};
     MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);
     int is_ready;
@@ -469,9 +469,9 @@ void memory_manager::print(int key, const std::string& path) {
 }
 
 void memory_manager::print_quantum(int key, int quantum_index) {
-    CHECK(memory_manager::rank >= 1 && memory_manager::rank < size, ERR_WRONG_RANK);
+    CHECK(memory_manager::rank >= 1 && memory_manager::rank < size, STATUS_ERR_WRONG_RANK);
     auto* memory = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
-    CHECK(memory->quantums[quantum_index].quantum != nullptr, ERR_NULLPTR);
+    CHECK(memory->quantums[quantum_index].quantum != nullptr, STATUS_ERR_NULLPTR);
     MPI_Status status;
     MPI_File_write_at(fh, quantum_index * memory->quantum_size * memory->size_of, memory->quantums[quantum_index].quantum, std::min(memory->logical_size, memory->quantum_size), memory->type, &status);
     std::cout<<std::flush;
@@ -533,7 +533,7 @@ void memory_manager::finalize() {
         int request[4] = {-1, -1, -1, -1};
         MPI_Send(request, 3, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // завершение работы вспомогательного потока процесса-мастера
     }
-    CHECK(helper_thr.joinable(), ERR_UNKNOWN);
+    CHECK(helper_thr.joinable(), STATUS_ERR_UNKNOWN);
     helper_thr.join();
     // if (rank != 0) {
     //     for (int key = 0; key < (int)memory.size(); ++key) {
@@ -554,7 +554,7 @@ void memory_manager::finalize() {
 
 int memory_manager::get_owner(int key, int quantum_index, int requesting_process) {
     auto* memory = dynamic_cast<memory_line_master*>(memory_manager::memory[key]);
-    CHECK(!memory->quantums[quantum_index].owners.empty(), ERR_READ_UNINITIALIZED_DATA);
+    CHECK(!memory->quantums[quantum_index].owners.empty(), STATUS_ERR_READ_UNINITIALIZED_DATA);
     for (auto rank: memory->quantums[quantum_index].owners)
         if (rank == requesting_process)
             return requesting_process;
@@ -566,7 +566,7 @@ int memory_manager::get_owner(int key, int quantum_index, int requesting_process
 
 void memory_manager::remove_owner(int key, int removing_quantum_index, int process) {
     auto* memory = dynamic_cast<memory_line_master*>(memory_manager::memory[key]);
-    CHECK(!memory->quantums[removing_quantum_index].owners.empty(), ERR_UNKNOWN);
+    CHECK(!memory->quantums[removing_quantum_index].owners.empty(), STATUS_ERR_UNKNOWN);
     for (auto rank = memory->quantums[removing_quantum_index].owners.begin();
                         rank  < memory->quantums[removing_quantum_index].owners.end(); ++rank) {
         if (*rank == process) {
