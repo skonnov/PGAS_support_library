@@ -2,7 +2,7 @@
 #include "common.h"
 
 void cache_list::push_back(cache_node* node) {
-    CHECK(node != nullptr, ERR_NULLPTR);
+    CHECK(node != nullptr, STATUS_ERR_NULLPTR);
     if (begin == nullptr && end == nullptr) {
         begin = end = node;
         node->next = node->prev = nullptr;
@@ -21,7 +21,7 @@ void cache_list::push_back(cache_node* node) {
 }
 
 cache_node* cache_list::pop_front() {
-    CHECK(begin != nullptr, ERR_NULLPTR);
+    CHECK(begin != nullptr, STATUS_ERR_NULLPTR);
     cache_node* return_value = begin;
     if (begin == end) {
         begin = end = nullptr;
@@ -29,7 +29,7 @@ cache_node* cache_list::pop_front() {
         begin = end;
         begin->prev = begin->next = end->next = end->prev = nullptr;
     } else {
-        CHECK(begin->next != nullptr, ERR_NULLPTR);
+        CHECK(begin->next != nullptr, STATUS_ERR_NULLPTR);
         begin = begin->next;
         begin->prev = nullptr;
     }
@@ -38,7 +38,7 @@ cache_node* cache_list::pop_front() {
 }
 
 cache_node* cache_list::pop_back() {
-    CHECK(end != nullptr, ERR_NULLPTR);
+    CHECK(end != nullptr, STATUS_ERR_NULLPTR);
     cache_node* return_value = end;
     if (begin == end) {
         begin = end = nullptr;
@@ -46,7 +46,7 @@ cache_node* cache_list::pop_back() {
         begin = end;
         begin->prev = begin->next = end->next = end->prev = nullptr;
     } else {
-        CHECK(end->prev != nullptr, ERR_NULLPTR);
+        CHECK(end->prev != nullptr, STATUS_ERR_NULLPTR);
         end = end->prev;
         end->next = nullptr;
     }
@@ -55,8 +55,8 @@ cache_node* cache_list::pop_back() {
 }
 
 void cache_list::delete_node(cache_node* node) {
-    CHECK(node != nullptr, ERR_NULLPTR);
-    CHECK(begin!= nullptr, ERR_NULLPTR);
+    CHECK(node != nullptr, STATUS_ERR_NULLPTR);
+    CHECK(begin!= nullptr, STATUS_ERR_NULLPTR);
     cache_node* next_node = node->next;
     if (node == begin) {
         pop_front();
@@ -154,7 +154,7 @@ memory_cache& memory_cache::operator=(memory_cache&& cache) {
 }
 
 int memory_cache::add(int quantum_index) {
-    CHECK(quantum_index >= 0 && quantum_index < (int)contain_flags.size(), ERR_OUT_OF_BOUNDS);
+    CHECK(quantum_index >= 0 && quantum_index < (int)contain_flags.size(), STATUS_ERR_OUT_OF_BOUNDS);
     // элемент уже находится в кеше?
     if (is_contain(quantum_index)) {
         // Least recently used (LRU) cache logic
@@ -209,7 +209,7 @@ int memory_cache::add(int quantum_index) {
 }
 
 bool memory_cache::is_contain(int quantum_index) {
-    CHECK(quantum_index >= 0 && quantum_index < (int)contain_flags.size(), ERR_OUT_OF_BOUNDS);
+    CHECK(quantum_index >= 0 && quantum_index < (int)contain_flags.size(), STATUS_ERR_OUT_OF_BOUNDS);
     return contain_flags[quantum_index] != nullptr;
 }
 
@@ -220,12 +220,12 @@ void memory_cache::add_to_excluded(int quantum_index) {
 }
 
 bool memory_cache::is_excluded(int quantum_index) {
-    CHECK(quantum_index >= 0 && quantum_index < (int)excluded.size(), ERR_OUT_OF_BOUNDS);
+    CHECK(quantum_index >= 0 && quantum_index < (int)excluded.size(), STATUS_ERR_OUT_OF_BOUNDS);
     return excluded[quantum_index];
 }
 
 void memory_cache::delete_elem(int quantum_index) {
-    CHECK(quantum_index >= 0 && quantum_index < (int)excluded.size(), ERR_OUT_OF_BOUNDS);
+    CHECK(quantum_index >= 0 && quantum_index < (int)excluded.size(), STATUS_ERR_OUT_OF_BOUNDS);
     if (is_contain(quantum_index)) {
         cache_indexes.delete_node(contain_flags[quantum_index]);
         free_cache_nodes.push_back(contain_flags[quantum_index]);

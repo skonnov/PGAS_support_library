@@ -150,12 +150,12 @@ int memory_manager::create_object(int count, const int* blocklens, const MPI_Ain
 
 template <class T>
 T memory_manager::get_data(int key, int index_of_element) {
-    CHECK(key >= 0 && key < (int)memory_manager::memory.size(), ERR_OUT_OF_BOUNDS);
+    CHECK(key >= 0 && key < (int)memory_manager::memory.size(), STATUS_ERR_OUT_OF_BOUNDS);
     auto* memory = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
     int quantum_index = get_quantum_index(key, index_of_element);
     auto& quantum = memory->quantums[quantum_index].quantum;
-    CHECK(index_of_element >= 0 && index_of_element < (int)memory->logical_size, ERR_OUT_OF_BOUNDS);
-    CHECK(quantum_index >= 0 && quantum_index < (int)memory->quantums.size(), ERR_OUT_OF_BOUNDS);
+    CHECK(index_of_element >= 0 && index_of_element < (int)memory->logical_size, STATUS_ERR_OUT_OF_BOUNDS);
+    CHECK(quantum_index >= 0 && quantum_index < (int)memory->quantums.size(), STATUS_ERR_OUT_OF_BOUNDS);
 
     memory->quantums[quantum_index].mutex->lock();
     if (!memory->quantums[quantum_index].is_mode_changed) {  // не было изменения режима? (данные актуальны?)
@@ -188,20 +188,20 @@ T memory_manager::get_data(int key, int index_of_element) {
 
     if (memory->quantums[quantum_index].mode == READ_ONLY && to_rank == rank) {  // если read_only_mode и данные уже у процесса,
                                                  // ответ мастеру о том, что данные готовы, отправлять не нужно
-        CHECK(quantum != nullptr, ERR_NULLPTR);
+        CHECK(quantum != nullptr, STATUS_ERR_NULLPTR);
         return (reinterpret_cast<T*>(quantum))[index_of_element % memory->quantum_size];
     }
     if (to_rank != rank) {  // если данные не у текущего процесса, инициируется передача данных от указанного мастером процесса
         if (quantum == nullptr) {
             quantum = memory->allocator.alloc();
         }
-        CHECK(to_rank > 0 && to_rank < size, ERR_WRONG_RANK);
-        CHECK(quantum != nullptr, ERR_NULLPTR);
+        CHECK(to_rank > 0 && to_rank < size, STATUS_ERR_WRONG_RANK);
+        CHECK(quantum != nullptr, STATUS_ERR_NULLPTR);
         MPI_Recv(quantum, memory->quantum_size, memory->type, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
     }
     request[0] = SET_INFO;
     request[3] = (to_rank != rank) ? to_rank : -1;
-    CHECK(quantum != nullptr, ERR_NULLPTR);
+    CHECK(quantum != nullptr, STATUS_ERR_NULLPTR);
     T elem = (reinterpret_cast<T*>(quantum))[index_of_element % memory->quantum_size];
     MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // уведомление мастера о том, что данные готовы для передачи другим процессам
     return elem;
@@ -209,12 +209,12 @@ T memory_manager::get_data(int key, int index_of_element) {
 
 template <class T>
 void memory_manager::set_data(int key, int index_of_element, T value) {
-    CHECK(key >= 0 && key < (int)memory_manager::memory.size(), ERR_OUT_OF_BOUNDS);
+    CHECK(key >= 0 && key < (int)memory_manager::memory.size(), STATUS_ERR_OUT_OF_BOUNDS);
     auto* memory = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
     int quantum_index = get_quantum_index(key, index_of_element);
-    CHECK(memory->quantums[quantum_index].mode == READ_WRITE, ERR_ILLEGAL_WRITE);  // запись в READ_ONLY режиме запрещена
-    CHECK(index_of_element >= 0 && index_of_element < (int)memory->logical_size, ERR_OUT_OF_BOUNDS);
-    CHECK(quantum_index >= 0 && quantum_index < (int)memory->quantums.size(), ERR_OUT_OF_BOUNDS);
+    CHECK(memory->quantums[quantum_index].mode == READ_WRITE, STATUS_ERR_ILLEGAL_WRITE);  // запись в READ_ONLY режиме запрещена
+    CHECK(index_of_element >= 0 && index_of_element < (int)memory->logical_size, STATUS_ERR_OUT_OF_BOUNDS);
+    CHECK(quantum_index >= 0 && quantum_index < (int)memory->quantums.size(), STATUS_ERR_OUT_OF_BOUNDS);
     auto& quantum = memory->quantums[quantum_index].quantum;
     memory->quantums[quantum_index].mutex->lock();
     if (!memory->quantums[quantum_index].is_mode_changed) {
@@ -236,7 +236,7 @@ void memory_manager::set_data(int key, int index_of_element, T value) {
         quantum = memory->allocator.alloc();
     }
     if (to_rank != rank) {  // если данные не у текущего процесса, инициируется передача данных от указанного мастером процесса
-        CHECK(to_rank > 0 && to_rank < size, ERR_WRONG_RANK);
+        CHECK(to_rank > 0 && to_rank < size, STATUS_ERR_WRONG_RANK);
         MPI_Recv(quantum, memory->quantum_size, memory->type, to_rank, GET_DATA_FROM_HELPER, MPI_COMM_WORLD, &status);
     }
     request[0] = SET_INFO;

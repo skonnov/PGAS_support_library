@@ -45,13 +45,13 @@ parallel_vector<T>::parallel_vector(int count, const int* blocklens, const MPI_A
 
 template<class T>
 T parallel_vector<T>::get_elem(const int& index) const {
-    CHECK(index >= 0 && index < size_vector, ERR_OUT_OF_BOUNDS);
+    CHECK(index >= 0 && index < size_vector, STATUS_ERR_OUT_OF_BOUNDS);
     return memory_manager::get_data<T>(key, index);
 }
 
 template<class T>
 void parallel_vector<T>::set_elem(const int& index, const T& value) {
-    CHECK(index >= 0 && index < size_vector, ERR_OUT_OF_BOUNDS);
+    CHECK(index >= 0 && index < size_vector, STATUS_ERR_OUT_OF_BOUNDS);
     memory_manager::set_data<T>(key, index, value);
 }
 

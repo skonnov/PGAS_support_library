@@ -64,26 +64,27 @@ enum operations {  // используется вспомогательными 
     DELETE      = 8
 };
 
-enum error_codes {
-    ERR_UNKNOWN                 = -1,
-    ERR_OUT_OF_BOUNDS           = -2,
-    ERR_NULLPTR                 = -3,
-    ERR_WRONG_RANK              = -4,
-    ERR_ILLEGAL_WRITE           = -5,
-    ERR_READ_UNINITIALIZED_DATA = -6,
-    ERR_FILE_OPEN               = -7
+enum StatusCode {
+    STATUS_OK                      =  0,
+    STATUS_ERR_UNKNOWN                 = -1,
+    STATUS_ERR_OUT_OF_BOUNDS           = -2,
+    STATUS_ERR_NULLPTR                 = -3,
+    STATUS_ERR_WRONG_RANK              = -4,
+    STATUS_ERR_ILLEGAL_WRITE           = -5,
+    STATUS_ERR_READ_UNINITIALIZED_DATA = -6,
+    STATUS_ERR_FILE_OPEN               = -7
 };
 
 static std::string get_error_code(int error_code) {
     std::string out;
     switch(error_code) {
-    case ERR_UNKNOWN:                 out = "ERR_UKNOWN"; break;
-    case ERR_OUT_OF_BOUNDS:           out = "ERR_OUT_OF_BOUNDS"; break;
-    case ERR_NULLPTR:                 out = "ERR_NULLPTR"; break;
-    case ERR_WRONG_RANK:              out = "ERR_WRONG_RANK"; break;
-    case ERR_ILLEGAL_WRITE:           out = "ERR_ILLEGAL_WRITE"; break;
-    case ERR_READ_UNINITIALIZED_DATA: out = "ERR_READ_UNINITIALIZED_DATA"; break;
-    case ERR_FILE_OPEN:               out = "ERR_FILE_OPEN"; break;
+    case STATUS_ERR_UNKNOWN:                 out = "STATUS_ERR_UNKNOWN"; break;
+    case STATUS_ERR_OUT_OF_BOUNDS:           out = "STATUS_ERR_OUT_OF_BOUNDS"; break;
+    case STATUS_ERR_NULLPTR:                 out = "STATUS_ERR_NULLPTR"; break;
+    case STATUS_ERR_WRONG_RANK:              out = "STATUS_ERR_WRONG_RANK"; break;
+    case STATUS_ERR_ILLEGAL_WRITE:           out = "STATUS_ERR_ILLEGAL_WRITE"; break;
+    case STATUS_ERR_READ_UNINITIALIZED_DATA: out = "STATUS_ERR_READ_UNINITIALIZED_DATA"; break;
+    case STATUS_ERR_FILE_OPEN:               out = "STATUS_ERR_FILE_OPEN"; break;
     default:;
     }
     out += "(" + std::to_string(error_code) + ")";
