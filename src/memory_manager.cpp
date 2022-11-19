@@ -575,3 +575,7 @@ void memory_manager::remove_owner(int key, int removing_quantum_index, int proce
         }
     }
 }
+
+void memory_manager::collect_statistic_worker(int key, int quantum_index) {
+
+}

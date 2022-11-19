@@ -33,6 +33,8 @@ struct quantum_worker
     void* quantum = nullptr; // указатель на квант
     std::unique_ptr<std::mutex> mutex;  // мьютекс нужен, чтобы предотвратить одновременный доступ
                                     // к кванту с разных потоков в режиме READ_WRITE
+    std::vector<int> cnt;
+    std::vector<int> modes;
     quantum_worker(): mutex(new std::mutex()) {}
 };
 
@@ -109,6 +111,7 @@ private:
     static void print_quantum(int key, int quantum_index);
     static int get_owner(int key, int quantum_index, int requesting_process);  // получить номер процесса, хранящего квант в текущий момент времени
     static void remove_owner(int key, int removing_quantum_index, int process);  // удалить процесс из структуры данных с номерами процессов, хранящих данный квант
+    static void collect_statistic_worker(int key, int quantum_index);
     friend void worker_helper_thread();  // функция, выполняемая вспомогательными потоками процессов-рабочих
     friend void master_helper_thread();  // функция, выполняемая вспомогательным потоком процесса-мастера
 };
@@ -162,6 +165,9 @@ T memory_manager::get_data(int key, int index_of_element) {
         if (quantum != nullptr) {  // на данном процессе есть квант?
             T elem = (reinterpret_cast<T*>(quantum))[index_of_element % memory->quantum_size];
             memory->quantums[quantum_index].mutex->unlock();
+#ifdef ENABLE_STATISTICS_COLLECTION
+            ++memory->quantums[quantum_index].cnt.back();
+#endif
             return elem;  // элемент возвращается без обращения к мастеру
         }
     }
@@ -189,6 +195,11 @@ T memory_manager::get_data(int key, int index_of_element) {
     if (memory->quantums[quantum_index].mode == READ_ONLY && to_rank == rank) {  // если read_only_mode и данные уже у процесса,
                                                  // ответ мастеру о том, что данные готовы, отправлять не нужно
         CHECK(quantum != nullptr, STATUS_ERR_NULLPTR);
+#ifdef ENABLE_STATISTICS_COLLECTION
+        // correct?
+        memory->quantums[quantum_index].cnt.push_back(1);
+        memory->quantums[quantum_index].modes.push_back(memory->quantums[quantum_index].mode);
+#endif
         return (reinterpret_cast<T*>(quantum))[index_of_element % memory->quantum_size];
     }
     if (to_rank != rank) {  // если данные не у текущего процесса, инициируется передача данных от указанного мастером процесса
@@ -204,6 +215,10 @@ T memory_manager::get_data(int key, int index_of_element) {
     CHECK(quantum != nullptr, STATUS_ERR_NULLPTR);
     T elem = (reinterpret_cast<T*>(quantum))[index_of_element % memory->quantum_size];
     MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // уведомление мастера о том, что данные готовы для передачи другим процессам
+#ifdef ENABLE_STATISTICS_COLLECTION
+    memory->quantums[quantum_index].cnt.push_back(1);
+    memory->quantums[quantum_index].modes.push_back(memory->quantums[quantum_index].mode);
+#endif
     return elem;
 }
 
@@ -221,6 +236,9 @@ void memory_manager::set_data(int key, int index_of_element, T value) {
         if (quantum != nullptr) {
             (reinterpret_cast<T*>(quantum))[index_of_element % memory->quantum_size] = value;
             memory->quantums[quantum_index].mutex->unlock();
+#ifdef ENABLE_STATISTICS_COLLECTION
+            ++memory->quantums[quantum_index].cnt.back();
+#endif
             return;
         }
     }
@@ -243,6 +261,10 @@ void memory_manager::set_data(int key, int index_of_element, T value) {
     request[3] = (to_rank != rank) ? to_rank : -1;
     (reinterpret_cast<T*>(quantum))[index_of_element % memory->quantum_size] = value;
     MPI_Send(request, 4, MPI_INT, 0, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD);  // уведомление мастера о том, что данные готовы для передачи другим процессам
+#ifdef ENABLE_STATISTICS_COLLECTION
+    memory->quantums[quantum_index].cnt.push_back(1);
+    memory->quantums[quantum_index].modes.push_back(memory->quantums[quantum_index].mode);
+#endif
 }
 
 template <class T>
