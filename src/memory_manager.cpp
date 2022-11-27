@@ -76,26 +76,36 @@ void worker_helper_thread() {
         MPI_Recv(request, 4, MPI_INT, MPI_ANY_SOURCE, SEND_DATA_TO_HELPER, MPI_COMM_WORLD, &status);
         if (request[0] == -1 && request[1] == -1 && request[2] == -1 && request[3] == -1) {  // окончание работы вспомогательного потока
             // освобождение памяти
+#if (ENABLE_STATISTICS_COLLECTION)
+    #if (ENABLE_STATISTICS_QUANTUMS_CNT_WORKERS)
+            // write quantum request statistic to file
+            std::ofstream worker_process_statistic;
+            worker_process_statistic.open(STATISTICS_OUTPUT_DIRECTORY + "quantums_ranks_cnt_process_" + std::to_string(rank) + ".txt");
+            worker_process_statistic << "key | quantum_index | cnt | mode (READ_ONLY = 0, READ_WRITE = 1)\n";
+    #endif
+#endif
             for (int key = 0; key < int(memory_manager::memory.size()); ++key) {
 #if (ENABLE_STATISTICS_COLLECTION)
     #if (ENABLE_STATISTICS_CACHE_MISSES_CNT)
                 auto* memory = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
                 memory->cache.get_cache_miss_cnt_statistics(key, memory->quantums.size() * memory->quantum_size);
     #endif
-    // write quantum request statistic to file
-    std::ofstream worker_process_statistic;
-    worker_process_statistic.open(STATISTICS_OUTPUT_DIRECTORY + "quantums_ranks_cnt_process_" + std::to_string(rank) + ".txt");
-    worker_process_statistic << "key | quantum_index | cnt | mode\n";
-        for (int quantum_index = 0; quantum_index < memory->quantums.size(); ++quantum_index) {
-            for (int j = 0; j < memory->quantums[quantum_index].cnt.size(); ++j) {
-                worker_process_statistic << key << " " << quantum_index << " " << memory->quantums[quantum_index].cnt[j] << " " << memory->quantums[quantum_index].modes[j] << "\n";
-            }
-        }
-    worker_process_statistic.close();
+    #if (ENABLE_STATISTICS_QUANTUMS_CNT_WORKERS)
+                for (int quantum_index = 0; quantum_index < memory->quantums.size(); ++quantum_index) {
+                    for (int j = 0; j < memory->quantums[quantum_index].cnt.size(); ++j) {
+                        worker_process_statistic << key << " " << quantum_index << " " << memory->quantums[quantum_index].cnt[j] << " " << memory->quantums[quantum_index].modes[j] << "\n";
+                    }
+                }
+    #endif
 #endif
                 auto* memory_line = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
                 delete memory_line;
             }
+#if (ENABLE_STATISTICS_COLLECTION)
+    #if (ENABLE_STATISTICS_QUANTUMS_CNT_WORKERS)
+            worker_process_statistic.close();
+    #endif
+#endif
             break;
         }
         int key = request[1], quantum_index = request[2], to_rank = request[3];
