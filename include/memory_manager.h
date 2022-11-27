@@ -224,7 +224,7 @@ T memory_manager::get_data(int key, int index_of_element) {
 
 template <class T>
 void memory_manager::set_data(int key, int index_of_element, T value) {
-    CHECK(key >= 0 && key < (int)memory_manager::memory.size(), STATUS_ERR_OUT_OF_BOUNDS);
+    CHECK(key >= 0 && key < (int)memory_manager::memory.size(), STATUS_ERR_OUT_OF_BOUNDS  );
     auto* memory = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
     int quantum_index = get_quantum_index(key, index_of_element);
     CHECK(memory->quantums[quantum_index].mode == READ_WRITE, STATUS_ERR_ILLEGAL_WRITE);  // запись в READ_ONLY режиме запрещена

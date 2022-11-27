@@ -82,6 +82,16 @@ void worker_helper_thread() {
                 auto* memory = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
                 memory->cache.get_cache_miss_cnt_statistics(key, memory->quantums.size() * memory->quantum_size);
     #endif
+    // write quantum request statistic to file
+    std::ofstream worker_process_statistic;
+    worker_process_statistic.open(STATISTICS_OUTPUT_DIRECTORY + "quantums_ranks_cnt_process_" + std::to_string(rank) + ".txt");
+    worker_process_statistic << "key | quantum_index | cnt | mode\n";
+        for (int quantum_index = 0; quantum_index < memory->quantums.size(); ++quantum_index) {
+            for (int j = 0; j < memory->quantums[quantum_index].cnt.size(); ++j) {
+                worker_process_statistic << key << " " << quantum_index << " " << memory->quantums[quantum_index].cnt[j] << " " << memory->quantums[quantum_index].modes[j] << "\n";
+            }
+        }
+    worker_process_statistic.close();
 #endif
                 auto* memory_line = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
                 delete memory_line;
