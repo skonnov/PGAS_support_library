@@ -374,7 +374,7 @@ void master_helper_thread() {
                     }
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_QUANTUMS_SCHEDULE)
-                std::string info = "CHANGE_MODE " + std::to_string(key) + std::to_string(quantum_l) + " " + std::to_string(quantum_r);
+                std::string info = std::to_string(key) + " " + "CHANGE_MODE " + std::to_string(quantum_l) + " " + std::to_string(quantum_r);
                 quantums_schedule_file_stream << info << "\n";
   #endif
 #endif

@@ -69,7 +69,7 @@ enum operations {  // используется вспомогательными 
 };
 
 enum StatusCode {
-    STATUS_OK                      =  0,
+    STATUS_OK                          =  0,
     STATUS_ERR_UNKNOWN                 = -1,
     STATUS_ERR_OUT_OF_BOUNDS           = -2,
     STATUS_ERR_NULLPTR                 = -3,
