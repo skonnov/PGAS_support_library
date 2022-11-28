@@ -15,8 +15,9 @@ int memory_manager::worker_size;  // worker_size = size-1
 int memory_manager::proc_count_ready = 0;
 MPI_File memory_manager::fh;
 MPI_Comm memory_manager::workers_comm;
+schedule memory_manager::sch;
 
-void memory_manager::init(int argc, char**argv, std::string error_helper_str) {
+StatusCode memory_manager::init(int argc, char** argv, std::string error_helper_str, bool is_statistic, config* cfg) {
     int provided = 0;
     MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
     if (provided != MPI_THREAD_MULTIPLE) {
@@ -48,6 +49,14 @@ void memory_manager::init(int argc, char**argv, std::string error_helper_str) {
     MPI_Group_incl(group_world, worker_size, procs.data(), &group_workers);
     MPI_Comm_create(MPI_COMM_WORLD, group_workers, &workers_comm);
     // TODO: создание своего типа для пересылки посылок ???
+
+    if (is_statistic) {
+        StatusCode sts = readStatistic(cfg);
+        if (sts != StatusCode::STATUS_OK) {
+            return sts;
+        }
+    }
+    return StatusCode::STATUS_OK;
 }
 
 int memory_manager::get_MPI_rank() {
@@ -596,6 +605,24 @@ void memory_manager::remove_owner(int key, int removing_quantum_index, int proce
     }
 }
 
-void memory_manager::collect_statistic_worker(int key, int quantum_index) {
-
+StatusCode memory_manager::readStatistic(config* cfg) {
+    if (rank == 0) {
+        if (cfg->is_schedule_statistic) {
+            StatusCode sts = memory_manager::sch.read_from_file_schedule(cfg->schedule_statistic_file_path);
+            if (sts != StatusCode::STATUS_OK) {
+                return sts;
+            }
+        }
+    }
+    else {
+        if (cfg->is_quantums_access_cnt_statistic) {
+            if (rank - 1 < cfg->quantums_access_cnt_statistic_file_path.size()) {
+                StatusCode sts = memory_manager::sch.read_from_file_schedule(cfg->schedule_statistic_file_path);
+                if (sts != StatusCode::STATUS_OK) {
+                    return sts;
+                }
+            }
+        }
+    }
+    return StatusCode::STATUS_OK;
 }

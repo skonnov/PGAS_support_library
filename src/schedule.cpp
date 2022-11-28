@@ -85,6 +85,6 @@ void schedule::optimize() {
     // to do some optimizations
 }
 
-std::unordered_map<int, std::vector<schedule_line>> schedule::get() const {
+std::unordered_map<int, std::vector<schedule_line>> schedule::get_schedule() const {
     return schedule_structure;
 }
