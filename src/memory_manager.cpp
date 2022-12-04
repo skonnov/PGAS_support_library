@@ -176,6 +176,15 @@ void master_helper_thread() {
     while (true) {
         MPI_Recv(&request, 4, MPI_INT, MPI_ANY_SOURCE, SEND_DATA_TO_MASTER_HELPER, MPI_COMM_WORLD, &status);
         if (request[0] == -1 && request[1] == -1 && request[2] == -1) {  // окончание работы вспомогательного потока
+#if (ENABLE_STATISTICS_COLLECTION)
+            std::ofstream common_statistic;
+            common_statistic.open(STATISTICS_OUTPUT_DIRECTORY + "common_statistic.txt");
+            common_statistic << "number_of_processes: " << size << " number_of_vectors: " << memory_manager::memory.size() << "\n";
+            for (auto _line: memory_manager::memory) {
+                common_statistic << "quantum_size: " << _line->quantum_size << " logical_size: " << _line->logical_size << "\n";
+            }
+            common_statistic.close();
+#endif
             for (auto _line: memory_manager::memory) {
                 memory_line_master* line = dynamic_cast<memory_line_master*>(_line);
                 for (auto quantum: line->quantums) {

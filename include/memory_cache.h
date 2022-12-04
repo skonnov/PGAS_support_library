@@ -27,8 +27,8 @@ public:
 
 class memory_cache {
 public:
-    memory_cache();
-    memory_cache(int cache_size, int number_of_quantums, MPI_Comm workers_comm);
+    memory_cache(int key=0);
+    memory_cache(int cache_size, int number_of_quantums, MPI_Comm workers_comm, int key=0);
     memory_cache& operator=(const memory_cache& cache);
     memory_cache& operator=(memory_cache&& cache);
     int add(int quantum_index);  // добавить элемент в кеш. Если при попытке добавления
@@ -46,6 +46,7 @@ private:
     cache_list free_cache_nodes {}, cache_indexes {};
     int rank, size;
     MPI_Comm workers_comm;
+    int key;
 #if (ENABLE_STATISTICS_COLLECTION)
     int cache_miss_cnt = 0, cache_miss_cnt_no_free = 0;
     std::ofstream statistic_file_stream, cache_miss_cnt_file_stream;
