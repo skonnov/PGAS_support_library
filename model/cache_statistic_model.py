@@ -2,8 +2,8 @@ import sys
 from os.path import exists
 
 import cache_model as cm
-
-
+from scipy import optimize
+import bisect as bs
 
 def read_common_statistic(statistic_path: str):
     full_filename = statistic_path + "/common_statistic.txt"
@@ -42,15 +42,14 @@ def read_worker_process_info(statistic_path: str, process_number: int, number_of
             print("error while reading file " + "memory_cache_" + str(process_number) + ".txt on line: " + str(id + 1))
     return events
 
-def process(cache_size: int, vectors_size, events_processes):
+def process(cache_size_arg):
+    cache_size = int(cache_size_arg[0])
     number_of_vectors = len(vectors_size)
     cnt_misses = 0
     for process in range(len(events_processes)): # process_worker index
         caches = []
-        # print(process, number_of_vectors, len(vectors_size))
         for i in range(number_of_vectors):
             caches.append(cm.cache(cache_size, vectors_size[i]))
-        # print(events_processes[process])
         for v_id, event_vector in enumerate(events_processes[process]):
             for i, event in enumerate(event_vector):
                 if event[0] == 0 or event[0] == 4:  # PUT_IN_CACHE or ALREADY_IN_CACHE
@@ -68,8 +67,20 @@ def process(cache_size: int, vectors_size, events_processes):
                     pass
                 else:
                     assert("unknown event!")
-            # print(cnt_misses)
+    print(cache_size, ": ", cnt_misses)
     return cnt_misses
+
+def lower_bound(left: int, right: int, best_cnt_misses: int):
+    ans = right
+    while left <= right:
+        c = (left + right) // 2
+        cnt_misses = process([c])
+        if cnt_misses <= best_cnt_misses:
+            right = c - 1
+            ans = c
+        else:
+            left = c + 1
+    return ans
 
 
 if __name__ == "__main__":
@@ -82,5 +93,11 @@ if __name__ == "__main__":
     events_processes = []
     for i in range(1, number_of_processes):
         events_processes.append(read_worker_process_info(statistic_path, i, number_of_vectors))
-    cnt_misses = process(caches_size[0], vectors_size, events_processes)
-    print(cnt_misses)
+    cnt_misses = process(caches_size)
+
+    best_value = process([1000])
+    print(lower_bound(5, 500, best_value))
+    # bounds = optimize.Bounds(5, 500)
+    # print(optimize.minimize(process, x0 = 5, bounds=bounds, method='Nelder-Mead'))
+    # res = gp_minimize(process, [(5, 500)], n_calls=20)
+    # print(res.x)
