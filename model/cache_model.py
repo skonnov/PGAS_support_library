@@ -62,16 +62,24 @@ class cache_list:
                 node.next.prev = node.prev
 
 class cache:
-    total_size = 0
     current_size = 0
+    total_size = 0
     cache_indexes = cache_list()
     cache_memory = []
     def __init__(self, size: int, number_of_quantums: int):
-        self.total_size = size
+        if not isinstance(size, int):
+            raise(TypeError("wrong type, expected int!"))
+        if not isinstance(number_of_quantums, int):
+            raise(TypeError("wrong type, expected int!"))
         self.current_size = 0
+        self.total_size = size
+        self.cache_indexes = cache_list()
         self.cache_memory = [None for i in range(number_of_quantums)]
 
+
     def add(self, elem: int) -> int:
+        if not isinstance(elem, int):
+            raise(TypeError("wrong type, expected int!"))
         return_value = -1
         if self.current_size < self.total_size:
             self.current_size += 1
@@ -84,15 +92,21 @@ class cache:
         return return_value
 
     def remove(self, elem: int):
+        if not isinstance(elem, int):
+            raise(TypeError("wrong type, expected int!"))
         if not (self.cache_memory[elem] is None):
             self.cache_indexes.delete_node(self.cache_memory[elem])
             self.cache_memory[elem] = None
             self.current_size -= 1
 
     def is_contain(self, elem: int) -> bool:
+        if not isinstance(elem, int):
+            raise(TypeError("wrong type, expected int!"))
         return not self.cache_memory[elem] is None
 
     def update(self, elem: int):
+        if not isinstance(elem, int):
+            raise(TypeError("wrong type, expected int!"))
         self.cache_indexes.delete_node(self.cache_memory[elem])
         self.cache_indexes.push_back(elem)
         self.cache_memory[elem] = self.cache_indexes.end
