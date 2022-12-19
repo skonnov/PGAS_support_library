@@ -181,7 +181,8 @@ void master_helper_thread() {
             common_statistic.open(STATISTICS_OUTPUT_DIRECTORY + "common_statistic.txt");
             common_statistic << "number_of_processes: " << size << " number_of_vectors: " << memory_manager::memory.size() << "\n";
             for (auto _line: memory_manager::memory) {
-                common_statistic << "quantum_size: " << _line->quantum_size << " logical_size: " << _line->logical_size << "\n";
+                common_statistic << "number_of_quantums: " << _line->logical_size / _line->quantum_size << " logical_size: " <<_line->logical_size <<
+                                                                                                    " cache_size: " << _line->cache_size << "\n";
             }
             common_statistic.close();
 #endif

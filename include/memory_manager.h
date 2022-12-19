@@ -53,8 +53,10 @@ struct quantum_master
 };
 
 struct memory_line_common {
+    int number_of_quantums;
     int logical_size;  // общее число элементов в векторе на всех процессах
     int quantum_size;
+    int cache_size;
     virtual ~memory_line_common() {}
 };
 
@@ -145,8 +147,10 @@ int memory_manager::create_object(int number_of_elements, int quantum_size, int 
         line_worker->type = get_mpi_type<T>();
         line_worker->size_of = sizeof(T);
     }
+    line->number_of_quantums = num_of_quantums;
     line->quantum_size = quantum_size;
     line->logical_size = number_of_elements;
+    line->cache_size = cache_size;
     memory.emplace_back(line);
     MPI_Barrier(MPI_COMM_WORLD);
     return int(memory.size()) - 1;
@@ -173,6 +177,8 @@ T memory_manager::get_data(int key, int index_of_element) {
     memory->quantums[quantum_index].mutex->lock();
     if (!memory->quantums[quantum_index].is_mode_changed) {  // не было изменения режима? (данные актуальны?)
         if (quantum != nullptr) {  // на данном процессе есть квант?
+            if (memory->cache.is_contain(quantum_index))
+                memory->cache.update(quantum_index); // LRU algorithm
             T elem = (reinterpret_cast<T*>(quantum))[index_of_element % memory->quantum_size];
             memory->quantums[quantum_index].mutex->unlock();
 #ifdef ENABLE_STATISTICS_COLLECTION

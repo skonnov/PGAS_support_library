@@ -7,6 +7,8 @@ memory_cache::memory_cache(int key) {
     this->key = key;
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_EVERY_CACHE_MISSES)
+    std::string path = STATISTICS_OUTPUT_DIRECTORY + "memory_cache_" + std::to_string(rank) + ".txt";
+    // statistic_file = fopen(path.data(), "w");
     statistic_file_stream.open(STATISTICS_OUTPUT_DIRECTORY + "memory_cache_" + std::to_string(rank) + ".txt");
   #endif
 #endif
@@ -22,7 +24,9 @@ memory_cache::memory_cache(int cache_size, int number_of_quantums, MPI_Comm comm
     this->key = key;
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_EVERY_CACHE_MISSES)
-    statistic_file_stream.open(STATISTICS_OUTPUT_DIRECTORY + "memory_cache_" + std::to_string(rank) + ".txt");
+    // statistic_file_stream.open(STATISTICS_OUTPUT_DIRECTORY + "memory_cache_" + std::to_string(rank) + ".txt");
+    std::string path = STATISTICS_OUTPUT_DIRECTORY + "memory_cache_" + std::to_string(rank) + ".txt";
+    statistic_file = fopen(path.data(), "w");
   #endif
 #endif
     for (int i = 0; i < cache_size; ++i) {
@@ -70,7 +74,8 @@ memory_cache& memory_cache::operator=(memory_cache&& cache) {
                 cache_miss_cnt = cache.cache_miss_cnt;
             #endif
             #if (ENABLE_STATISTICS_EVERY_CACHE_MISSES)
-                statistic_file_stream = std::move(cache.statistic_file_stream);
+            //     statistic_file_stream = std::move(cache.statistic_file_stream);
+            statistic_file = cache.statistic_file;
             #endif
         #endif
     }
@@ -81,15 +86,7 @@ int memory_cache::add(int quantum_index) {
     CHECK(quantum_index >= 0 && quantum_index < (int)contain_flags.size(), STATUS_ERR_OUT_OF_BOUNDS);
     // элемент уже находится в кеше?
     if (is_contain(quantum_index)) {
-        // Least recently used (LRU) cache logic
-#if (ENABLE_STATISTICS_COLLECTION)
-  #if (ENABLE_STATISTICS_EVERY_CACHE_MISSES)
-    statistic_file_stream << "ALREADY_IN_CACHE: " << key << " " << quantum_index << " " << MPI_Wtime() << "\n";
-    // PRINT_TO_FILE(statistic_output_directory, "memory_cache", info);
-  #endif
-#endif
-        cache_indexes.delete_node(contain_flags[quantum_index]);
-        cache_indexes.push_back(contain_flags[quantum_index]);
+        update(quantum_index);
         return -1;
     }
     // элемент находится в списке исключённых элементов?
@@ -103,7 +100,14 @@ int memory_cache::add(int quantum_index) {
   #endif
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_EVERY_CACHE_MISSES)
-        statistic_file_stream << "PUT_IN_CACHE: " << key << " " << quantum_index << " " << MPI_Wtime() << "\n";
+    std::string output_str = std::to_string(PUT_IN_CACHE) + " " + std::to_string(key) + " " + std::to_string(quantum_index) + "\n";
+    mt.lock();
+    // fprintf(statistic_file, output_str.data());
+        statistic_file_stream << PUT_IN_CACHE << " " << key << " " << quantum_index << "\n";//" " << MPI_Wtime();
+        ++cnt;
+        // if (cnt % 1000 == 0)
+            statistic_file_stream.flush();
+    mt.unlock();
         // PRINT_TO_FILE(statistic_output_directory, "memory_cache", info);
   #endif
 #endif
@@ -131,7 +135,14 @@ int memory_cache::add(int quantum_index) {
     int return_value = node->value;
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_EVERY_CACHE_MISSES)
-    statistic_file_stream << "REMOVE_FROM_CACHE: " << key << " " << node->value << " " << MPI_Wtime() << "\n";
+    // statistic_file_stream << REMOVE_FROM_CACHE << " " << key << " " << node->value << "\n";//" " << MPI_Wtime();
+    // output_str = std::to_string(REMOVE_FROM_CACHE) + " " + std::to_string(key) + " " + std::to_string(node->value) + "\n";
+    // mt.lock();
+    // fprintf(statistic_file, output_str.data());
+    // mt.unlock();
+    // ++cnt;
+    // if (cnt % 1000 == 0)
+    //     statistic_file_stream.flush();
   #endif
 #endif
     node->value = quantum_index;
@@ -151,7 +162,14 @@ void memory_cache::add_to_excluded(int quantum_index) {
     delete_elem(quantum_index);
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_EVERY_CACHE_MISSES)
-    statistic_file_stream << "ADD_TO_EXCLUDED: " << key << " " << quantum_index << " " << MPI_Wtime() << "\n";
+    std::string output_str = std::to_string(ADD_TO_EXCLUDED) + " " + std::to_string(key) + " " + std::to_string(quantum_index) + "\n";
+    mt.lock();
+    // fprintf(statistic_file, output_str.data());
+    statistic_file_stream << ADD_TO_EXCLUDED << " " << key << " " << quantum_index << "\n";//" " << MPI_Wtime();
+    ++cnt;
+    // if (cnt % 1000 == 0)
+        statistic_file_stream.flush();
+    mt.unlock();
   #endif
 #endif
     excluded[quantum_index] = true;
@@ -169,16 +187,31 @@ void memory_cache::delete_elem(int quantum_index) {
         cache_indexes.delete_node(contain_flags[quantum_index]);
         free_cache_nodes.push_back(contain_flags[quantum_index]);
         contain_flags[quantum_index] = nullptr;
+#if (ENABLE_STATISTICS_COLLECTION)
+  #if (ENABLE_STATISTICS_EVERY_CACHE_MISSES)
+        // std::string output_str = std::to_string(REMOVE_FROM_CACHE) + " " + std::to_string(key) + " " + std::to_string(quantum_index) + "\n";
+        mt.lock();
+        // fprintf(statistic_file, output_str.data());
+    statistic_file_stream << REMOVE_FROM_CACHE << " " << key << " " << quantum_index << "\n";//" " << MPI_Wtime();
+    ++cnt;
+    // if (cnt % 1000 == 0)
+        statistic_file_stream.flush();
+        mt.unlock();
+  #endif
+#endif
     }
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_EVERY_CACHE_MISSES)
-    statistic_file_stream << "REMOVE_FROM_CACHE: " << key << " " << quantum_index << " " << MPI_Wtime() << "\n";
-  #endif
-#endif
-#if (ENABLE_STATISTICS_COLLECTION)
-  #if (ENABLE_STATISTICS_EVERY_CACHE_MISSES)
-    if (excluded[quantum_index])
-        statistic_file_stream << "REMOVE_FROM_EXCLUDED: " << key << " " << quantum_index << " " << MPI_Wtime() << "\n";
+    if (excluded[quantum_index]) {
+        // std::string output_str = std::to_string(REMOVE_FROM_EXCLUDED) + " " + std::to_string(key) + " " + std::to_string(quantum_index) + "\n";
+        mt.lock();
+        // fprintf(statistic_file, output_str.data());
+        statistic_file_stream << REMOVE_FROM_EXCLUDED << " " << key << " " << quantum_index << "\n";//" " << MPI_Wtime();
+        ++cnt;
+        // if (cnt % 1000 == 0)
+            statistic_file_stream.flush();
+        mt.unlock();
+    }
   #endif
 #endif
     excluded[quantum_index] = false;
@@ -190,6 +223,7 @@ void memory_cache::get_cache_miss_cnt_statistics(int key, int number_of_elements
     if (statistic_file_stream.is_open()) {
         statistic_file_stream.close();
     }
+    fclose(statistic_file);
   #endif
   #if (ENABLE_STATISTICS_CACHE_MISSES_CNT)
     std::vector<int> cache_miss_cnts(size-1);
@@ -219,4 +253,24 @@ void memory_cache::get_cache_miss_cnt_statistics(int key, int number_of_elements
     }
   #endif
 #endif
+}
+
+void memory_cache::update(int quantum_index) {
+    CHECK(is_contain(quantum_index), STATUS_ERR_UNKNOWN);
+    // Least recently used (LRU) cache logic
+#if (ENABLE_STATISTICS_COLLECTION)
+  #if (ENABLE_STATISTICS_EVERY_CACHE_MISSES)
+    std::string output_str = std::to_string(ALREADY_IN_CACHE) + " " + std::to_string(key) + " " + std::to_string(quantum_index) + "\n";
+    mt.lock();
+    // fprintf(statistic_file, output_str.data());
+    statistic_file_stream << ALREADY_IN_CACHE << " " << key << " " << quantum_index << "\n";//" " << MPI_Wtime(); // что-то делать, только если quantum_index не на последнем элементе?
+   ++cnt;
+//    if (cnt % 1000 == 0)
+        statistic_file_stream.flush();
+    mt.unlock();
+    // PRINT_TO_FILE(statistic_output_directory, "memory_cache", info);
+  #endif
+#endif
+    cache_indexes.delete_node(contain_flags[quantum_index]);
+    cache_indexes.push_back(contain_flags[quantum_index]);
 }

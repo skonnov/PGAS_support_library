@@ -7,9 +7,19 @@
 #include <queue>
 #include <iostream>
 #include <fstream>
+#include <cstdio>
+#include <string>
+#include <mutex>
 #include "common.h"
 #include "cache_list.h"
 
+enum cache_statistic_operations {
+    PUT_IN_CACHE = 0,
+    REMOVE_FROM_CACHE = 1,
+    ADD_TO_EXCLUDED = 2,
+    REMOVE_FROM_EXCLUDED = 3,
+    ALREADY_IN_CACHE = 4
+};
 
 class memory_cache {
 public:
@@ -25,6 +35,7 @@ public:
     bool is_excluded(int quantum_index);
     void delete_elem(int quantum_index);
     void get_cache_miss_cnt_statistics(int key, int number_of_elements);
+    void update(int quantum_index);
 private:
     std::vector<bool> excluded {};
     std::vector<cache_node*> contain_flags {};
@@ -35,7 +46,11 @@ private:
     int key;
 #if (ENABLE_STATISTICS_COLLECTION)
     int cache_miss_cnt = 0, cache_miss_cnt_no_free = 0;
-    std::ofstream statistic_file_stream, cache_miss_cnt_file_stream;
+    std::ofstream statistic_file_stream;
+    FILE* statistic_file;
+    std::ofstream cache_miss_cnt_file_stream;
+    std::mutex mt;
+    int cnt = 0;
 #endif
 };
 
