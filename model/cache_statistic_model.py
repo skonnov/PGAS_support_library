@@ -35,17 +35,21 @@ def read_worker_process_info(statistic_path: str, process_number: int, number_of
         try:
             event = int(line[0])
             if event < 0 or event > 4:
+                # print("error on event reading")
                 raise ValueError()
             vector_number = int(line[1])
             if vector_number < 0 or vector_number > len(vectors_size):
+                # print("error on vector_number reading")
                 raise ValueError()
             quantum_number = int(line[2])
             if quantum_number < 0 or quantum_number > vectors_size[vector_number]:
+                # print("error on quantum_number reading")
                 raise ValueError()
             events[vector_number].append((event, quantum_number))
-            id += 1
         except:
-            print("error while reading file " + "memory_cache_" + str(process_number) + ".txt on line: " + str(id + 1))
+            # print("error while reading file " + "memory_cache_" + str(process_number) + ".txt on line: " + str(id + 1))
+            pass
+        id += 1
     return events
 
 def process(cache_size_arg):
@@ -73,7 +77,7 @@ def process(cache_size_arg):
                     pass
                 else:
                     assert("unknown event!")
-    print(cache_size, ": ", cnt_misses)
+    # print(cache_size, ": ", cnt_misses)
     return cnt_misses
 
 def lower_bound(left: int, right: int, best_cnt_misses: int):
@@ -94,7 +98,7 @@ if __name__ == "__main__":
         print("Error: You need to specify path to statistic folder!")
         exit(1)
     statistic_path = sys.argv[1]
-    print("Read statistics from directory: ", statistic_path)
+    # print("Read statistics from directory: ", statistic_path)
     number_of_processes, number_of_vectors, vectors_size, caches_size = read_common_statistic(statistic_path)
     events_processes = []
     for i in range(1, number_of_processes):
