@@ -95,10 +95,8 @@ void worker_helper_thread() {
 #endif
             for (int key = 0; key < int(memory_manager::memory.size()); ++key) {
 #if (ENABLE_STATISTICS_COLLECTION)
-    #if (ENABLE_STATISTICS_CACHE_MISSES_CNT)
                 auto* memory = dynamic_cast<memory_line_worker*>(memory_manager::memory[key]);
                 memory->cache.get_cache_miss_cnt_statistics(key, memory->quantums.size() * memory->quantum_size);
-    #endif
     #if (ENABLE_STATISTICS_QUANTUMS_CNT_WORKERS)
                 for (int quantum_index = 0; quantum_index < memory->quantums.size(); ++quantum_index) {
                     for (int j = 0; j < memory->quantums[quantum_index].cnt.size(); ++j) {

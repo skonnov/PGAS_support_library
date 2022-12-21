@@ -24,7 +24,7 @@ memory_cache::memory_cache(int cache_size, int number_of_quantums, MPI_Comm comm
     this->key = key;
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_EVERY_CACHE_MISSES)
-    // statistic_file_stream.open(STATISTICS_OUTPUT_DIRECTORY + "memory_cache_" + std::to_string(rank) + ".txt");
+    statistic_file_stream.open(STATISTICS_OUTPUT_DIRECTORY + "memory_cache_" + std::to_string(rank) + ".txt", std::ofstream::out);
     std::string path = STATISTICS_OUTPUT_DIRECTORY + "memory_cache_" + std::to_string(rank) + ".txt";
     statistic_file = fopen(path.data(), "w");
   #endif
@@ -105,7 +105,7 @@ int memory_cache::add(int quantum_index) {
     // fprintf(statistic_file, output_str.data());
         statistic_file_stream << PUT_IN_CACHE << " " << key << " " << quantum_index << "\n";//" " << MPI_Wtime();
         ++cnt;
-        // if (cnt % 1000 == 0)
+        if (cnt % 1000 == 0)
             statistic_file_stream.flush();
     mt.unlock();
         // PRINT_TO_FILE(statistic_output_directory, "memory_cache", info);
@@ -167,7 +167,7 @@ void memory_cache::add_to_excluded(int quantum_index) {
     // fprintf(statistic_file, output_str.data());
     statistic_file_stream << ADD_TO_EXCLUDED << " " << key << " " << quantum_index << "\n";//" " << MPI_Wtime();
     ++cnt;
-    // if (cnt % 1000 == 0)
+    if (cnt % 1000 == 0)
         statistic_file_stream.flush();
     mt.unlock();
   #endif
@@ -194,7 +194,7 @@ void memory_cache::delete_elem(int quantum_index) {
         // fprintf(statistic_file, output_str.data());
     statistic_file_stream << REMOVE_FROM_CACHE << " " << key << " " << quantum_index << "\n";//" " << MPI_Wtime();
     ++cnt;
-    // if (cnt % 1000 == 0)
+    if (cnt % 1000 == 0)
         statistic_file_stream.flush();
         mt.unlock();
   #endif
@@ -208,7 +208,7 @@ void memory_cache::delete_elem(int quantum_index) {
         // fprintf(statistic_file, output_str.data());
         statistic_file_stream << REMOVE_FROM_EXCLUDED << " " << key << " " << quantum_index << "\n";//" " << MPI_Wtime();
         ++cnt;
-        // if (cnt % 1000 == 0)
+        if (cnt % 1000 == 0)
             statistic_file_stream.flush();
         mt.unlock();
     }
@@ -265,7 +265,7 @@ void memory_cache::update(int quantum_index) {
     // fprintf(statistic_file, output_str.data());
     statistic_file_stream << ALREADY_IN_CACHE << " " << key << " " << quantum_index << "\n";//" " << MPI_Wtime(); // что-то делать, только если quantum_index не на последнем элементе?
    ++cnt;
-//    if (cnt % 1000 == 0)
+   if (cnt % 1000 == 0)
         statistic_file_stream.flush();
     mt.unlock();
     // PRINT_TO_FILE(statistic_output_directory, "memory_cache", info);
