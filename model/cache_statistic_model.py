@@ -2,8 +2,8 @@ import sys
 from os.path import exists
 
 import cache_model as cm
-from scipy import optimize
-import bisect as bs
+# from scipy import optimize
+# import bisect as bs
 
 def read_common_statistic(statistic_path: str):
     full_filename = statistic_path + "/common_statistic.txt"
@@ -22,7 +22,7 @@ def read_common_statistic(statistic_path: str):
         caches_size.append(int(line[5]))
     return number_of_processes, number_of_vectors, vectors_size, caches_size
 
-def read_worker_process_info(statistic_path: str, process_number: int, number_of_vectors: int):
+def read_worker_process_info(statistic_path: str, process_number: int, number_of_vectors: int, vectors_size):
     full_filename = statistic_path + "/memory_cache_" + str(process_number) + ".txt"
     if (not exists(full_filename)):
         print("Error: cache statistic file for process " + str(process_number) + " was not found!")
@@ -34,8 +34,14 @@ def read_worker_process_info(statistic_path: str, process_number: int, number_of
         line = _line.split()
         try:
             event = int(line[0])
+            if event < 0 or event > 4:
+                raise ValueError()
             vector_number = int(line[1])
+            if vector_number < 0 or vector_number > len(vectors_size):
+                raise ValueError()
             quantum_number = int(line[2])
+            if quantum_number < 0 or quantum_number > vectors_size[vector_number]:
+                raise ValueError()
             events[vector_number].append((event, quantum_number))
             id += 1
         except:
@@ -92,7 +98,7 @@ if __name__ == "__main__":
     number_of_processes, number_of_vectors, vectors_size, caches_size = read_common_statistic(statistic_path)
     events_processes = []
     for i in range(1, number_of_processes):
-        events_processes.append(read_worker_process_info(statistic_path, i, number_of_vectors))
+        events_processes.append(read_worker_process_info(statistic_path, i, number_of_vectors, vectors_size))
     cnt_misses = process(caches_size)
 
     best_value = process([1000])
