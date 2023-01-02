@@ -32,7 +32,7 @@
 #endif
 
 #if (ENABLE_STATISTICS_COLLECTION)
-    #define STATISTICS_OUTPUT_DIRECTORY std::string("/mnt/d/Works/PGAS_support_library/build_linux/")
+    #define STATISTICS_OUTPUT_DIRECTORY std::string("./")
 #endif
 
 enum mods {  // используется для изменения режима работы с памятью

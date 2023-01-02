@@ -77,7 +77,7 @@ def process(cache_size_arg):
                     pass
                 else:
                     assert("unknown event!")
-    # print(cache_size, ": ", cnt_misses)
+    print(cache_size, ": ", cnt_misses)
     return cnt_misses
 
 def lower_bound(left: int, right: int, best_cnt_misses: int):
@@ -105,8 +105,8 @@ if __name__ == "__main__":
         events_processes.append(read_worker_process_info(statistic_path, i, number_of_vectors, vectors_size))
     cnt_misses = process(caches_size)
 
-    best_value = process([1000])
-    print(lower_bound(5, 500, best_value))
+    best_value = process([100000])
+    print(lower_bound(5, 100000, best_value))
     # bounds = optimize.Bounds(5, 500)
     # print(optimize.minimize(process, x0 = 5, bounds=bounds, method='Nelder-Mead'))
     # res = gp_minimize(process, [(5, 500)], n_calls=20)
