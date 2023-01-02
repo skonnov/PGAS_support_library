@@ -7,6 +7,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: brew update-reset;
+      - run: brew link --overwrite python@3.10
       - run: brew install open-mpi;
       - run: mkdir build
       - working-directory: build
