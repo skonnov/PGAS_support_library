@@ -17,6 +17,7 @@
 #include "memory_allocator.h"
 #include "queue_quantums.h"
 #include "memory_cache.h"
+#include "schedule.h"
 
 void worker_helper_thread();
 void master_helper_thread();
@@ -52,8 +53,10 @@ struct quantum_master
 };
 
 struct memory_line_common {
+    int number_of_quantums;
     int logical_size;  // общее число элементов в векторе на всех процессах
     int quantum_size;
+    int cache_size;
     virtual ~memory_line_common() {}
 };
 
@@ -74,6 +77,15 @@ struct memory_line_master
 
 };
 
+struct config {
+    int number_of_processes;
+    bool is_schedule_statistic;
+    std::string schedule_statistic_file_path;
+    bool is_quantums_access_cnt_statistic;
+    std::vector<std::string> quantums_access_cnt_statistic_file_path;
+};
+
+
 class memory_manager {
     static std::vector<memory_line_common*> memory;  // структура-хранилище памяти и вспомогательной информации
     static std::thread helper_thr;  // вспомогательный поток
@@ -82,9 +94,10 @@ class memory_manager {
     static int proc_count_ready;
     static MPI_File fh;
     static MPI_Comm workers_comm;
-
+    static schedule sch;
 public:
-    static void init(int argc, char** argv, std::string error_helper = "");  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
+    static StatusCode init(int argc, char** argv, std::string error_helper = "", bool is_statistic = false, config* cfg = nullptr);  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
+    static StatusCode readStatistic(config* cfg);
     static int get_MPI_rank();
     static int get_MPI_size();
     template <class T> static T get_data(int key, int index_of_element);  // получить элемент по индексу с любого процесса
@@ -111,7 +124,6 @@ private:
     static void print_quantum(int key, int quantum_index);
     static int get_owner(int key, int quantum_index, int requesting_process);  // получить номер процесса, хранящего квант в текущий момент времени
     static void remove_owner(int key, int removing_quantum_index, int process);  // удалить процесс из структуры данных с номерами процессов, хранящих данный квант
-    static void collect_statistic_worker(int key, int quantum_index);
     friend void worker_helper_thread();  // функция, выполняемая вспомогательными потоками процессов-рабочих
     friend void master_helper_thread();  // функция, выполняемая вспомогательным потоком процесса-мастера
 };
@@ -131,12 +143,14 @@ int memory_manager::create_object(int number_of_elements, int quantum_size, int 
         auto line_worker = dynamic_cast<memory_line_worker*>(line);
         line_worker->quantums.resize(num_of_quantums);
         line_worker->allocator.set_quantum_size(quantum_size, sizeof(T));
-        line_worker->cache = memory_cache(cache_size, num_of_quantums, workers_comm);
+        line_worker->cache = memory_cache(cache_size, num_of_quantums, workers_comm, int(memory.size()));
         line_worker->type = get_mpi_type<T>();
         line_worker->size_of = sizeof(T);
     }
+    line->number_of_quantums = num_of_quantums;
     line->quantum_size = quantum_size;
     line->logical_size = number_of_elements;
+    line->cache_size = cache_size;
     memory.emplace_back(line);
     MPI_Barrier(MPI_COMM_WORLD);
     return int(memory.size()) - 1;
@@ -163,6 +177,8 @@ T memory_manager::get_data(int key, int index_of_element) {
     memory->quantums[quantum_index].mutex->lock();
     if (!memory->quantums[quantum_index].is_mode_changed) {  // не было изменения режима? (данные актуальны?)
         if (quantum != nullptr) {  // на данном процессе есть квант?
+            if (memory->cache.is_contain(quantum_index))
+                memory->cache.update(quantum_index); // LRU algorithm
             T elem = (reinterpret_cast<T*>(quantum))[index_of_element % memory->quantum_size];
             memory->quantums[quantum_index].mutex->unlock();
 #ifdef ENABLE_STATISTICS_COLLECTION

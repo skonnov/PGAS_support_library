@@ -33,7 +33,7 @@ public:
     StatusCode read_from_file_schedule(std::string path);
     StatusCode read_from_file_quantums_access_cnt(std::string path);
     void optimize();
-    std::unordered_map<int, std::vector<schedule_line>> get() const;
+    std::unordered_map<int, std::vector<schedule_line>> get_schedule() const;
 private:
     std::vector<int> parse_string_line_schedule(const std::string& line);
     std::vector<int> parse_string_line_quantums_access_cnt(const std::string& line);

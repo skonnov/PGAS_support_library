@@ -12,27 +12,27 @@
     #define ENABLE_STATISTICS_COLLECTION true
 #endif
 
-#ifdef ENABLE_STATISTICS_COLLECTION
+#if (ENABLE_STATISTICS_COLLECTION)
     #ifndef ENABLE_STATISTICS_EVERY_CACHE_MISSES
-        #define ENABLE_STATISTICS_EVERY_CACHE_MISSES false
+        #define ENABLE_STATISTICS_EVERY_CACHE_MISSES true
     #endif
 
     #ifndef ENABLE_STATISTICS_CACHE_MISSES_CNT
-        #define ENABLE_STATISTICS_CACHE_MISSES_CNT true
+        #define ENABLE_STATISTICS_CACHE_MISSES_CNT false
     #endif
 
     #ifndef ENABLE_STATISTICS_QUANTUMS_SCHEDULE
-        #define ENABLE_STATISTICS_QUANTUMS_SCHEDULE true
+        #define ENABLE_STATISTICS_QUANTUMS_SCHEDULE false
     #endif
 
     #ifndef ENABLE_STATISTICS_QUANTUMS_CNT_WORKERS
-        #define ENABLE_STATISTICS_QUANTUMS_CNT_WORKERS true
+        #define ENABLE_STATISTICS_QUANTUMS_CNT_WORKERS false
     #endif
 
 #endif
 
 #if (ENABLE_STATISTICS_COLLECTION)
-    #define STATISTICS_OUTPUT_DIRECTORY std::string("/mnt/d/Works/PGAS_support_library/build_linux/")
+    #define STATISTICS_OUTPUT_DIRECTORY std::string("./")
 #endif
 
 enum mods {  // используется для изменения режима работы с памятью

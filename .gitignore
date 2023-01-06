@@ -3,3 +3,4 @@
 build*/
 .vscode
 scripts/output*
+*__pycache_*
