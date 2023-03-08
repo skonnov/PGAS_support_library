@@ -32,8 +32,8 @@ for ($i = 0; $i < 3; ++$i) {
 }
 print WF "cache_size_small: ", $cache_size_small, " matrix_size: ", $matrix_size, " quantum_size: ", $quantum_size, " number_of_processes: ", $number_of_processes, " time: ", $time;
 
-print "python3 cache_statistic_model.py .\n";
-$cache_size_from_model = `python3 cache_statistic_model.py .`;
+print "python3 cache_statistic_model.py -path .\n";
+$cache_size_from_model = `python3 cache_statistic_model.py -path .`;
 print "done cache_statistic_model.py, cache_size_from_model: $cache_size_from_model\n";
 
 $time = 100500;
