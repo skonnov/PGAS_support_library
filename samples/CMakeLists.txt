@@ -1,19 +1,24 @@
-file(GLOB samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
+set(samples
+    dijkstra.cpp
+    locks_simple_sample.cpp
+    matrixmult_queue.cpp
+    matrixmult_single.cpp
+    matrixmult.cpp
+    matrixvector.cpp
+    parallel_reduce_sum_of_vector.cpp
+    sample_pqueue.cpp
+    single_sum_of_vector.cpp
+    statistics.cpp
+    sum_of_vector_struct.cpp
+    sum_of_vector.cpp
+)
+
 foreach(sample ${samples})
-    get_filename_component(exe ${sample} NAME_WE)
-    add_executable(${exe} ${sample})
-    target_link_libraries(${exe} PGAS_SL)
-    if(MPI_FOUND)
-        target_link_libraries(${exe} ${MPI_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
-
-        if(MPI_COMPILE_FLAGS)
-        set_target_properties(${exe} PROPERTIES COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
-        endif()
-
-        if(MPI_LINK_FLAGS)
-        set_target_properties(${exe} PROPERTIES LINK_FLAGS "${MPI_LINK_FLAGS}")
-        endif()
-    else(MPI_FOUND)
-        target_link_libraries(${exe} MPI_LIB ${CMAKE_THREAD_LIBS_INIT})
-    endif(MPI_FOUND)
+    get_filename_component(samples_executable ${sample} NAME_WE)
+    add_executable(${samples_executable} ${sample})
+    
+    target_link_libraries(${samples_executable}
+    PRIVATE
+        PGAS_SL
+    )
 endforeach()
