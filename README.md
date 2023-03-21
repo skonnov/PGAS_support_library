@@ -1,6 +1,6 @@
 ![CI status](https://github.com/skonnov/PGAS_support_library/actions/workflows/ci.yml/badge.svg)
 
-# PGAS Suppor Library (PGAS_SL)
+# PGAS Support Library (PGAS_SL)
 
 **PGAS_SL** is the library that helps to implement parallel algorithms using [Partitioned Global Address Space (PGAS)](https://en.wikipedia.org/wiki/Partitioned_global_address_space) paradigm.
 
