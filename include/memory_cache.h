@@ -36,6 +36,7 @@ public:
     void delete_elem(int quantum_index);
     void get_cache_miss_cnt_statistics(int key, int number_of_elements);
     void update(int quantum_index);
+    void init(int cache_size, int number_of_quantums, MPI_Comm comm, int key);
 private:
     std::vector<bool> excluded {};
     std::vector<cache_node*> contain_flags {};
@@ -46,11 +47,8 @@ private:
     int key;
 #if (ENABLE_STATISTICS_COLLECTION)
     int cache_miss_cnt = 0, cache_miss_cnt_no_free = 0;
-    std::ofstream statistic_file_stream;
-    FILE* statistic_file;
+    static std::ofstream statistic_file_stream;
     std::ofstream cache_miss_cnt_file_stream;
-    std::mutex mt;
-    int cnt = 0;
 #endif
 };
 

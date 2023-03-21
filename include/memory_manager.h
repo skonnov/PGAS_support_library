@@ -143,7 +143,8 @@ int memory_manager::create_object(int number_of_elements, int quantum_size, int 
         auto line_worker = dynamic_cast<memory_line_worker*>(line);
         line_worker->quantums.resize(num_of_quantums);
         line_worker->allocator.set_quantum_size(quantum_size, sizeof(T));
-        line_worker->cache = memory_cache(cache_size, num_of_quantums, workers_comm, int(memory.size()));
+        line_worker->cache.init(cache_size, num_of_quantums, workers_comm, int(memory.size()));
+        // line_worker->cache = memory_cache(cache_size, num_of_quantums, workers_comm, int(memory.size()));
         line_worker->type = get_mpi_type<T>();
         line_worker->size_of = sizeof(T);
     }
