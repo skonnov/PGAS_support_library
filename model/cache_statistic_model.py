@@ -93,7 +93,7 @@ def lower_bound(left: int, right: int, best_cnt_misses: int, put_in_cache_weight
             left = c + 1
     return ans
 
-def parse_argv(argv: list[str]):
+def parse_argv(argv):
     ret_argv = {}
     for i in range(len(argv)):
         if argv[i].startswith('-') and i < len(argv) - 1:
@@ -113,7 +113,6 @@ if __name__ == "__main__":
     statistic_path = parsed_argv["path"]
     put_in_cache_weight = 1
     already_in_cache_weight = 0
-
     if "pw" in parsed_argv:
         put_in_cache_weight = int(parsed_argv["pw"])
         assert(put_in_cache_weight >= 0)
