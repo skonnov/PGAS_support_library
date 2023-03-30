@@ -22,6 +22,7 @@ void memory_cache::init(int cache_size, int number_of_quantums, MPI_Comm comm, i
     contain_flags = std::vector<cache_node*>(number_of_quantums, nullptr);
     excluded = std::vector<bool>(number_of_quantums, false);
     workers_comm = comm;
+    this->key = key;
     for (int i = 0; i < cache_size; ++i) {
         free_cache_nodes.push_back(&cache_memory[i]);
     }
