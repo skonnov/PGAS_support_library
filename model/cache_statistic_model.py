@@ -128,7 +128,10 @@ def parse_argv(argv):
     return ret_argv
 
 def show_usage():
-    print("usage: python cache_statistic_model.py <-path path/to/statistic/folder> [-pw put_in_cache_weight (default = 1)] [-aw already_in_cache_weight (default = 0)]")
+    print("usage: python cache_statistic_model.py <-path path/to/statistic/folder>\n\
+          [-pw put_in_cache_weight (default = 1)]\n\
+          [-aw already_in_cache_weight (default = 0)]\n\
+          [-rw replacement_weight (default = 1)]")
 
 if __name__ == "__main__":
     parsed_argv = parse_argv(sys.argv)
