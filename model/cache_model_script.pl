@@ -32,8 +32,8 @@ for ($i = 0; $i < 3; ++$i) {
 }
 print WF "cache_size_small: ", $cache_size_small, " matrix_size: ", $matrix_size, " quantum_size: ", $quantum_size, " number_of_processes: ", $number_of_processes, " time: ", $time;
 
-print "python3 cache_statistic_model.py -path .\n";
-$cache_size_from_model = `python3 cache_statistic_model.py -path .`;
+print "python3 cache_statistic_model.py -path . -pw 10 -aw 3\n";
+$cache_size_from_model = `python3 cache_statistic_model.py -path . -pw 10 -aw 3`;
 print "done cache_statistic_model.py, cache_size_from_model: $cache_size_from_model\n";
 
 $time = 100500;
@@ -42,10 +42,10 @@ for ($i = 0; $i < 3; ++$i) {
     $tmp = `mpiexec --oversubscribe -n $number_of_processes $build_directory/Release/matrixmult -size $matrix_size -quantum_size $quantum_size -cs $cache_size_from_model`;
     $time = min($tmp, $time);
 }
-print WF "cache_size_from_cache_statistic_model: ", $cache_size, " matrix_size: ", $matrix_size, " quantum_size: ", $quantum_size, " number_of_processes: ", $number_of_processes, " time: ", $time;
+print WF "cache_size_from_cache_statistic_model: ", $cache_size_from_model, " matrix_size: ", $matrix_size, " quantum_size: ", $quantum_size, " number_of_processes: ", $number_of_processes, " time: ", $time;
 
 
-$cache_size_from_model = int(1043);
+# $cache_size_from_model = int(1043);
 for ($cache_size_coeff = 0; $cache_size_coeff < @cache_sizes_coeffs; $cache_size_coeff++) {
     # print @cache_sizes_coeffs[$cache_size_coeff], "!@\n";
     $cache_size = int(int($cache_size_from_model) * @cache_sizes_coeffs[$cache_size_coeff]);
