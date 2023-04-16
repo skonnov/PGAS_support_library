@@ -3,26 +3,10 @@ from os.path import exists
 from multiprocessing import Process, Manager
 import time
 
+import common as common
 import cache_model as cm
 # from scipy import optimize
 # import bisect as bs
-
-def read_common_statistic(statistic_path: str):
-    full_filename = statistic_path + "/common_statistic.txt"
-    if (not exists(full_filename)):
-        print("Error: common statistic file was not found!")
-        exit(1)
-    f = open(full_filename)
-    line = f.readline().split()
-    number_of_processes = int(line[1])
-    number_of_vectors = int(line[3])
-    vectors_size = []
-    caches_size = []
-    for i in range(number_of_vectors):
-        line = f.readline().split()
-        vectors_size.append(int(line[1]))
-        caches_size.append(int(line[5]))
-    return number_of_processes, number_of_vectors, vectors_size, caches_size
 
 def read_worker_process_info(statistic_path: str, process_number: int, number_of_vectors: int, vectors_size):
     full_filename = statistic_path + "/memory_cache_" + str(process_number) + ".txt"
@@ -119,14 +103,6 @@ def lower_bound(left: int, right: int, best_cnt_misses: int, put_in_cache_weight
             left = c + 1
     return ans
 
-def parse_argv(argv):
-    ret_argv = {}
-    for i in range(len(argv)):
-        if argv[i].startswith('-') and i < len(argv) - 1:
-            ret_argv[argv[i][1:]] = argv[i + 1]
-            i += 1
-    return ret_argv
-
 def show_usage():
     print("usage: python cache_statistic_model.py <-path path/to/statistic/folder>\n\
           [-pw put_in_cache_weight (default = 1)]\n\
@@ -134,7 +110,7 @@ def show_usage():
           [-rw replacement_weight (default = 1)]")
 
 if __name__ == "__main__":
-    parsed_argv = parse_argv(sys.argv)
+    parsed_argv = common.parse_argv(sys.argv)
     if "path" not in parsed_argv:
         print("Error: You need to specify path to statistic folder!")
         show_usage()
@@ -156,7 +132,7 @@ if __name__ == "__main__":
         assert(already_in_cache_weight >= 0)
 
     # print("Read statistics from directory: ", statistic_path)
-    number_of_processes, number_of_vectors, vectors_size, caches_size = read_common_statistic(statistic_path)
+    number_of_processes, number_of_vectors, vectors_size, caches_size = common.read_common_statistic(statistic_path)
     events_processes = []
     for i in range(1, number_of_processes):
         events_processes.append(read_worker_process_info(statistic_path, i, number_of_vectors, vectors_size))
