@@ -262,6 +262,11 @@ void master_helper_thread() {
                         // нет необработанных запросов на передачу данного кванта с данного процесса?
                         if (memory->quantums[removing_quantum_index].requests[status.MPI_SOURCE] == 0) {
                             int request_to_delete[] = {DELETE, key, removing_quantum_index, -1};
+#if (ENABLE_STATISTICS_COLLECTION)
+  #if (ENABLE_STATISTICS_QUANTUMS_SCHEDULE)
+                            quantums_schedule_file_stream <<  "1 " + std::to_string(key) + " " + std::to_string(removing_quantum_index) + " " + std::to_string(status.MPI_SOURCE) + " " + std::to_string(MPI_Wtime()) + " !\n";
+  #endif
+#endif
                             MPI_Send(request_to_delete, 4, MPI_INT, status.MPI_SOURCE, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
                         } else {
                             memory->quantums[removing_quantum_index].want_to_delete[status.MPI_SOURCE] = true;
@@ -332,6 +337,11 @@ void master_helper_thread() {
 
                         memory->quantums[quantum_index].want_to_delete[worker_rank_sender] = false;
                         int request_to_delete[] = {DELETE, key, quantum_index, 0};
+#if (ENABLE_STATISTICS_COLLECTION)
+  #if (ENABLE_STATISTICS_QUANTUMS_SCHEDULE)
+                        quantums_schedule_file_stream <<  "1 " + std::to_string(key) + " " + std::to_string(quantum_index) + " " +std::to_string(worker_rank_sender) + " " + std::to_string(MPI_Wtime()) + "\n";
+  #endif
+#endif
                         MPI_Send(request_to_delete, 4, MPI_INT, worker_rank_sender, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
                     }
                 }
@@ -364,7 +374,7 @@ void master_helper_thread() {
                 }
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_QUANTUMS_SCHEDULE)
-                std::string info = std::to_string(key) + " " + std::to_string(quantum_index) + " " + std::to_string(status.MPI_SOURCE);
+                std::string info = "0 " + std::to_string(key) + " " + std::to_string(quantum_index) + " " + std::to_string(status.MPI_SOURCE) + " " + std::to_string(MPI_Wtime());
                 quantums_schedule_file_stream << info << "\n";
   #endif
 #endif
@@ -391,7 +401,7 @@ void master_helper_thread() {
                     }
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_QUANTUMS_SCHEDULE)
-                std::string info = std::to_string(key) + " " + "CHANGE_MODE " + std::to_string(quantum_l) + " " + std::to_string(quantum_r);
+                std::string info = "2 " + std::to_string(key) + " " + std::to_string(quantum_l) + " " + std::to_string(quantum_r) + " " + std::to_string(MPI_Wtime());
                 quantums_schedule_file_stream << info << "\n";
   #endif
 #endif
