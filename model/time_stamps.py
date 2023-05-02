@@ -3,6 +3,7 @@ import sys
 from enum import Enum
 import common as common
 from os.path import exists
+from sklearn.cluster import KMeans
 
 class op(Enum):
     PUSH = 0
@@ -49,15 +50,17 @@ def read_quantums_schedule_statistic(statistic_path: str):
 
 
 def update_timestamps(timestamps, quantums_processes):
+    quantum_id_global = 0
     for vector_id in range(len(quantums_processes)):
         for quantum_id in range(len(quantums_processes[vector_id])):
             for process in quantums_processes[vector_id][quantum_id]:
-                timestamps[vector_id][quantum_id][process] += 1
+                timestamps[quantum_id_global][process] += 1
+            quantum_id_global += 1
 
 # timestamps - array of counters for each process in each quantum in each vector
 # e.g. timestamps[5][6][3] = 6: counter for vector #5, quantum #6, process #3 = 6
-def collect_time_stamps(time_step: float, number_of_processes, number_of_vectors, vectors_size, quantums_schedule_statistic):
-    timestamps = [[[0 for process_number in range(number_of_processes)] for quantum_id in range(vectors_size[vector_id])] for vector_id in range(number_of_vectors)]
+def collect_time_stamps(time_step: float, number_of_processes, number_of_vectors, vectors_size, quantums_schedule_statistic, number_of_quantums: int):
+    timestamps = [[0 for process_number in range(number_of_processes)] for quantum_id in range(number_of_quantums)]
     current_time_target = time_step
 
     # contains current process numbers for each quantum and each vector
@@ -98,6 +101,19 @@ def collect_time_stamps(time_step: float, number_of_processes, number_of_vectors
                 quantums_mode[key][quantum_id][1] = True
     return timestamps
 
+def normalize(timestamps):
+    for i in range(len(timestamps)):
+        count = 0
+        for j in range(len(timestamps[i])):
+            count += timestamps[i][j]
+        for j in range(len(timestamps[i])):
+            timestamps[i][j] /= count
+
+def get_clusters(timestamps, number_of_processes):
+    kmeans = KMeans(n_clusters=number_of_processes, random_state=0, n_init="auto").fit(timestamps)
+    # print(kmeans.labels_)
+    # print(kmeans.cluster_centers_)
+    return kmeans
 
 if __name__ == "__main__":
     parsed_argv = common.parse_argv(sys.argv)
@@ -118,12 +134,30 @@ if __name__ == "__main__":
 
     quantums_schedule_statistic = read_quantums_schedule_statistic(statistic_path)
 
-    timestamps = collect_time_stamps(time_step, number_of_processes, number_of_vectors, vectors_size, quantums_schedule_statistic)
+    number_of_quantums = 0
+    for i in range(number_of_vectors):
+        number_of_quantums += vectors_size[i]
+
+    timestamps = collect_time_stamps(time_step, number_of_processes, number_of_vectors, vectors_size, quantums_schedule_statistic, number_of_quantums)
+    normalize(timestamps)
+
+    kmeans = get_clusters(timestamps, number_of_processes)
+
+    quantum_id = 0
+    print(len(kmeans.labels_), len(timestamps))
     for key in range(number_of_vectors):
         print("vector ", key, ":", sep="")
-        for quantum_number in range(len(timestamps[key])):
+        for quantum_number in range(vectors_size[key]):
             print("    quantum ", quantum_number, ":", sep="")
             print("        ", end="")
-            for process in range(len(timestamps[key][quantum_number])):
-                print(timestamps[key][quantum_number][process], end=" ")
-            print("")
+            for process in range(len(timestamps[quantum_id])):
+                print(timestamps[quantum_id][process], end=" ")
+            print(" | ", kmeans.labels_[quantum_id])
+            quantum_id += 1
+
+    for i in range(len(kmeans.cluster_centers_)):
+        print("cluster ", i, ": ", end="")
+        for j in range(len(kmeans.cluster_centers_[i])):
+            print("{:.6f}".format(kmeans.cluster_centers_[i][j]), end=" ")
+        print("")
+    print(kmeans)
