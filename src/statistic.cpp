@@ -1,10 +1,10 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include "schedule.h"
+#include "statistic.h"
 #include "common.h"
 
-std::vector<int> schedule::parse_string_line_schedule(const std::string& line) {
+std::vector<int> statistic::parse_string_line_schedule(const std::string& line) {
     size_t pos = 0;
     std::string token;
     size_t cur = 0;
@@ -23,7 +23,7 @@ std::vector<int> schedule::parse_string_line_schedule(const std::string& line) {
     return values;
 }
 
-StatusCode schedule::read_from_file_schedule(std::string path) {
+StatusCode statistic::read_from_file_schedule(std::string path) {
     std::ifstream in(path);
     if (!in) {
         return STATUS_ERR_FILE_OPEN;
@@ -45,7 +45,7 @@ StatusCode schedule::read_from_file_schedule(std::string path) {
     return STATUS_OK;
 }
 
-std::vector<int> schedule::parse_string_line_quantums_access_cnt(const std::string& line) {
+std::vector<int> statistic::parse_string_line_quantums_access_cnt(const std::string& line) {
     size_t pos = 0;
     std::string token;
     size_t cur = 0;
@@ -60,7 +60,28 @@ std::vector<int> schedule::parse_string_line_quantums_access_cnt(const std::stri
     return values;
 }
 
-StatusCode schedule::read_from_file_quantums_access_cnt(std::string path) {
+std::vector<std::string> statistic::split(const std::string& line) {
+    size_t pos = 0;
+    std::string token;
+    size_t cur = 0;
+    std::vector<std::string> values;
+    while ((pos = line.find(" ", cur)) != std::string::npos) {
+        token = line.substr(cur, pos - cur);
+        values.push_back(token);
+        cur = pos + 1;
+    }
+    token = line.substr(cur, pos - cur);
+    if (token.size()) {
+        values.push_back(token);
+    }
+
+    for (int i = 0; i < values.size(); ++i) {
+        std::cout << values[i] << " ";
+    }
+    return values;
+}
+
+StatusCode statistic::read_from_file_quantums_access_cnt(std::string path) {
     std::ifstream in(path);
     if (!in) {
         return STATUS_ERR_FILE_OPEN;
@@ -81,10 +102,40 @@ StatusCode schedule::read_from_file_quantums_access_cnt(std::string path) {
     return STATUS_OK;
 }
 
-void schedule::optimize() {
+
+StatusCode statistic::read_from_file_quantums_clusters_info(std::string path) {
+    std::ifstream in(path);
+    if (!in) {
+        return STATUS_ERR_FILE_OPEN;
+    }
+    std::string line;
+    while (std::getline(in, line)) {
+        std::vector<std::string> splitted_line = split(line);
+        if (splitted_line.empty()) {
+            break;
+        }
+
+        if (splitted_line[0][0] == 'v') {  // vector
+            vectors_quantums_clusters.push_back(std::vector<quantum_cluster_info>());
+        } else if (splitted_line[0][0] == 'q') {  // quantum
+            continue;
+        } else {  // weights and cluster id
+            vectors_quantums_clusters.back().push_back(quantum_cluster_info());
+            for (int i = 0; i < (int)splitted_line.size() - 2; ++i) {
+                vectors_quantums_clusters.back().back().weitghs.push_back(std::stod(splitted_line[i]));
+            }
+            vectors_quantums_clusters.back().back().cluster_id = std::stoi(splitted_line.back());
+        }
+    }
+    in.close();
+    return STATUS_OK;
+}
+
+
+void statistic::optimize() {
     // to do some optimizations
 }
 
-std::unordered_map<int, std::vector<schedule_line>> schedule::get_schedule() const {
+std::unordered_map<int, std::vector<schedule_line>> statistic::get_schedule() const {
     return schedule_structure;
 }
