@@ -28,9 +28,9 @@ void memory_cache::init(int cache_size, int number_of_quantums, MPI_Comm comm, i
         free_cache_nodes.push_back(&cache_memory[i]);
     }
     if (stat) {
-        auto quantum_cluster_info = stat->get_vectors_quantums_clusters();
-        if (quantum_cluster_info->size()) {
-            CHECK(key < quantum_cluster_info->size(), STATUS_ERR_UNKNOWN);
+        vector_quantum_cluster_info = stat->get_vectors_quantums_clusters();
+        if (vector_quantum_cluster_info->size()) {
+            CHECK(key < vector_quantum_cluster_info->size(), STATUS_ERR_UNKNOWN);
         }
     }
 }
@@ -138,8 +138,24 @@ int memory_cache::add(int quantum_index) {
   #endif
 #endif
 
+    cache_node* node = nullptr;
     // вытеснение кванта из кеша текущим квантом
-    cache_node* node = cache_indexes.pop_front();
+    if (vector_quantum_cluster_info->size() > 0) {
+        int cluster_id_target =  (*vector_quantum_cluster_info)[key][quantum_index].cluster_id;
+        for (cache_node* cache_cur_node = cache_indexes.get_begin(); cache_cur_node != nullptr; cache_cur_node = cache_cur_node->next) {
+            int cur_id = cache_cur_node->value;
+            if ((*vector_quantum_cluster_info)[key][cur_id].cluster_id != cluster_id_target) {
+                node = cache_cur_node;
+                cache_indexes.delete_node(cache_cur_node);
+                break;
+            }
+        }
+    }
+
+    // if there are no statistic info or remove target value after statistic analyzing is still unknown, use LRU algorigthm
+    if (node == nullptr) {
+        node = cache_indexes.pop_front();
+    }
     contain_flags[node->value] = nullptr;
     int return_value = node->value;
 #if (ENABLE_STATISTICS_COLLECTION)
@@ -150,9 +166,7 @@ int memory_cache::add(int quantum_index) {
 #endif
     node->value = quantum_index;
     contain_flags[quantum_index] = node;
-
     cache_indexes.push_back(node);
-
     return return_value;
 }
 
@@ -241,7 +255,6 @@ void memory_cache::get_cache_miss_cnt_statistics(int key, int number_of_elements
 
 void memory_cache::update(int quantum_index) {
     CHECK(is_contain(quantum_index), STATUS_ERR_UNKNOWN);
-    // Least recently used (LRU) cache logic
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_EVERY_CACHE_MISSES)
     std::string output_str = std::to_string(ALREADY_IN_CACHE) + " " + std::to_string(key) + " " + std::to_string(quantum_index) + "\n";

@@ -47,6 +47,7 @@ private:
     MPI_Comm workers_comm;
     int key;
     statistic* stat;
+    const std::vector<std::vector<quantum_cluster_info>>* vector_quantum_cluster_info;
 #if (ENABLE_STATISTICS_COLLECTION)
     int cache_miss_cnt = 0, cache_miss_cnt_no_free = 0;
     static std::ofstream statistic_file_stream;
