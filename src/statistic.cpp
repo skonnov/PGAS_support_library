@@ -66,17 +66,15 @@ std::vector<std::string> statistic::split(const std::string& line) {
     size_t cur = 0;
     std::vector<std::string> values;
     while ((pos = line.find(" ", cur)) != std::string::npos) {
-        token = line.substr(cur, pos - cur);
-        values.push_back(token);
+        if (pos - cur > 0) {
+            token = line.substr(cur, pos - cur);
+            values.push_back(token);
+        }
         cur = pos + 1;
     }
-    token = line.substr(cur, pos - cur);
+    token = line.substr(cur, line.size() - cur);
     if (token.size()) {
         values.push_back(token);
-    }
-
-    for (int i = 0; i < values.size(); ++i) {
-        std::cout << values[i] << " ";
     }
     return values;
 }
@@ -110,15 +108,20 @@ StatusCode statistic::read_from_file_quantums_clusters_info(std::string path) {
     }
     std::string line;
     while (std::getline(in, line)) {
+        line.pop_back();
         std::vector<std::string> splitted_line = split(line);
         if (splitted_line.empty()) {
             break;
         }
-
         if (splitted_line[0][0] == 'v') {  // vector
             vectors_quantums_clusters.push_back(std::vector<quantum_cluster_info>());
         } else if (splitted_line[0][0] == 'q') {  // quantum
             continue;
+        } else if (splitted_line[0][0] == 'c') {  // cluster info
+            clusters.push_back(std::vector<double>());
+            for (int i = 3; i < (int)splitted_line.size(); ++i) {
+                clusters.back().push_back(std::stod(splitted_line[i]));
+            }
         } else {  // weights and cluster id
             vectors_quantums_clusters.back().push_back(quantum_cluster_info());
             for (int i = 0; i < (int)splitted_line.size() - 2; ++i) {
