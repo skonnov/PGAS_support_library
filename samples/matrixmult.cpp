@@ -45,34 +45,40 @@ void print(parallel_vector<T>& pv1, parallel_vector<T>& pv2, parallel_vector<T>&
     std::cout << std::endl;
 }
 
-int get_args(int argc, char** argv, int& n, int& cache_size, int q, int size_workers, int& quantum_size) {
+int get_args(int argc, char** argv, int& n, int& cache_size, int& quantum_size, std::vector<input_config>& cfgs) {
     n = -1, cache_size = DEFAULT_CACHE_SIZE;
     for (int i = 1; i < argc; ++i) {
-        if (std::string(argv[i]) == "-size") {
+        std::string cur_argv = std::string(argv[i]);
+        if (cur_argv == "-size") {
             if (i + 1 < argc) {
                 n = atoi(argv[++i]);
             } else {
                 return -1;
             }
-        } else if (std::string(argv[i]) == "-cache_size" || std::string(argv[i]) == "-cs") {
+        } else if (cur_argv == "-cache_size" || cur_argv == "-cs") {
             if (i + 1 < argc) {
                 cache_size = atoi(argv[++i]);
             } else {
                 return -1;
             }
-        } else if (std::string(argv[i]) == "-quantum_size" || std::string(argv[i]) == "-qs") {
+        } else if (cur_argv == "-quantum_size" || std::string(argv[i]) == "-qs") {
             if (i + 1 < argc) {
                 quantum_size = atoi(argv[++i]);
             } else {
                 return -1;
             }
-        } else {
-            if (memory_manager::get_MPI_rank() == 1)
-                std::cerr << "Unknown argument: " << argv[i] << std::endl;
-            return -1;
+        } else if (cur_argv == "-stat") {
+            if (i + 2 >= argc)
+                return -1;
+            cfgs.push_back({input_info_identificator(atoi(argv[i + 1])), argv[i + 2]});
+            i += 2;
         }
     }
 
+    return 0;
+}
+
+int check_args(int n, int cache_size, int q, int size_workers) {
     if (n == -1) {
         if (memory_manager::get_MPI_rank() == 1)
             std::cerr << "You need to define matrixes size!" << std::endl;
@@ -108,22 +114,31 @@ int get_args(int argc, char** argv, int& n, int& cache_size, int q, int size_wor
 
 static void show_usage() {
     if (memory_manager::get_MPI_rank() == 1)
-        std::cerr << "Usage: mpiexec <-n number of processes> matrixmult <-size size_of_matrix> [-cache_size|-cs cache_size] [-quantum_size|-qs quantum_size]" << std::endl;
+        std::cerr << "Usage: mpiexec <-n number of processes> matrixmult <-size size_of_matrix> [-cache_size|-cs cache_size] [-quantum_size|-qs quantum_size] " <<
+        "[-stat stat_id path_to_file] [-stat stat_id path_to_file] ... "<< std::endl;
 }
 
 int main(int argc, char** argv) {
-    memory_manager::init(argc, argv);
+    int n = 0, cache_size = DEFAULT_CACHE_SIZE, quantum_size = DEFAULT_QUANTUM_SIZE;
+    std::vector<input_config> cfgs;
+    int res = get_args(argc, argv, n, cache_size, quantum_size, cfgs);
+    if (res < 0) {
+        show_usage();
+        return res;
+    }
+
+    bool is_stat = (cfgs.size() > 0);
+    memory_manager::init(argc, argv, "", is_stat, &cfgs);
     int rank = memory_manager::get_MPI_rank();
     int size_workers = memory_manager::get_MPI_size()-1;
     int q = static_cast<int>(sqrt(static_cast<double>(size_workers)));
 
-    int n = 0, cache_size = DEFAULT_CACHE_SIZE, quantum_size = DEFAULT_QUANTUM_SIZE;
 
-    int res = get_args(argc, argv, n, cache_size, q, size_workers, quantum_size);
-    if (res == -1) {
+    res = check_args(n, cache_size, q, size_workers);
+    if (res < 0) {
         show_usage();
         memory_manager::finalize();
-        return 0;
+        return res;
     }
 
     int num_in_block = n / q;
