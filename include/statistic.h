@@ -44,7 +44,8 @@ public:
     StatusCode read_from_file_quantums_access_cnt(std::string path);
     StatusCode read_from_file_quantums_clusters_info(std::string path);
     void optimize();
-    std::unordered_map<int, std::vector<schedule_line>> get_schedule() const;
+    const std::unordered_map<int, std::vector<schedule_line>>* get_schedule() const;
+    const std::vector<std::vector<quantum_cluster_info>>* get_vectors_quantums_clusters() const;
 private:
     std::vector<std::string> split(const std::string& line);
     std::vector<int> parse_string_line_schedule(const std::string& line);

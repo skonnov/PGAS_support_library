@@ -12,6 +12,7 @@
 #include <mutex>
 #include "common.h"
 #include "cache_list.h"
+#include "statistic.h"
 
 enum cache_statistic_operations {
     PUT_IN_CACHE = 0,
@@ -36,7 +37,7 @@ public:
     void delete_elem(int quantum_index);
     void get_cache_miss_cnt_statistics(int key, int number_of_elements);
     void update(int quantum_index);
-    void init(int cache_size, int number_of_quantums, MPI_Comm comm, int key);
+    void init(int cache_size, int number_of_quantums, MPI_Comm comm, int key, statistic* stat = nullptr);
 private:
     std::vector<bool> excluded {};
     std::vector<cache_node*> contain_flags {};
@@ -45,6 +46,7 @@ private:
     int rank, size;
     MPI_Comm workers_comm;
     int key;
+    statistic* stat;
 #if (ENABLE_STATISTICS_COLLECTION)
     int cache_miss_cnt = 0, cache_miss_cnt_no_free = 0;
     static std::ofstream statistic_file_stream;

@@ -134,11 +134,14 @@ StatusCode statistic::read_from_file_quantums_clusters_info(std::string path) {
     return STATUS_OK;
 }
 
-
 void statistic::optimize() {
     // to do some optimizations
 }
 
-std::unordered_map<int, std::vector<schedule_line>> statistic::get_schedule() const {
-    return schedule_structure;
+const std::unordered_map<int, std::vector<schedule_line>>* statistic::get_schedule() const {
+    return &schedule_structure;
+}
+
+const std::vector<std::vector<quantum_cluster_info>>* statistic::get_vectors_quantums_clusters() const {
+    return &vectors_quantums_clusters;
 }

@@ -17,7 +17,7 @@
 #include "memory_allocator.h"
 #include "queue_quantums.h"
 #include "memory_cache.h"
-#include "schedule.h"
+#include "statistic.h"
 
 void worker_helper_thread();
 void master_helper_thread();
@@ -77,6 +77,15 @@ struct memory_line_master
 
 };
 
+enum input_info_identificator {
+    INPUT_ID_QUANTUM_CLUSTER_INFO = 0
+};
+
+struct input_config {
+    input_info_identificator input_id;
+    std::string path;
+};
+
 struct config {
     int number_of_processes;
     bool is_schedule_statistic;
@@ -94,10 +103,10 @@ class memory_manager {
     static int proc_count_ready;
     static MPI_File fh;
     static MPI_Comm workers_comm;
-    static schedule sch;
+    static statistic stat;
 public:
-    static StatusCode init(int argc, char** argv, std::string error_helper = "", bool is_statistic = false, config* cfg = nullptr);  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
-    static StatusCode readStatistic(config* cfg);
+    static StatusCode init(int argc, char** argv, const std::string& error_helper = "", bool is_statistic = false, const std::vector<input_config>* cfg = nullptr);  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
+    static StatusCode readStatistic(const std::vector<input_config>* cfg);
     static int get_MPI_rank();
     static int get_MPI_size();
     template <class T> static T get_data(int key, int index_of_element);  // получить элемент по индексу с любого процесса
@@ -143,7 +152,7 @@ int memory_manager::create_object(int number_of_elements, int quantum_size, int 
         auto line_worker = dynamic_cast<memory_line_worker*>(line);
         line_worker->quantums.resize(num_of_quantums);
         line_worker->allocator.set_quantum_size(quantum_size, sizeof(T));
-        line_worker->cache.init(cache_size, num_of_quantums, workers_comm, int(memory.size()));
+        line_worker->cache.init(cache_size, num_of_quantums, workers_comm, int(memory.size()), &memory_manager::stat);
         // line_worker->cache = memory_cache(cache_size, num_of_quantums, workers_comm, int(memory.size()));
         line_worker->type = get_mpi_type<T>();
         line_worker->size_of = sizeof(T);
