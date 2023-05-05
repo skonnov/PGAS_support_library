@@ -15,9 +15,9 @@ int memory_manager::worker_size;  // worker_size = size-1
 int memory_manager::proc_count_ready = 0;
 MPI_File memory_manager::fh;
 MPI_Comm memory_manager::workers_comm;
-schedule memory_manager::sch;
+statistic memory_manager::stat;
 
-StatusCode memory_manager::init(int argc, char** argv, std::string error_helper_str, bool is_statistic, config* cfg) {
+StatusCode memory_manager::init(int argc, char** argv, const std::string& error_helper_str, bool is_statistic, const std::vector<input_config>* cfg) {
     int provided = 0;
     MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
     if (provided != MPI_THREAD_MULTIPLE) {
@@ -623,24 +623,33 @@ void memory_manager::remove_owner(int key, int removing_quantum_index, int proce
     }
 }
 
-StatusCode memory_manager::readStatistic(config* cfg) {
-    if (rank == 0) {
-        if (cfg->is_schedule_statistic) {
-            StatusCode sts = memory_manager::sch.read_from_file_schedule(cfg->schedule_statistic_file_path);
-            if (sts != StatusCode::STATUS_OK) {
+StatusCode memory_manager::readStatistic(const std::vector<input_config>* cfg) {
+    for(const auto& input_cfg: *cfg) {
+        if (input_cfg.input_id == INPUT_ID_QUANTUM_CLUSTER_INFO) {
+            StatusCode sts = stat.read_from_file_quantums_clusters_info(input_cfg.path);
+            if (sts != STATUS_OK) {
                 return sts;
             }
         }
     }
-    else {
-        if (cfg->is_quantums_access_cnt_statistic) {
-            if (rank - 1 < cfg->quantums_access_cnt_statistic_file_path.size()) {
-                StatusCode sts = memory_manager::sch.read_from_file_schedule(cfg->schedule_statistic_file_path);
-                if (sts != StatusCode::STATUS_OK) {
-                    return sts;
-                }
-            }
-        }
-    }
+    // TODO: fix read schedule!
+    // if (rank == 0) {
+    //     if (cfg->is_schedule_statistic) {
+    //         StatusCode sts = memory_manager::stat.read_from_file_schedule(cfg->schedule_statistic_file_path);
+    //         if (sts != StatusCode::STATUS_OK) {
+    //             return sts;
+    //         }
+    //     }
+    // }
+    // else {
+    //     if (cfg->is_quantums_access_cnt_statistic) {
+    //         if (rank - 1 < cfg->quantums_access_cnt_statistic_file_path.size()) {
+    //             StatusCode sts = memory_manager::stat.read_from_file_schedule(cfg->schedule_statistic_file_path);
+    //             if (sts != StatusCode::STATUS_OK) {
+    //                 return sts;
+    //             }
+    //         }
+    //     }
+    // }
     return StatusCode::STATUS_OK;
 }

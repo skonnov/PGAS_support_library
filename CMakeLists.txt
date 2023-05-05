@@ -51,14 +51,14 @@ PRIVATE
     include/parallel_reduce.h
     include/parallel_vector.h
     include/queue_quantums.h
-    include/schedule.h
+    include/statistic.h
 
     src/cache_list.cpp
     src/memory_allocator.cpp
     src/memory_cache.cpp
     src/memory_manager.cpp
     src/queue_quantums.cpp
-    src/schedule.cpp
+    src/statistic.cpp
 )
 
 if(MPI_COMPILE_FLAGS)

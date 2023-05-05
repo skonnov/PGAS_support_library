@@ -15,7 +15,7 @@ class mode(Enum):
     READ_ONLY = 1
 
 def show_usage():
-    print("usage: python time_stamps.py <-path path/to/statistic/folder>")
+    print("usage: python time_stamps.py <-path path/to/statistic/folder> <-output/-o output_file.txt>")
 
 # info for each quantum step:
 # add/delete:
@@ -123,6 +123,11 @@ if __name__ == "__main__":
         show_usage()
         exit(1)
 
+    if "output" not in parsed_argv:
+        print("Error: You need to specify output file!")
+        show_usage()
+        exit(1)
+
     time_step = 0.001  # in seconds
 
     if "time_step" in parsed_argv:
@@ -144,20 +149,23 @@ if __name__ == "__main__":
     kmeans = get_clusters(timestamps, number_of_processes)
 
     quantum_id = 0
-    print(len(kmeans.labels_), len(timestamps))
+    if "output" in parsed_argv:
+        output = parsed_argv["output"]
+    else:
+        output = parsed_argv["o"]
+    f = open(output, "w")
     for key in range(number_of_vectors):
-        print("vector ", key, ":", sep="")
+        f.write("vector " + str(key) + ":\n")
         for quantum_number in range(vectors_size[key]):
-            print("    quantum ", quantum_number, ":", sep="")
-            print("        ", end="")
+            f.write("    quantum " + str(quantum_number) + ":\n")
+            f.write("        ")
             for process in range(len(timestamps[quantum_id])):
-                print(timestamps[quantum_id][process], end=" ")
-            print(" | ", kmeans.labels_[quantum_id])
+                f.write(str(timestamps[quantum_id][process]) + " ")
+            f.write(" | " + str(kmeans.labels_[quantum_id]) + "\n")
             quantum_id += 1
 
     for i in range(len(kmeans.cluster_centers_)):
-        print("cluster ", i, ": ", end="")
+        f.write("cluster " + str(i) + ": ")
         for j in range(len(kmeans.cluster_centers_[i])):
-            print("{:.6f}".format(kmeans.cluster_centers_[i][j]), end=" ")
-        print("")
-    print(kmeans)
+            f.write("{:.6f} ".format(kmeans.cluster_centers_[i][j]))
+        f.write("\n")

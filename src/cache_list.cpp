@@ -69,8 +69,13 @@ void cache_list::delete_node(cache_node* node) {
             node->next->prev = node->prev;
         }
     }
+    node->prev = node->next = nullptr;
 }
 
 bool cache_list::empty() {
     return begin == end && begin == nullptr;
+}
+
+cache_node* cache_list::get_begin() {
+    return begin;
 }

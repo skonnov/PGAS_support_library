@@ -15,4 +15,5 @@ public:
     cache_node* pop_back();
     void delete_node(cache_node* node);
     bool empty();
+    cache_node* get_begin();
 };
