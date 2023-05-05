@@ -108,7 +108,6 @@ StatusCode statistic::read_from_file_quantums_clusters_info(std::string path) {
     }
     std::string line;
     while (std::getline(in, line)) {
-        line.pop_back();
         std::vector<std::string> splitted_line = split(line);
         if (splitted_line.empty()) {
             break;
@@ -119,7 +118,7 @@ StatusCode statistic::read_from_file_quantums_clusters_info(std::string path) {
             continue;
         } else if (splitted_line[0][0] == 'c') {  // cluster info
             clusters.push_back(std::vector<double>());
-            for (int i = 3; i < (int)splitted_line.size(); ++i) {
+            for (int i = 2; i < (int)splitted_line.size(); ++i) {
                 clusters.back().push_back(std::stod(splitted_line[i]));
             }
         } else {  // weights and cluster id

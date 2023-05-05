@@ -627,6 +627,9 @@ StatusCode memory_manager::readStatistic(const std::vector<input_config>* cfg) {
     for(const auto& input_cfg: *cfg) {
         if (input_cfg.input_id == INPUT_ID_QUANTUM_CLUSTER_INFO) {
             StatusCode sts = stat.read_from_file_quantums_clusters_info(input_cfg.path);
+            if (sts != STATUS_OK) {
+                return sts;
+            }
         }
     }
     // TODO: fix read schedule!
