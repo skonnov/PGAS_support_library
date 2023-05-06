@@ -45,7 +45,8 @@ void print(parallel_vector<T>& pv1, parallel_vector<T>& pv2, parallel_vector<T>&
     std::cout << std::endl;
 }
 
-int get_args(int argc, char** argv, int& n, int& cache_size, int& quantum_size, std::vector<input_config>& cfgs) {
+int get_args(int argc, char** argv, int& n, int& cache_size, int& quantum_size,
+    std::string& statistics_output_directory, std::vector<input_config>& cfgs) {
     n = -1, cache_size = DEFAULT_CACHE_SIZE;
     for (int i = 1; i < argc; ++i) {
         std::string cur_argv = std::string(argv[i]);
@@ -72,6 +73,10 @@ int get_args(int argc, char** argv, int& n, int& cache_size, int& quantum_size, 
                 return -1;
             cfgs.push_back({input_info_identificator(atoi(argv[i + 1])), argv[i + 2]});
             i += 2;
+        } else if (cur_argv == "-stat_output") {
+            if (i + 1 >= argc)
+                return -1;
+            statistics_output_directory = argv[++i];
         }
     }
 
@@ -115,20 +120,21 @@ int check_args(int n, int cache_size, int q, int size_workers) {
 static void show_usage() {
     if (memory_manager::get_MPI_rank() == 1)
         std::cerr << "Usage: mpiexec <-n number of processes> matrixmult <-size size_of_matrix> [-cache_size|-cs cache_size] [-quantum_size|-qs quantum_size] " <<
-        "[-stat stat_id path_to_file] [-stat stat_id path_to_file] ... "<< std::endl;
+        "[-stat_output path/to/statistics/output/folder] [-stat stat_id path_to_file] [-stat stat_id path_to_file] ... "<< std::endl;
 }
 
 int main(int argc, char** argv) {
     int n = 0, cache_size = DEFAULT_CACHE_SIZE, quantum_size = DEFAULT_QUANTUM_SIZE;
     std::vector<input_config> cfgs;
-    int res = get_args(argc, argv, n, cache_size, quantum_size, cfgs);
+    std::string statistics_output_directory = "";
+    int res = get_args(argc, argv, n, cache_size, quantum_size, statistics_output_directory, cfgs);
     if (res < 0) {
         show_usage();
         return res;
     }
 
     bool is_stat = (cfgs.size() > 0);
-    memory_manager::init(argc, argv, "", is_stat, &cfgs);
+    memory_manager::init(argc, argv, "", is_stat, statistics_output_directory, &cfgs);
     int rank = memory_manager::get_MPI_rank();
     int size_workers = memory_manager::get_MPI_size()-1;
     int q = static_cast<int>(sqrt(static_cast<double>(size_workers)));

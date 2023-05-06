@@ -27,10 +27,10 @@ for ($matrix_it = 0; $matrix_it < @matrix_sizes; $matrix_it++) {
                 print "mpiexec --oversubscribe -n $proc_num ../../build_linux/Release/matrixmult -size $matrix_size -quantum_size 10 -cs $cache_size\n";
                 $tmp = `mpiexec --oversubscribe -n $proc_num ../../build_linux/Release/matrixmult -size $matrix_size -quantum_size 10 -cs $cache_size`;
                 $result_lru = min($result_lru + 0.0, $tmp + 0.0);
-                $output_timestamps_file = "output_timestamps_matrixmult_proc_$proc_num\_proc_num_$matrix_size\_cache_size_$cache_size.txt";
+                $output_timestamps_file = "statistics_output/output_timestamps_matrixmult_proc_$proc_num\_proc_num_$matrix_size\_cache_size_$cache_size.txt";
                 if ($i == 0) {
-                    print "python ../../model/time_stamps.py -path . -output $output_timestamps_file\n";
-                    `python ../../model/time_stamps.py -path . -output $output_timestamps_file`;
+                    print "python ../../model/time_stamps.py -path ./statistics_output -output $output_timestamps_file\n";
+                    `python ../../model/time_stamps.py -path ./statistics_output -output $output_timestamps_file`;
                 }
                 print "mpiexec --oversubscribe -n $proc_num ../../build_linux/Release/matrixmult -size $matrix_size -quantum_size 10 -cs $cache_size -stat 0 $output_timestamps_file\n";
                 $tmp = `mpiexec --oversubscribe -n $proc_num ../../build_linux/Release/matrixmult -size $matrix_size -quantum_size 10 -cs $cache_size -stat 0 $output_timestamps_file`;

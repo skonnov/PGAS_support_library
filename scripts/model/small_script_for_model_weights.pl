@@ -12,42 +12,42 @@ $matrix_size = 300;
 print "mpiexec --oversubscribe -n 10 ../build_linux/Release/matrixmult -size $matrix_size -quantum_size 10 -cs 100\n";
 print WF `mpiexec --oversubscribe -n 10 ../build_linux/Release/matrixmult -size $matrix_size -quantum_size 10 -cs 100`;
 
-$x = `python3 ../model/cache_statistic_model.py -path . -pw 1 -aw 0`;
+$x = `python3 ../model/cache_statistic_model.py -path ./statistics_output -pw 1 -aw 0`;
 print "!!!! ", $x, " !!!!\n";
 $result = int($x);
 print WF $result, " -pw 1 -aw 0\n";
 print "mpiexec --oversubscribe -n 10 ../build_linux/Release/matrixmult -size $matrix_size -quantum_size 10 -cs $result\n";
 print WF `mpiexec --oversubscribe -n 10 ../build_linux/Release/matrixmult -size $matrix_size -quantum_size 10 -cs $result`;
 
-$x = `python3 ../model/cache_statistic_model.py -path . -pw 5 -aw 1`;
+$x = `python3 ../model/cache_statistic_model.py -path ./statistics_output -pw 5 -aw 1`;
 print "!!!! ", $x, " !!!!\n";
 $result = int($x);
 print WF $result, " -pw 5 -aw 1\n";
 print "mpiexec --oversubscribe -n 10 ../build_linux/Release/matrixmult -size $matrix_size -quantum_size 10 -cs $result\n";
 print WF `mpiexec --oversubscribe -n 10 ../build_linux/Release/matrixmult -size $matrix_size -quantum_size 10 -cs $result`;
 
-$x = `python3 ../model/cache_statistic_model.py -path . -pw 5 -aw 3`;
+$x = `python3 ../model/cache_statistic_model.py -path ./statistics_output -pw 5 -aw 3`;
 print "!!!! ", $x, " !!!!\n";
 $result = int($x);
 print WF $result, " -pw 5 -aw 3\n";
 print "mpiexec --oversubscribe -n 10 ../build_linux/Release/matrixmult -size $matrix_size -quantum_size 10 -cs $result\n";
 print WF `mpiexec --oversubscribe -n 10 ../build_linux/Release/matrixmult -size $matrix_size -quantum_size 10 -cs $result`;
 
-$x = `python3 ../model/cache_statistic_model.py -path . -pw 10 -aw 3`;
+$x = `python3 ../model/cache_statistic_model.py -path ./statistics_output -pw 10 -aw 3`;
 print "!!!! ", $x, " !!!!\n";
 $result = int($x);
 print WF $result, " -pw 10 -aw 3\n";
 print "mpiexec --oversubscribe -n 10 ../build_linux/Release/matrixmult -size $matrix_size -quantum_size 10 -cs $result\n";
 print WF `mpiexec --oversubscribe -n 10 ../build_linux/Release/matrixmult -size $matrix_size -quantum_size 10 -cs $result`;
 
-$x = `python3 ../model/cache_statistic_model.py -path . -pw 1 -aw 1`;
+$x = `python3 ../model/cache_statistic_model.py -path ./statistics_output -pw 1 -aw 1`;
 print "!!!! ", $x, " !!!!\n";
 $result = int($x);
 print WF $result, " -pw 1 -aw 1\n";
 print "mpiexec --oversubscribe -n 10 ../build_linux/Release/matrixmult -size $matrix_size -quantum_size 10 -cs $result\n";
 print WF `mpiexec --oversubscribe -n 10 ../build_linux/Release/matrixmult -size $matrix_size -quantum_size 10 -cs $result`;
 
-$x = `python3 ../model/cache_statistic_model.py -path . -pw 100 -aw 1`;
+$x = `python3 ../model/cache_statistic_model.py -path ./statistics_output -pw 100 -aw 1`;
 print "!!!! ", $x, " !!!!\n";
 $result = int($x);
 print WF $result, " -pw 100 -aw 1\n";

@@ -24,8 +24,6 @@ enum cache_statistic_operations {
 
 class memory_cache {
 public:
-    memory_cache(int key=0);
-    memory_cache(int cache_size, int number_of_quantums, MPI_Comm workers_comm, int key=0);
     memory_cache& operator=(const memory_cache& cache);
     memory_cache& operator=(memory_cache&& cache);
     int add(int quantum_index);  // добавить элемент в кеш. Если при попытке добавления
@@ -37,8 +35,9 @@ public:
     void delete_elem(int quantum_index);
     void get_cache_miss_cnt_statistics(int key, int number_of_elements);
     void update(int quantum_index);
-    void init(int cache_size, int number_of_quantums, MPI_Comm comm, int key, statistic* stat = nullptr);
+    void init(int cache_size, int number_of_quantums, MPI_Comm comm, int key, const std::string& statistics_output_directory, statistic* stat = nullptr);
 private:
+    std::string statistics_output_directory;
     std::vector<bool> excluded {};
     std::vector<cache_node*> contain_flags {};
     std::vector<cache_node> cache_memory {};

@@ -11,6 +11,7 @@
 #include <string>
 #include <set>
 #include <memory>
+#include <filesystem>
 #include <mpi.h>
 #include "common.h"
 #include "detail.h"
@@ -104,8 +105,10 @@ class memory_manager {
     static MPI_File fh;
     static MPI_Comm workers_comm;
     static statistic stat;
+    static std::string statistics_output_directory;
 public:
-    static StatusCode init(int argc, char** argv, const std::string& error_helper = "", bool is_statistic = false, const std::vector<input_config>* cfg = nullptr);  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
+    static StatusCode init(int argc, char** argv, const std::string& error_helper = "",
+    bool is_statistic = false, const std::string& statistics_output_directory = "./", const std::vector<input_config>* cfg = nullptr);  // функция, вызываемая в начале выполнения программы, инициирует вспомогательные потоки
     static StatusCode readStatistic(const std::vector<input_config>* cfg);
     static int get_MPI_rank();
     static int get_MPI_size();
@@ -152,7 +155,8 @@ int memory_manager::create_object(int number_of_elements, int quantum_size, int 
         auto line_worker = dynamic_cast<memory_line_worker*>(line);
         line_worker->quantums.resize(num_of_quantums);
         line_worker->allocator.set_quantum_size(quantum_size, sizeof(T));
-        line_worker->cache.init(cache_size, num_of_quantums, workers_comm, int(memory.size()), &memory_manager::stat);
+        line_worker->cache.init(cache_size, num_of_quantums, workers_comm, int(memory.size()),
+            memory_manager::statistics_output_directory, &memory_manager::stat);
         // line_worker->cache = memory_cache(cache_size, num_of_quantums, workers_comm, int(memory.size()));
         line_worker->type = get_mpi_type<T>();
         line_worker->size_of = sizeof(T);

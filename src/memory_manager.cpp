@@ -16,8 +16,10 @@ int memory_manager::proc_count_ready = 0;
 MPI_File memory_manager::fh;
 MPI_Comm memory_manager::workers_comm;
 statistic memory_manager::stat;
+std::string memory_manager::memory_manager::statistics_output_directory = std::string("./statistics_output");
 
-StatusCode memory_manager::init(int argc, char** argv, const std::string& error_helper_str, bool is_statistic, const std::vector<input_config>* cfg) {
+StatusCode memory_manager::init(int argc, char** argv, const std::string& error_helper_str, bool is_statistic,
+    const std::string& statistics_output_directory, const std::vector<input_config>* cfg) {
     int provided = 0;
     MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
     if (provided != MPI_THREAD_MULTIPLE) {
@@ -49,6 +51,13 @@ StatusCode memory_manager::init(int argc, char** argv, const std::string& error_
     MPI_Group_incl(group_world, worker_size, procs.data(), &group_workers);
     MPI_Comm_create(MPI_COMM_WORLD, group_workers, &workers_comm);
     // TODO: создание своего типа для пересылки посылок ???
+
+    if (statistics_output_directory.size() > 0)
+        memory_manager::statistics_output_directory = statistics_output_directory;
+    if (memory_manager::statistics_output_directory.back() != '/') {
+        memory_manager::statistics_output_directory.push_back('/');
+    }
+    std::filesystem::create_directory(memory_manager::statistics_output_directory);
 
     if (is_statistic) {
         StatusCode sts = readStatistic(cfg);
@@ -89,7 +98,7 @@ void worker_helper_thread() {
     #if (ENABLE_STATISTICS_QUANTUMS_CNT_WORKERS)
             // write quantum request statistic to file
             std::ofstream worker_process_statistic;
-            worker_process_statistic.open(STATISTICS_OUTPUT_DIRECTORY + "quantums_ranks_cnt_process_" + std::to_string(rank) + ".txt");
+            worker_process_statistic.open(memory_manager::statistics_output_directory + "quantums_ranks_cnt_process_" + std::to_string(rank) + ".txt");
             worker_process_statistic << "key | quantum_index | cnt | mode (READ_ONLY = 0, READ_WRITE = 1)\n";
     #endif
 #endif
@@ -168,7 +177,7 @@ void master_helper_thread() {
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_QUANTUMS_SCHEDULE)
     std::ofstream quantums_schedule_file_stream;
-    quantums_schedule_file_stream.open(STATISTICS_OUTPUT_DIRECTORY + "quantums_schedule_raw" + ".txt");
+    quantums_schedule_file_stream.open(memory_manager::statistics_output_directory + "quantums_schedule_raw" + ".txt");
   #endif
 #endif
     while (true) {
@@ -176,7 +185,7 @@ void master_helper_thread() {
         if (request[0] == -1 && request[1] == -1 && request[2] == -1) {  // окончание работы вспомогательного потока
 #if (ENABLE_STATISTICS_COLLECTION)
             std::ofstream common_statistic;
-            common_statistic.open(STATISTICS_OUTPUT_DIRECTORY + "common_statistic.txt");
+            common_statistic.open(memory_manager::statistics_output_directory + "common_statistic.txt");
             common_statistic << "number_of_processes: " << size << " number_of_vectors: " << memory_manager::memory.size() << "\n";
             for (auto _line: memory_manager::memory) {
                 common_statistic << "number_of_quantums: " << (_line->logical_size + (_line->quantum_size - 1)) / _line->quantum_size <<

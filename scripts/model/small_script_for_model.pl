@@ -9,7 +9,7 @@ $average = 0;
 $num_runs = 7;
 for ($i = 0; $i < $num_runs; ++$i) {
     print WF `mpiexec --oversubscribe -n 10 ../build_linux/Release/matrixmult -size 300 -quantum_size 10 -cs 100`;
-    $result = `python3 ../model/cache_statistic_model.py .`;
+    $result = `python3 ../model/cache_statistic_model.py ./statistics_output`;
     print WF $result, "\n";
     $average += $result;
 }
