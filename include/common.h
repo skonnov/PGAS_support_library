@@ -22,17 +22,13 @@
     #endif
 
     #ifndef ENABLE_STATISTICS_QUANTUMS_SCHEDULE
-        #define ENABLE_STATISTICS_QUANTUMS_SCHEDULE false
+        #define ENABLE_STATISTICS_QUANTUMS_SCHEDULE true
     #endif
 
     #ifndef ENABLE_STATISTICS_QUANTUMS_CNT_WORKERS
         #define ENABLE_STATISTICS_QUANTUMS_CNT_WORKERS false
     #endif
 
-#endif
-
-#if (ENABLE_STATISTICS_COLLECTION)
-    #define STATISTICS_OUTPUT_DIRECTORY std::string("./")
 #endif
 
 enum mods {  // используется для изменения режима работы с памятью
@@ -94,7 +90,6 @@ static std::string get_error_code(int error_code) {
     out += "(" + std::to_string(error_code) + ")";
     return out;
 }
-
 #define CHECK(expression, error_code)                                                                                \
     if (!(expression)) {                                                                                             \
         int rank;                                                                                                    \
