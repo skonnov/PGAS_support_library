@@ -37,6 +37,15 @@ StatusCode memory_manager::init(int argc, char** argv, const std::string& error_
     }
     worker_rank = rank - 1;
     worker_size = size - 1;
+
+
+    if (statistics_output_directory.size() > 0)
+        memory_manager::statistics_output_directory = statistics_output_directory;
+    if (memory_manager::statistics_output_directory.back() != '/') {
+        memory_manager::statistics_output_directory.push_back('/');
+    }
+    std::filesystem::create_directory(memory_manager::statistics_output_directory);
+
     if (rank == 0) {
         helper_thr = std::thread(master_helper_thread);
     } else {
@@ -51,13 +60,6 @@ StatusCode memory_manager::init(int argc, char** argv, const std::string& error_
     MPI_Group_incl(group_world, worker_size, procs.data(), &group_workers);
     MPI_Comm_create(MPI_COMM_WORLD, group_workers, &workers_comm);
     // TODO: создание своего типа для пересылки посылок ???
-
-    if (statistics_output_directory.size() > 0)
-        memory_manager::statistics_output_directory = statistics_output_directory;
-    if (memory_manager::statistics_output_directory.back() != '/') {
-        memory_manager::statistics_output_directory.push_back('/');
-    }
-    std::filesystem::create_directory(memory_manager::statistics_output_directory);
 
     if (is_statistic) {
         StatusCode sts = readStatistic(cfg);
@@ -273,7 +275,7 @@ void master_helper_thread() {
                             int request_to_delete[] = {DELETE, key, removing_quantum_index, -1};
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_QUANTUMS_SCHEDULE)
-                            quantums_schedule_file_stream <<  "1 " + std::to_string(key) + " " + std::to_string(removing_quantum_index) + " " + std::to_string(status.MPI_SOURCE) + " " + std::to_string(MPI_Wtime()) + " !\n";
+                            quantums_schedule_file_stream <<  "1 " + std::to_string(key) + " " + std::to_string(removing_quantum_index) + " " + std::to_string(status.MPI_SOURCE) + " " + std::to_string(MPI_Wtime()) + "\n";
   #endif
 #endif
                             MPI_Send(request_to_delete, 4, MPI_INT, status.MPI_SOURCE, SEND_DATA_TO_HELPER, MPI_COMM_WORLD);
