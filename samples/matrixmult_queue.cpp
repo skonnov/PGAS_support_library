@@ -6,42 +6,57 @@
 
 // #define MAX_TASK 5
 
-int get_args(int argc, char** argv, int& n, int& div_num, int& seed, int& cache_size) {
+int get_args(int argc, char** argv, int& n, int& div_num, int& seed, int& cache_size, int& quantum_size,
+    std::string& statistics_output_directory, std::vector<input_config>& cfgs) {
     n = -1, div_num = -1, seed = 0, cache_size = DEFAULT_CACHE_SIZE;
     for (int i = 1; i < argc; ++i) {
-        if (std::string(argv[i]) == "-size") {
+        std::string cur_argv = std::string(argv[i]);
+        if (cur_argv == "-size") {
             if (i + 1 < argc) {
                 n = atoi(argv[++i]);
             } else {
                 return -1;
             }
-        }
-
-        if (std::string(argv[i]) == "-d") {
+        } else if (cur_argv == "-d") {
             if (i + 1 < argc) {
                 div_num = atoi(argv[++i]);
             } else {
                 return -1;
             }
-        }
-
-        if (std::string(argv[i]) == "-s") {
+        } else if (cur_argv == "-s") {
             if (i + 1 < argc) {
                 seed = atoi(argv[++i]);
             } else {
                 return -1;
             }
-        }
-
-        if (std::string(argv[i]) == "-cache_size" || std::string(argv[i]) == "-cs") {
+        } else if (cur_argv == "-cache_size" || cur_argv == "-cs") {
             if (i + 1 < argc) {
                 cache_size = atoi(argv[++i]);
             } else {
                 return -1;
             }
+        } else if (cur_argv == "-quantum_size" || cur_argv == "-qs") {
+            if (i + 1 < argc) {
+                quantum_size = atoi(argv[++i]);
+            } else {
+                return -1;
+            }
+        } else if (cur_argv == "-stat") {
+            if (i + 2 >= argc)
+                return -1;
+            cfgs.push_back({input_info_identificator(atoi(argv[i + 1])), argv[i + 2]});
+            i += 2;
+        } else if (cur_argv == "-stat_output") {
+            if (i + 1 >= argc)
+                return -1;
+            statistics_output_directory = argv[++i];
         }
     }
 
+    return 0;
+}
+
+int check_args(int n, int cache_size, int div_num) {
     if (n == -1) {
         if (memory_manager::get_MPI_rank() == 1)
             std::cerr<<"You need to define matrixes size!"<<std::endl;
@@ -77,7 +92,9 @@ int get_args(int argc, char** argv, int& n, int& div_num, int& seed, int& cache_
 
 static void show_usage() {
     if (memory_manager::get_MPI_rank() == 1)
-        std::cerr << "Usage: mpiexec <-n matrices size> matrixmult_queue <-size matrices size> <-d num_of_divisions> [-s seed] [-cache_size|-cs cache_size]"<<std::endl;
+        std::cerr << "Usage: mpiexec <-n matrices size> matrixmult_queue <-size matrices size> <-d num_of_divisions> [-s seed]" <<
+        "[-cache_size|-cs cache_size] [-quantum_size|-qs quantum_size] " <<
+        "[-stat_output path/to/statistics/output/folder] [-stat stat_id path_to_file] [-stat stat_id path_to_file] ... "<< std::endl;
 }
 
 void generate_matrices(parallel_vector<int>& pva, parallel_vector<int>& pvb, parallel_vector<int>& pvc, int n, int seed, int minn = 0, int maxx = 1000) {
@@ -149,15 +166,24 @@ struct task {
 
 
 int main(int argc, char** argv) { // матрица b транспонирована
-    memory_manager::init(argc, argv);
-    int n, div_num, seed, cache_size = DEFAULT_CACHE_SIZE;
-    int res = get_args(argc, argv, n, div_num, seed, cache_size);
-    if (res == -1) {
+    int n, div_num, seed, cache_size = DEFAULT_CACHE_SIZE, quantum_size = DEFAULT_QUANTUM_SIZE;
+    std::string statistics_output_directory = "";
+    std::vector<input_config> cfgs;
+    int res = get_args(argc, argv, n, div_num, seed, cache_size, quantum_size, statistics_output_directory, cfgs);
+    if (res < 0) {
+        show_usage();
+        return res;
+    }
+
+    bool is_stat = (cfgs.size() > 0);
+    memory_manager::init(argc, argv, "", is_stat, statistics_output_directory, &cfgs);
+    res = check_args(n, cache_size, div_num);
+    if (res < 0) {
         show_usage();
         memory_manager::finalize();
         return 0;
     }
-    parallel_vector<int> pva(n * n, DEFAULT_QUANTUM_SIZE, cache_size), pvb(n * n, DEFAULT_QUANTUM_SIZE, cache_size), pvc (n * n, DEFAULT_QUANTUM_SIZE, cache_size);
+    parallel_vector<int> pva(n * n, quantum_size, cache_size), pvb(n * n, quantum_size, cache_size), pvc (n * n, quantum_size, cache_size);
     generate_matrices(pva, pvb, pvc, n, seed);
     int part_size = n / div_num;
     std::queue<task> qu;
@@ -188,7 +214,6 @@ int main(int argc, char** argv) { // матрица b транспонирова
         (MPI_Aint)offsetof(task, b_second)
     };
     MPI_Datatype types[] = { MPI_INT, MPI_INT, MPI_INT, MPI_INT };
-
     parallel_vector<task> tasks(count, blocklens, indices, types, size, 1);
     double t1 = MPI_Wtime();
     if (rank != 0) {
