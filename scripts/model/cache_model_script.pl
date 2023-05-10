@@ -2,7 +2,7 @@ use POSIX;
 use List::Util qw[min max];
 
 $datetime = strftime "%Y-%m-%d-%H-%M-%S", localtime time;
-$path_matrixmult = ">> ./output_model_".$datetime.".txt";
+$path_matrixmult = ">> ./output_model_cache_".$datetime.".txt";
 open(WF, $path_matrixmult) or die;
 
 $matrix_size = 300;
@@ -13,7 +13,7 @@ $number_of_processes = 10;
 
 @cache_sizes_coeffs = (0.5, 0.7, 0.9, 1.1, 1.3, 1.5);
 
-$build_directory = "../build_linux";
+$build_directory = "../../build_linux";
 $tmp = -1;
 $time = 100500;
 
@@ -32,9 +32,9 @@ for ($i = 0; $i < 3; ++$i) {
 }
 print WF "cache_size_small: ", $cache_size_small, " matrix_size: ", $matrix_size, " quantum_size: ", $quantum_size, " number_of_processes: ", $number_of_processes, " time: ", $time;
 
-print "python3 ../model/cache_statistic_model.py -path . -pw 10 -aw 3\n";
-$cache_size_from_model = `python3 ../model/cache_statistic_model.py -path . -pw 10 -aw 3`;
-print "done ../model/cache_statistic_model.py, cache_size_from_model: $cache_size_from_model\n";
+print "python3 ../../model/cache_statistic_model.py -path ./statistics_output -pw 10 -aw 3\n";
+$cache_size_from_model = `python3 ../../model/cache_statistic_model.py -path ./statistics_output -pw 10 -aw 3`;
+print "done ../../model/cache_statistic_model.py, cache_size_from_model: $cache_size_from_model\n";
 
 $time = 100500;
 print "mpiexec --oversubscribe -n $number_of_processes $build_directory/Release/matrixmult -size $matrix_size -quantum_size $quantum_size -cs $cache_size_from_model\n";
