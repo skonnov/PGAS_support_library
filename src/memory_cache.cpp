@@ -118,7 +118,7 @@ void memory_cache::add_to_excluded(int quantum_index) {
     delete_elem(quantum_index);
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_EVERY_CACHE_MISSES)
-    std::string output_str = std::to_string(ADD_TO_EXCLUDED) + " " + std::to_string(key) + " " + std::to_string(quantum_index) + " " + std::to_string(MPI_Wtime()) + "\n";
+    std::string output_str = std::to_string(ADD_TO_EXCLUDED) + " " + std::to_string(key) + " " + std::to_string(quantum_index) + "\n";
     statistic_file_stream << output_str;
   #endif
 #endif
@@ -139,7 +139,7 @@ void memory_cache::delete_elem(int quantum_index) {
         contain_flags[quantum_index] = nullptr;
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_EVERY_CACHE_MISSES)
-        std::string output_str = std::to_string(REMOVE_FROM_CACHE) + " " + std::to_string(key) + " " + std::to_string(quantum_index) + " " + std::to_string(MPI_Wtime()) + "\n";
+        std::string output_str = std::to_string(REMOVE_FROM_CACHE) + " " + std::to_string(key) + " " + std::to_string(quantum_index) + "\n";
         statistic_file_stream << output_str;
   #endif
 #endif
@@ -147,7 +147,7 @@ void memory_cache::delete_elem(int quantum_index) {
 #if (ENABLE_STATISTICS_COLLECTION)
   #if (ENABLE_STATISTICS_EVERY_CACHE_MISSES)
     if (excluded[quantum_index]) {
-        std::string output_str = std::to_string(REMOVE_FROM_EXCLUDED) + " " + std::to_string(key) + " " + std::to_string(quantum_index) + " " + std::to_string(MPI_Wtime()) + "\n";
+        std::string output_str = std::to_string(REMOVE_FROM_EXCLUDED) + " " + std::to_string(key) + " " + std::to_string(quantum_index) + "\n";
         statistic_file_stream << output_str;
     }
   #endif
