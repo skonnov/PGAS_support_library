@@ -38,6 +38,7 @@ public:
     void init(int cache_size, int number_of_quantums, MPI_Comm comm, int key, const std::string& statistics_output_directory, statistic* stat = nullptr);
 private:
     double get_dist(int cluster_id1, int cluster_id2);
+    void calculate_clusters_dists();
 
     std::string statistics_output_directory;
     std::vector<bool> excluded {};
@@ -48,6 +49,7 @@ private:
     MPI_Comm workers_comm;
     int key;
     statistic* stat;
+    std::vector<std::vector<double>> clusters_dist;
     const std::vector<std::vector<quantum_cluster_info>>* vector_quantum_cluster_info;
     const std::vector<std::vector<double>>* clusters;
 #if (ENABLE_STATISTICS_COLLECTION)
