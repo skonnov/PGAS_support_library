@@ -106,8 +106,9 @@ def normalize(timestamps):
         count = 0
         for j in range(len(timestamps[i])):
             count += timestamps[i][j]
-        for j in range(len(timestamps[i])):
-            timestamps[i][j] /= count
+        if count != 0:
+            for j in range(len(timestamps[i])):
+                timestamps[i][j] /= count
 
 def get_clusters(timestamps, number_of_processes):
     kmeans = KMeans(n_clusters=number_of_processes, random_state=0, n_init="auto").fit(timestamps)
