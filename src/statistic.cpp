@@ -144,3 +144,7 @@ const std::unordered_map<int, std::vector<schedule_line>>* statistic::get_schedu
 const std::vector<std::vector<quantum_cluster_info>>* statistic::get_vectors_quantums_clusters() const {
     return &vectors_quantums_clusters;
 }
+
+const std::vector<std::vector<double>>* statistic::get_clusters() const {
+    return &clusters;
+}

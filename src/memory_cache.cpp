@@ -21,6 +21,7 @@ void memory_cache::init(int cache_size, int number_of_quantums, MPI_Comm comm, i
         if (vector_quantum_cluster_info->size()) {
             CHECK(key < vector_quantum_cluster_info->size(), STATUS_ERR_UNKNOWN);
         }
+        clusters = stat->get_clusters();
     }
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -36,6 +37,14 @@ void memory_cache::init(int cache_size, int number_of_quantums, MPI_Comm comm, i
     }
   #endif
 #endif
+}
+
+double memory_cache::get_dist(int cluster_id1, int cluster_id2) {
+    double dist = 0.;
+    for (int i = 0; i < (*clusters)[cluster_id1].size(); ++i) {
+        dist += ((*clusters)[cluster_id1][i] - (*clusters)[cluster_id2][i]) * ((*clusters)[cluster_id1][i] - (*clusters)[cluster_id2][i]);
+    }
+    return dist;
 }
 
 int memory_cache::add(int quantum_index) {
@@ -81,12 +90,17 @@ int memory_cache::add(int quantum_index) {
     // вытеснение кванта из кеша текущим квантом
     if (vector_quantum_cluster_info->size() > 0) {
         int cluster_id_target =  (*vector_quantum_cluster_info)[key][quantum_index].cluster_id;
+        double max_dist = 0.;
         for (cache_node* cache_cur_node = cache_indexes.get_begin(); cache_cur_node != nullptr; cache_cur_node = cache_cur_node->next) {
             int cur_id = cache_cur_node->value;
-            if ((*vector_quantum_cluster_info)[key][cur_id].cluster_id != cluster_id_target) {
+            int cur_cluster_id = (*vector_quantum_cluster_info)[key][cur_id].cluster_id;
+            double dist = get_dist(cur_cluster_id, cluster_id_target);
+            // if (cur_cluster_id != cluster_id_target) {
+            //     std::cout << cur_cluster_id << " " << cluster_id_target << " | " << dist << std::endl;
+            // }
+            if (dist > max_dist) {
+                max_dist = dist;
                 node = cache_cur_node;
-                cache_indexes.delete_node(cache_cur_node);
-                break;
             }
         }
     }

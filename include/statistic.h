@@ -46,6 +46,7 @@ public:
     void optimize();
     const std::unordered_map<int, std::vector<schedule_line>>* get_schedule() const;
     const std::vector<std::vector<quantum_cluster_info>>* get_vectors_quantums_clusters() const;
+    const std::vector<std::vector<double>>* get_clusters() const;
 private:
     std::vector<std::string> split(const std::string& line);
     std::vector<int> parse_string_line_schedule(const std::string& line);
