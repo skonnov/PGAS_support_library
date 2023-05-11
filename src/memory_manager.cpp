@@ -664,3 +664,7 @@ StatusCode memory_manager::readStatistic(const std::vector<input_config>* cfg) {
     // }
     return StatusCode::STATUS_OK;
 }
+
+const statistic& memory_manager::get_statistic() {
+    return stat;
+}
