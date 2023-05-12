@@ -16,12 +16,26 @@ int main(int argc, char** argv) {
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
             for (int k = 0; k < n; ++k) {
-                ans[i * n + j] += v1[i * n + k] * v2[k * n + j];
+                ans[i * n + k] += v1[i * n + j] * v2[k * n + j];
             }
         }
     }
     double t2 = MPI_Wtime();
     std::cout << t2 - t1 << "\n";
+    // for (int i = 0; i < n; ++i) {
+    //     for (int j = 0; j < n; ++j) {
+    //         std::cout << v1[i * n + j] << " ";
+    //     }
+    //     std::cout << "\n";
+    // }
+    // std::cout << "------\n";
+    // for (int i = 0; i < n; ++i) {
+    //     for (int j = 0; j < n; ++j) {
+    //         std::cout << v2[i * n + j] << " ";
+    //     }
+    //     std::cout << "\n";
+    // }
+    // std::cout << "------\n";
     // for (int i = 0; i < n; ++i) {
     //     for (int j = 0; j < n; ++j) {
     //         std::cout << ans[i * n + j] << " ";
