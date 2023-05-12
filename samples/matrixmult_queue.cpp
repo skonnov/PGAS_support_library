@@ -290,29 +290,55 @@ int main(int argc, char** argv) { // матрица b транспонирова
     double t1 = MPI_Wtime();
     if (rank != 0) {
         if (rank == 1) {
-            int count_working = 0;
-            for (int i = 0; i < size - 2 && !qu.empty(); ++i) {
-                tasks.set_elem(i, qu.front());
-                ++count_working;
-                qu.pop();
-                memory_manager::notify(i + 2);
-            }
+            if (use_statistic) {
+                int finished_count = 0;
+                for (int i = 2; i < size; ++i) {
+                    if (qu_proc[i].size()) {
+                        tasks.set_elem(i - 2, qu_proc[i].front());
+                        qu_proc[i].pop();
+                    } else {
+                        tasks.set_elem(i - 2, {-1, -1, -1, -1});
+                        ++finished_count;
+                    }
+                    memory_manager::notify(i);
+                }
 
-            while (!qu.empty()) {
-                int to_rank = memory_manager::wait();
-                tasks.set_elem(to_rank - 2, qu.front());
-                qu.pop();
-                memory_manager::notify(to_rank);
-            }
+                while (finished_count < size - 2) {
+                    int to_rank = memory_manager::wait();
+                    if (qu_proc[to_rank].size()) {
+                        tasks.set_elem(to_rank - 2, qu_proc[to_rank].front());
+                        qu_proc[to_rank].pop();
+                    } else {
+                        tasks.set_elem(to_rank - 2, {-1, -1, -1, -1});
+                        ++finished_count;
+                    }
+                    memory_manager::notify(to_rank);
+                }
+            } else {
+                int count_working = 0;
+                for (int i = 0; i < size - 2 && !qu.empty(); ++i) {
+                    tasks.set_elem(i, qu.front());
+                    ++count_working;
+                    qu.pop();
+                    memory_manager::notify(i + 2);
+                }
 
-            while (count_working) {
-                memory_manager::wait();
-                --count_working;
-            }
+                while (!qu.empty()) {
+                    int to_rank = memory_manager::wait();
+                    tasks.set_elem(to_rank - 2, qu.front());
+                    qu.pop();
+                    memory_manager::notify(to_rank);
+                }
 
-            for (int i = 0; i < size - 2; ++i) {
-                tasks.set_elem(i, {-1, -1, -1, -1});
-                memory_manager::notify(i + 2);
+                while (count_working) {
+                    memory_manager::wait();
+                    --count_working;
+                }
+
+                for (int i = 0; i < size - 2; ++i) {
+                    tasks.set_elem(i, {-1, -1, -1, -1});
+                    memory_manager::notify(i + 2);
+                }
             }
         } else {
             while (true) {
