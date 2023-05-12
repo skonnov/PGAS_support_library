@@ -1,6 +1,7 @@
 #include <iostream>
 #include <random>
 #include <cstddef>
+#include <algorithm>
 #include "memory_manager.h"
 #include "parallel_vector.h"
 
@@ -114,8 +115,10 @@ void generate_matrices(parallel_vector<int>& pva, parallel_vector<int>& pvb, par
         std::uniform_int_distribution<int> rand(1, maxx);
         // инициализация
         for (int i = index; i < index + portion; ++i) {
-            pva.set_elem(i, rand(mt));
-            pvb.set_elem(i, rand(mt));
+            pva.set_elem(i, i);
+            pvb.set_elem(i, i);
+            // pva.set_elem(i, rand(mt));
+            // pvb.set_elem(i, rand(mt));
             pvc.set_elem(i, 0);
         }
     }
@@ -165,6 +168,47 @@ struct task {
 };
 
 
+int get_process_id(const std::vector<std::vector<quantum_cluster_info>>* vector_quantum_cluster_info,
+    const std::vector<std::vector<double>>* clusters,
+    int i1, int j1, int i2, int j2, int i3, int j3, int n, int num_in_block) {
+    // use only clusters for pv3;
+    std::vector<int> cnts(memory_manager::get_MPI_size(), 0);
+    // use only i1, j1, i2, j2, i3, j3 elems???(*vector_quantum_cluster_info)
+
+    // for (int i = 0; i < num_in_block; ++i) {
+    //     for (int j = 0; j < num_in_block; ++j) {
+    //         int i3_teq = i3 + i;
+    //         int j3_teq = j3 + j;
+    //         int cur_id = i3_teq * n + j3_teq;
+    //         ++cnts[(*vector_quantum_cluster_info)[2][cur_id].cluster_id];
+    //     }
+    // }
+    // int maxx = 0, max_id = 0;
+    // for (int i = 0; i < (int)cnts.size(); ++i) {
+    //     if (cnts[i] > maxx) {
+    //         maxx = cnts[i];
+    //         max_id = i;
+    //     }
+    // }
+    // int cur_id = i3 * n + j3;
+    int cur_id = memory_manager::get_quantum_index(2, i1 * n + j1);
+    // std::cout << cur_id << "!!!" << std::endl;
+    int cluster_id = (*vector_quantum_cluster_info)[2][cur_id].cluster_id;
+
+    int max_id = 0;
+    double max_cluster_value = 0;
+    for (int i = 0; i < (int)(*clusters)[cluster_id].size(); ++i) {
+        // std::cout << i << ": ";
+        if ((*clusters)[cluster_id][i] > max_cluster_value) {
+            max_id = i;
+            max_cluster_value = (*clusters)[cluster_id][i];
+        }
+        // std::cout << "\n";
+    }
+    // std::cout << cur_id << " " << i1 << " " << j1 << "|" << cluster_id << " " << (int)(*clusters)[cluster_id].size() << ": " <<  max_id << " " << max_cluster_value << std::endl;
+    return max_id;
+}
+
 int main(int argc, char** argv) { // матрица b транспонирована
     int n, div_num, seed, cache_size = DEFAULT_CACHE_SIZE, quantum_size = DEFAULT_QUANTUM_SIZE;
     std::string statistics_output_directory = "";
@@ -183,6 +227,7 @@ int main(int argc, char** argv) { // матрица b транспонирова
         memory_manager::finalize();
         return 0;
     }
+
     parallel_vector<int> pva(n * n, quantum_size, cache_size), pvb(n * n, quantum_size, cache_size), pvc (n * n, quantum_size, cache_size);
     generate_matrices(pva, pvb, pvc, n, seed);
     int part_size = n / div_num;
@@ -193,7 +238,7 @@ int main(int argc, char** argv) { // матрица b транспонирова
         for (int i = 0; i < div_num; ++i) {
             for (int j = 0; j < div_num; ++j) {
                 for (int k = 0; k < div_num; ++k) {
-                    qu.push({i, j, k, j});
+                    qu.push({i, k, j, k});
                 }
             }
         }
@@ -202,6 +247,33 @@ int main(int argc, char** argv) { // матрица b транспонирова
     if (rank != 0) {
         pva.change_mode(0, pva.get_num_quantums(), READ_ONLY);
         pvb.change_mode(0, pvb.get_num_quantums(), READ_ONLY);
+    }
+
+    const statistic& stat = memory_manager::get_statistic();
+    const std::vector<std::vector<double>>* clusters;
+    const std::vector<std::vector<quantum_cluster_info>>* vector_quantum_cluster_info;
+    std::vector<std::queue<task>> qu_proc(memory_manager::get_MPI_size());
+    bool use_statistic = (cfgs.size() > 0);
+    if (rank == 1) {
+        if (use_statistic) {
+            clusters = stat.get_clusters();
+            vector_quantum_cluster_info = stat.get_vectors_quantums_clusters();
+            for (int i = 0; i < div_num; ++i) {
+                for (int j = 0; j < div_num; ++j) {
+                    for (int k = 0; k < div_num; ++k) {
+                        int a_first = i * part_size;
+                        int a_second = k * part_size;
+                        int b_first = j * part_size;
+                        int b_second = k * part_size;
+                        int proc_id = get_process_id(vector_quantum_cluster_info, clusters, a_first, a_second, b_first, b_second, a_first, b_first, n, part_size);
+                        qu_proc[proc_id].push({i, j, k, j});
+                    }
+                }
+            }
+            for (int i = 0; i < qu_proc.size(); ++i) {
+                std::cout << i << ": " << qu_proc[i].size() << "\n";
+            }
+        }
     }
     // if (rank == 1)
     //     print_matrices(pva, pvb, pvc, n);
@@ -253,6 +325,7 @@ int main(int argc, char** argv) { // матрица b транспонирова
                     int a_second = t.a_second * part_size;
                     int b_first = t.b_first * part_size;
                     int b_second = t.b_second * part_size;
+                    // std::cout << rank << ": " << a_first << " " << b_first << " " << a_second << " " << b_second << std::endl;
                     matrix_mult(pva, pvb, pvc, a_first, a_second, b_first, b_second, a_first, b_first, n, part_size);
                 }
                 memory_manager::notify(1);
