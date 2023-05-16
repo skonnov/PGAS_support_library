@@ -164,36 +164,39 @@ void matrix_mult(parallel_vector<T>& pv1, parallel_vector<T>& pv2, parallel_vect
 }
 
 struct task {
-    int a_first, a_second, b_first, b_second;
+    int a_first, a_second, b_first, b_second, cluster_id;
 };
 
 
-int get_process_id(const std::vector<std::vector<quantum_cluster_info>>* vector_quantum_cluster_info,
+int get_cluster_id(const std::vector<std::vector<quantum_cluster_info>>* vector_quantum_cluster_info,
     const std::vector<std::vector<double>>* clusters,
     int i1, int j1, int i2, int j2, int i3, int j3, int n, int num_in_block) {
     // use only clusters for pv3;
     std::vector<int> cnts(memory_manager::get_MPI_size(), 0);
     // use only i1, j1, i2, j2, i3, j3 elems???(*vector_quantum_cluster_info)
 
-    // for (int i = 0; i < num_in_block; ++i) {
-    //     for (int j = 0; j < num_in_block; ++j) {
-    //         int i3_teq = i3 + i;
-    //         int j3_teq = j3 + j;
-    //         int cur_id = i3_teq * n + j3_teq;
-    //         ++cnts[(*vector_quantum_cluster_info)[2][cur_id].cluster_id];
-    //     }
-    // }
-    // int maxx = 0, max_id = 0;
-    // for (int i = 0; i < (int)cnts.size(); ++i) {
-    //     if (cnts[i] > maxx) {
-    //         maxx = cnts[i];
-    //         max_id = i;
-    //     }
-    // }
-    // int cur_id = i3 * n + j3;
-    int cur_id = memory_manager::get_quantum_index(2, i1 * n + j1);
-    // std::cout << cur_id << "!!!" << std::endl;
-    int cluster_id = (*vector_quantum_cluster_info)[2][cur_id].cluster_id;
+    for (int i = 0; i < num_in_block; ++i) {
+        for (int j = 0; j < num_in_block; ++j) {
+            for (int k = 0; k < num_in_block; ++k) {
+                int cur_id = memory_manager::get_quantum_index(0, (i1 + i) * n + j1 + k);
+                ++cnts[(*vector_quantum_cluster_info)[2][cur_id].cluster_id];
+                cur_id = memory_manager::get_quantum_index(1, (i2 + j) * n + j2 + k);
+                ++cnts[(*vector_quantum_cluster_info)[2][cur_id].cluster_id];
+            }
+            int i3_teq = i3 + i;
+            int j3_teq = j3 + j;
+            int cur_id = memory_manager::get_quantum_index(2, i3_teq * n + j3_teq);
+            ++cnts[(*vector_quantum_cluster_info)[2][cur_id].cluster_id];
+        }
+    }
+    int maxx = 0, cluster_id = 0;
+    for (int i = 0; i < (int)cnts.size(); ++i) {
+        if (cnts[i] > maxx) {
+            maxx = cnts[i];
+            cluster_id = i;
+        }
+    }
+    return cluster_id;
 
     int max_id = 0;
     double max_cluster_value = 0;
@@ -205,7 +208,6 @@ int get_process_id(const std::vector<std::vector<quantum_cluster_info>>* vector_
         }
         // std::cout << "\n";
     }
-    // std::cout << cur_id << " " << i1 << " " << j1 << "|" << cluster_id << " " << (int)(*clusters)[cluster_id].size() << ": " <<  max_id << " " << max_cluster_value << std::endl;
     return max_id;
 }
 
@@ -234,11 +236,28 @@ int main(int argc, char** argv) { // матрица b транспонирова
     std::queue<task> qu;
     int rank = memory_manager::get_MPI_rank();
     int size = memory_manager::get_MPI_size();
+
+    bool use_statistic = (cfgs.size() > 0);
+    const std::vector<std::vector<double>>* clusters;
+    const std::vector<std::vector<quantum_cluster_info>>* vector_quantum_cluster_info;
+    const statistic& stat = memory_manager::get_statistic();
     if (rank == 1) {
+        if (use_statistic) {
+            clusters = stat.get_clusters();
+            vector_quantum_cluster_info = stat.get_vectors_quantums_clusters();
+        }
         for (int i = 0; i < div_num; ++i) {
             for (int j = 0; j < div_num; ++j) {
                 for (int k = 0; k < div_num; ++k) {
-                    qu.push({i, k, j, k});
+                    int cluster_id = -1;
+                    if (use_statistic) {
+                        int a_first = i * part_size;
+                        int a_second = k * part_size;
+                        int b_first = j * part_size;
+                        int b_second = k * part_size;
+                        cluster_id = get_cluster_id(vector_quantum_cluster_info, clusters, a_first, a_second, b_first, b_second, a_first, b_first, n, part_size);
+                    }
+                    qu.push({i, k, j, k, cluster_id});
                 }
             }
         }
@@ -249,32 +268,6 @@ int main(int argc, char** argv) { // матрица b транспонирова
         pvb.change_mode(0, pvb.get_num_quantums(), READ_ONLY);
     }
 
-    const statistic& stat = memory_manager::get_statistic();
-    const std::vector<std::vector<double>>* clusters;
-    const std::vector<std::vector<quantum_cluster_info>>* vector_quantum_cluster_info;
-    std::vector<std::queue<task>> qu_proc(memory_manager::get_MPI_size());
-    bool use_statistic = (cfgs.size() > 0);
-    if (rank == 1) {
-        if (use_statistic) {
-            clusters = stat.get_clusters();
-            vector_quantum_cluster_info = stat.get_vectors_quantums_clusters();
-            for (int i = 0; i < div_num; ++i) {
-                for (int j = 0; j < div_num; ++j) {
-                    for (int k = 0; k < div_num; ++k) {
-                        int a_first = i * part_size;
-                        int a_second = k * part_size;
-                        int b_first = j * part_size;
-                        int b_second = k * part_size;
-                        int proc_id = get_process_id(vector_quantum_cluster_info, clusters, a_first, a_second, b_first, b_second, a_first, b_first, n, part_size);
-                        qu_proc[proc_id].push({i, j, k, j});
-                    }
-                }
-            }
-            for (int i = 0; i < qu_proc.size(); ++i) {
-                std::cout << i << ": " << qu_proc[i].size() << "\n";
-            }
-        }
-    }
     // if (rank == 1)
     //     print_matrices(pva, pvb, pvc, n);
     int count = 4;
@@ -290,72 +283,56 @@ int main(int argc, char** argv) { // матрица b транспонирова
     double t1 = MPI_Wtime();
     if (rank != 0) {
         if (rank == 1) {
-            if (use_statistic) {
-                int finished_count = 0;
-                for (int i = 2; i < size; ++i) {
-                    if (qu_proc[i].size()) {
-                        tasks.set_elem(i - 2, qu_proc[i].front());
-                        qu_proc[i].pop();
-                    } else {
-                        tasks.set_elem(i - 2, {-1, -1, -1, -1});
-                        ++finished_count;
-                    }
-                    memory_manager::notify(i);
-                }
-
-                while (finished_count < size - 2) {
-                    int to_rank = memory_manager::wait();
-                    if (qu_proc[to_rank].size()) {
-                        tasks.set_elem(to_rank - 2, qu_proc[to_rank].front());
-                        qu_proc[to_rank].pop();
-                    } else {
-                        tasks.set_elem(to_rank - 2, {-1, -1, -1, -1});
-                        ++finished_count;
-                    }
-                    memory_manager::notify(to_rank);
-                }
-            } else {
-                int count_working = 0;
-                for (int i = 0; i < size - 2 && !qu.empty(); ++i) {
+            int count_working = 0;
+            for (int i = 0; i < size - 2 && !qu.empty(); ++i) {
+                if (use_statistic) {
+                    // search first num_processes tasks
+                } else {
                     tasks.set_elem(i, qu.front());
-                    ++count_working;
-                    qu.pop();
-                    memory_manager::notify(i + 2);
-                }
+                // }
+                ++count_working;
+                qu.pop();
+                memory_manager::notify(i + 2);
+            }
 
-                while (!qu.empty()) {
-                    int to_rank = memory_manager::wait();
+            while (!qu.empty()) {
+                int to_rank = memory_manager::wait();
+                if (use_statistic) {
+                    // search first num_processes tasks
+                } else {
                     tasks.set_elem(to_rank - 2, qu.front());
-                    qu.pop();
-                    memory_manager::notify(to_rank);
-                }
+                // }
+                qu.pop();
+                memory_manager::notify(to_rank);
+            }
 
-                while (count_working) {
-                    memory_manager::wait();
-                    --count_working;
-                }
+            while (count_working) {
+                memory_manager::wait();
+                --count_working;
+            }
 
-                for (int i = 0; i < size - 2; ++i) {
-                    tasks.set_elem(i, {-1, -1, -1, -1});
-                    memory_manager::notify(i + 2);
-                }
+            for (int i = 0; i < size - 2; ++i) {
+                tasks.set_elem(i, {-1, -1, -1, -1});
+                memory_manager::notify(i + 2);
             }
         } else {
+            int cnt = 0;
             while (true) {
                 memory_manager::wait(1);
                 task t = tasks.get_elem(rank - 2);
                 if (t.a_first == -1) {
                     break;
                 } else {
+                    ++cnt;
                     int a_first = t.a_first * part_size;
                     int a_second = t.a_second * part_size;
                     int b_first = t.b_first * part_size;
                     int b_second = t.b_second * part_size;
-                    // std::cout << rank << ": " << a_first << " " << b_first << " " << a_second << " " << b_second << std::endl;
                     matrix_mult(pva, pvb, pvc, a_first, a_second, b_first, b_second, a_first, b_first, n, part_size);
                 }
                 memory_manager::notify(1);
             }
+            // std::cout << rank << " " << cnt << "!\n";
         }
     }
     memory_manager::wait_all();
