@@ -7,6 +7,60 @@
 
 // #define MAX_TASK 5
 
+struct task {
+    int a_first, a_second, b_first, b_second, cluster_id;
+};
+
+struct node {
+    task value;
+    node* next;
+};
+
+class list_queue {
+    std::vector<node> buffer;
+public:
+    node* begin = nullptr, *end = nullptr;
+    int task_id = 0;
+    list_queue(int num_tasks) {
+        buffer.resize(num_tasks);
+    }
+
+    void push(task value) {
+        buffer[task_id] = {value, nullptr};
+        if (begin == nullptr) {
+            begin = end = &buffer[task_id];
+        } else if (begin == end) {
+            end = &buffer[task_id];
+            begin->next = end;
+        } else {
+            node* prev_end = end;
+            end = &buffer[task_id];
+            prev_end->next = end;
+        }
+        ++task_id;
+    }
+
+    void pop_front() {
+        if (begin) {
+            if (begin == end) {
+                begin = end = nullptr;
+            } else {
+                begin = begin->next;
+            }
+        }
+    }
+
+    void delete_next(node * node) {
+        if (node != nullptr && node->next != nullptr) {
+            node->next = node->next->next;
+        }
+    }
+
+    bool empty() {
+        return begin == nullptr;
+    }
+};
+
 int get_args(int argc, char** argv, int& n, int& div_num, int& seed, int& cache_size, int& quantum_size,
     std::string& statistics_output_directory, std::vector<input_config>& cfgs) {
     n = -1, div_num = -1, seed = 0, cache_size = DEFAULT_CACHE_SIZE;
@@ -163,10 +217,6 @@ void matrix_mult(parallel_vector<T>& pv1, parallel_vector<T>& pv2, parallel_vect
     }
 }
 
-struct task {
-    int a_first, a_second, b_first, b_second, cluster_id;
-};
-
 
 int get_cluster_id(const std::vector<std::vector<quantum_cluster_info>>* vector_quantum_cluster_info,
     const std::vector<std::vector<double>>* clusters,
@@ -233,7 +283,7 @@ int main(int argc, char** argv) { // матрица b транспонирова
     parallel_vector<int> pva(n * n, quantum_size, cache_size), pvb(n * n, quantum_size, cache_size), pvc (n * n, quantum_size, cache_size);
     generate_matrices(pva, pvb, pvc, n, seed);
     int part_size = n / div_num;
-    std::queue<task> qu;
+    list_queue qu(div_num * div_num * div_num);
     int rank = memory_manager::get_MPI_rank();
     int size = memory_manager::get_MPI_size();
 
@@ -288,10 +338,10 @@ int main(int argc, char** argv) { // матрица b транспонирова
                 if (use_statistic) {
                     // search first num_processes tasks
                 } else {
-                    tasks.set_elem(i, qu.front());
-                // }
+                    tasks.set_elem(i, qu.begin->value);
+                }
                 ++count_working;
-                qu.pop();
+                qu.pop_front();
                 memory_manager::notify(i + 2);
             }
 
@@ -300,9 +350,9 @@ int main(int argc, char** argv) { // матрица b транспонирова
                 if (use_statistic) {
                     // search first num_processes tasks
                 } else {
-                    tasks.set_elem(to_rank - 2, qu.front());
-                // }
-                qu.pop();
+                    tasks.set_elem(to_rank - 2, qu.begin->value);
+                }
+                qu.pop_front();
                 memory_manager::notify(to_rank);
             }
 
@@ -338,8 +388,8 @@ int main(int argc, char** argv) { // матрица b транспонирова
     memory_manager::wait_all();
     double t2 = MPI_Wtime();
     if (rank == 1) {
-        // std::cout << "----------------------------------" << std::endl;
-        // print_matrices(pva, pvb, pvc, n);
+        std::cout << "----------------------------------" << std::endl;
+        print_matrices(pva, pvb, pvc, n);
         std::cout << t2 - t1 << std::endl;
     }
     memory_manager::finalize();
