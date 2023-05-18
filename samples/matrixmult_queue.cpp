@@ -18,9 +18,10 @@ struct node {
 
 class list_queue {
     std::vector<node> buffer;
+    int _size = 0;
+    int task_id = 0;
 public:
     node* begin = nullptr, *end = nullptr;
-    int task_id = 0;
     list_queue(int num_tasks) {
         buffer.resize(num_tasks);
     }
@@ -38,6 +39,7 @@ public:
             prev_end->next = end;
         }
         ++task_id;
+        ++_size;
     }
 
     void pop_front() {
@@ -48,16 +50,22 @@ public:
                 begin = begin->next;
             }
         }
+        --_size;
     }
 
     void delete_next(node * node) {
         if (node != nullptr && node->next != nullptr) {
             node->next = node->next->next;
         }
+        --_size;
     }
 
     bool empty() {
         return begin == nullptr;
+    }
+
+    int size() {
+        return _size;
     }
 };
 
@@ -221,9 +229,12 @@ void matrix_mult(parallel_vector<T>& pv1, parallel_vector<T>& pv2, parallel_vect
 int get_cluster_id(const std::vector<std::vector<quantum_cluster_info>>* vector_quantum_cluster_info,
     const std::vector<std::vector<double>>* clusters,
     int i1, int j1, int i2, int j2, int i3, int j3, int n, int num_in_block) {
-    // use only clusters for pv3;
+    // // use only clusters for pv3;
+    // int cur_id = memory_manager::get_quantum_index(2, i3 * n + j3);
+    // return (*vector_quantum_cluster_info)[2][cur_id].cluster_id;
     std::vector<int> cnts(memory_manager::get_MPI_size(), 0);
     // use only i1, j1, i2, j2, i3, j3 elems???(*vector_quantum_cluster_info)
+
 
     for (int i = 0; i < num_in_block; ++i) {
         for (int j = 0; j < num_in_block; ++j) {
@@ -248,17 +259,42 @@ int get_cluster_id(const std::vector<std::vector<quantum_cluster_info>>* vector_
     }
     return cluster_id;
 
-    int max_id = 0;
-    double max_cluster_value = 0;
-    for (int i = 0; i < (int)(*clusters)[cluster_id].size(); ++i) {
-        // std::cout << i << ": ";
-        if ((*clusters)[cluster_id][i] > max_cluster_value) {
-            max_id = i;
-            max_cluster_value = (*clusters)[cluster_id][i];
+    // int max_id = 0;
+    // double max_cluster_value = 0;
+    // for (int i = 0; i < (int)(*clusters)[cluster_id].size(); ++i) {
+    //     // std::cout << i << ": ";
+    //     if ((*clusters)[cluster_id][i] > max_cluster_value) {
+    //         max_id = i;
+    //         max_cluster_value = (*clusters)[cluster_id][i];
+    //     }
+    //     // std::cout << "\n";
+    // }
+    // return max_id;
+}
+
+task search_best_cluster_and_delete(list_queue& qu, int size, const std::vector<std::vector<double>>* clusters, int rank) {
+    double max_dist = 0;
+    node* cur = qu.begin;
+    node* prev_to_delete = nullptr;
+    node* prev = nullptr;
+    for (int i = 0; i < std::min(qu.size(), size - 2); ++i) {
+        int cluster_id = cur->value.cluster_id;
+        if ((*clusters)[cur->value.cluster_id][rank] > max_dist) {
+            max_dist = (*clusters)[cur->value.cluster_id][rank];
+            prev_to_delete = prev;
         }
-        // std::cout << "\n";
+        prev = cur;
+        cur = cur->next;
     }
-    return max_id;
+    task out_task;
+    if (prev_to_delete == nullptr) {
+        out_task = qu.begin->value;
+        qu.pop_front();
+    } else {
+        out_task = prev_to_delete->next->value;
+        qu.delete_next(prev_to_delete);
+    }
+    return out_task;
 }
 
 int main(int argc, char** argv) { // матрица b транспонирована
@@ -271,8 +307,13 @@ int main(int argc, char** argv) { // матрица b транспонирова
         return res;
     }
 
-    bool is_stat = (cfgs.size() > 0);
-    memory_manager::init(argc, argv, "", is_stat, statistics_output_directory, &cfgs);
+    bool use_statistic = (cfgs.size() > 0);
+    res = memory_manager::init(argc, argv, "", use_statistic, statistics_output_directory, &cfgs);
+    if (res != STATUS_OK) {
+        std::cerr << "memory_manager_init returns " << get_error_code(res) << ". :(" << std::endl;
+        memory_manager::finalize();
+        return 0;
+    }
     res = check_args(n, cache_size, div_num);
     if (res < 0) {
         show_usage();
@@ -287,7 +328,6 @@ int main(int argc, char** argv) { // матрица b транспонирова
     int rank = memory_manager::get_MPI_rank();
     int size = memory_manager::get_MPI_size();
 
-    bool use_statistic = (cfgs.size() > 0);
     const std::vector<std::vector<double>>* clusters;
     const std::vector<std::vector<quantum_cluster_info>>* vector_quantum_cluster_info;
     const statistic& stat = memory_manager::get_statistic();
@@ -320,15 +360,17 @@ int main(int argc, char** argv) { // матрица b транспонирова
 
     // if (rank == 1)
     //     print_matrices(pva, pvb, pvc, n);
-    int count = 4;
-    int blocklens[] = {1, 1, 1, 1};
+
+    int count = 5;
+    int blocklens[] = {1, 1, 1, 1, 1};
     MPI_Aint indices[] = {
         (MPI_Aint)offsetof(task, a_first),
         (MPI_Aint)offsetof(task, a_second),
         (MPI_Aint)offsetof(task, b_first),
-        (MPI_Aint)offsetof(task, b_second)
+        (MPI_Aint)offsetof(task, b_second),
+        (MPI_Aint)offsetof(task, cluster_id),
     };
-    MPI_Datatype types[] = { MPI_INT, MPI_INT, MPI_INT, MPI_INT };
+    MPI_Datatype types[] = { MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT };
     parallel_vector<task> tasks(count, blocklens, indices, types, size, 1);
     double t1 = MPI_Wtime();
     if (rank != 0) {
@@ -337,22 +379,24 @@ int main(int argc, char** argv) { // матрица b транспонирова
             for (int i = 0; i < size - 2 && !qu.empty(); ++i) {
                 if (use_statistic) {
                     // search first num_processes tasks
+                    task t = search_best_cluster_and_delete(qu, size, clusters, i + 2);
+                    tasks.set_elem(i, t);
                 } else {
                     tasks.set_elem(i, qu.begin->value);
+                    qu.pop_front();
                 }
                 ++count_working;
-                qu.pop_front();
                 memory_manager::notify(i + 2);
             }
-
             while (!qu.empty()) {
                 int to_rank = memory_manager::wait();
                 if (use_statistic) {
-                    // search first num_processes tasks
+                    task t = search_best_cluster_and_delete(qu, size, clusters, to_rank);
+                    tasks.set_elem(to_rank - 2, t);
                 } else {
                     tasks.set_elem(to_rank - 2, qu.begin->value);
+                    qu.pop_front();
                 }
-                qu.pop_front();
                 memory_manager::notify(to_rank);
             }
 
@@ -382,14 +426,13 @@ int main(int argc, char** argv) { // матрица b транспонирова
                 }
                 memory_manager::notify(1);
             }
-            // std::cout << rank << " " << cnt << "!\n";
         }
     }
     memory_manager::wait_all();
     double t2 = MPI_Wtime();
     if (rank == 1) {
-        std::cout << "----------------------------------" << std::endl;
-        print_matrices(pva, pvb, pvc, n);
+        // std::cout << "----------------------------------" << std::endl;
+        // print_matrices(pva, pvb, pvc, n);
         std::cout << t2 - t1 << std::endl;
     }
     memory_manager::finalize();
