@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
     MPI_Datatype types[] = { MPI_INT, MPI_DOUBLE, MPI_CHAR };
 
     int n = atoi(argv[1]);
-    parallel_vector<str> v(count, blocklens, indices, types, n, 1);
+    parallel_vector<str> v(count, blocklens, indices, types, n, nullptr, 1);
     auto rank = memory_manager::get_MPI_rank();
     if (rank) {
         for (int i = 0; i < n; ++i) {

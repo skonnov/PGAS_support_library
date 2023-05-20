@@ -11,9 +11,9 @@ class parallel_vector {
     int key;  // идентификатор вектора в memory_manager
     int size_vector;  // глобальный размер вектора
 public:
-    parallel_vector(const int& number_of_elems=DEFAULT_QUANTUM_SIZE, const int& quantum_size = DEFAULT_QUANTUM_SIZE, const int& cache_size = DEFAULT_CACHE_SIZE);
-    parallel_vector(int count, const int* blocklens, const MPI_Aint* indices, const MPI_Datatype* types,
-                    const int& number_of_elems=DEFAULT_QUANTUM_SIZE, const int& quantum_size = DEFAULT_QUANTUM_SIZE, const int& cache_size = DEFAULT_CACHE_SIZE);
+    parallel_vector(const int& number_of_elems=DEFAULT_QUANTUM_SIZE, const std::vector<int>* data_indexes = nullptr, const int& quantum_size = DEFAULT_QUANTUM_SIZE, const int& cache_size = DEFAULT_CACHE_SIZE);
+    parallel_vector(int count, const int* blocklens, const MPI_Aint* indices, const MPI_Datatype* types, const int& number_of_elems=DEFAULT_QUANTUM_SIZE,
+                    const std::vector<int>* data_indexes = nullptr, const int& quantum_size = DEFAULT_QUANTUM_SIZE, const int& cache_size = DEFAULT_CACHE_SIZE);
     T get_elem(const int& index) const;  // получить элемент по глобальному индексу
     void set_elem(const int& index, const T& value);  // сохранить элемент по глобальному индексу
     void set_lock(int quantum_index);  // заблокировать квант
@@ -32,14 +32,15 @@ public:
 };
 
 template<class T>
-parallel_vector<T>::parallel_vector(const int& number_of_elems, const int& quantum_size, const int& cache_size) {
-    key = memory_manager::create_object<T>(number_of_elems, quantum_size, cache_size);
+parallel_vector<T>::parallel_vector(const int& number_of_elems, const std::vector<int>* data_indexes, const int& quantum_size, const int& cache_size) {
+    key = memory_manager::create_object<T>(number_of_elems, data_indexes, quantum_size, cache_size);
     size_vector = number_of_elems;
 }
 template<class T>
 parallel_vector<T>::parallel_vector(int count, const int* blocklens, const MPI_Aint* indices, const MPI_Datatype* types,
-                                    const int& number_of_elems, const int& quantum_size, const int& cache_size) {
-    key = memory_manager::create_object<T>(count, blocklens, indices, types, number_of_elems, quantum_size, cache_size);
+                                    const int& number_of_elems, const std::vector<int>* data_indexes,
+                                    const int& quantum_size, const int& cache_size) {
+    key = memory_manager::create_object<T>(count, blocklens, indices, types, number_of_elems, data_indexes, quantum_size, cache_size);
     size_vector = number_of_elems;
 }
 

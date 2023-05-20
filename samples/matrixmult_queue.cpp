@@ -321,7 +321,7 @@ int main(int argc, char** argv) { // матрица b транспонирова
         return 0;
     }
 
-    parallel_vector<int> pva(n * n, quantum_size, cache_size), pvb(n * n, quantum_size, cache_size), pvc (n * n, quantum_size, cache_size);
+    parallel_vector<int> pva(n * n, nullptr, quantum_size, cache_size), pvb(n * n, nullptr, quantum_size, cache_size), pvc (n * n, nullptr, quantum_size, cache_size);
     generate_matrices(pva, pvb, pvc, n, seed);
     int part_size = n / div_num;
     list_queue qu(div_num * div_num * div_num);
@@ -331,6 +331,7 @@ int main(int argc, char** argv) { // матрица b транспонирова
     const std::vector<std::vector<double>>* clusters;
     const std::vector<std::vector<quantum_cluster_info>>* vector_quantum_cluster_info;
     const statistic& stat = memory_manager::get_statistic();
+    // double t0 = MPI_Wtime();
     if (rank == 1) {
         if (use_statistic) {
             clusters = stat.get_clusters();
@@ -371,7 +372,7 @@ int main(int argc, char** argv) { // матрица b транспонирова
         (MPI_Aint)offsetof(task, cluster_id),
     };
     MPI_Datatype types[] = { MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT };
-    parallel_vector<task> tasks(count, blocklens, indices, types, size, 1);
+    parallel_vector<task> tasks(count, blocklens, indices, types, size, nullptr, 1);
     double t1 = MPI_Wtime();
     if (rank != 0) {
         if (rank == 1) {
@@ -433,6 +434,7 @@ int main(int argc, char** argv) { // матрица b транспонирова
     if (rank == 1) {
         // std::cout << "----------------------------------" << std::endl;
         // print_matrices(pva, pvb, pvc, n);
+        // std::cout << t2 - t1 << "|" << t1 - t0 << " " << t2 - t0 << std::endl;
         std::cout << t2 - t1 << std::endl;
     }
     memory_manager::finalize();

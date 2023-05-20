@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
 
     int num_in_block = n / q;
 
-    parallel_vector<int> pv1(n * n, quantum_size, cache_size), pv2(n * n, quantum_size, cache_size), pv3(n * n, quantum_size, cache_size);
+    parallel_vector<int> pv1(n * n, nullptr, quantum_size, cache_size), pv2(n * n, nullptr, quantum_size, cache_size), pv3(n * n, nullptr, quantum_size, cache_size);
     std::pair<int, int> grid_ind = get_grid_rank(rank, q);
     MPI_Barrier(MPI_COMM_WORLD);
     double t1 = MPI_Wtime();

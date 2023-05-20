@@ -62,10 +62,10 @@ parallel_priority_queue<T>::parallel_priority_queue(T _default_value, int _num_o
     num_of_elems_proc = num_of_quantums_proc * quantum_size;
     global_index_l = worker_rank * num_of_elems_proc;
 
-    maxes = parallel_vector<T>(worker_size, 1);
-    sizes = parallel_vector<int>(worker_size, 1);
+    maxes = parallel_vector<T>(worker_size, nullptr, 1);
+    sizes = parallel_vector<int>(worker_size, nullptr, 1);
 
-    pqueues = parallel_vector<T>(worker_size * num_of_elems_proc, quantum_size, cache_size);
+    pqueues = parallel_vector<T>(worker_size * num_of_elems_proc, nullptr, quantum_size, cache_size);
 
     if (worker_rank >= 0) {
         maxes.set_elem(worker_rank, default_value);
@@ -97,10 +97,10 @@ parallel_priority_queue<T>::parallel_priority_queue(int _count, const int* _bloc
     num_of_elems_proc = num_of_quantums_proc * quantum_size;
     global_index_l = worker_rank * num_of_elems_proc;
 
-    maxes = parallel_vector<T>(_count, _blocklens, _indices, _types, worker_size, 1);
-    sizes = parallel_vector<int>(worker_size, 1);
+    maxes = parallel_vector<T>(_count, _blocklens, _indices, _types, worker_size, nullptr, 1);
+    sizes = parallel_vector<int>(worker_size, nullptr, 1);
 
-    pqueues = parallel_vector<T>(_count, _blocklens, _indices, _types, worker_size*num_of_elems_proc, quantum_size, cache_size);
+    pqueues = parallel_vector<T>(_count, _blocklens, _indices, _types, worker_size*num_of_elems_proc, nullptr, quantum_size, cache_size);
 
     if (worker_rank >= 0) {
         maxes.set_elem(worker_rank, default_value);
