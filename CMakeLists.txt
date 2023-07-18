@@ -62,11 +62,19 @@ PRIVATE
 )
 
 if(MPI_COMPILE_FLAGS)
-    set_target_properties(PGAS_SL PROPERTIES COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
+    message(${MPI_COMPILE_FLAGS}, "!")
+    target_compile_options(PGAS_SL
+    PUBLIC
+        ${MPI_COMPILE_FLAGS}
+    )
 endif()
 
 if(MPI_LINK_FLAGS)
-    set_target_properties(PGAS_SL PROPERTIES LINK_FLAGS "${MPI_LINK_FLAGS}")
+    message(${MPI_COMPILE_FLAGS}, "?")
+    target_link_options(PGAS_SL
+    PUBLIC
+        ${MPI_LINK_FLAGS}
+    )
 endif()
 
 target_link_libraries(PGAS_SL
